@@ -1,0 +1,60 @@
+# Android / Gradle.gradle/
+.kotlin/
+**/build/
+**/captures/
+**/.cxx/
+**/.externalNativeBuild/
+**/generated/
+**/tmp/
+**/out/
+**/bin/
+**/obj/
+**/release/
+**/debug/
+*.apk
+*.aar
+*.ap_
+*.aab
+*.jks
+*.keystore
+*.pem
+*.p12
+*.keystore
+local.properties
+app/release/
+app/debug/
+
+# IDE / editor files
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+*.env
+secrets.properties
+keystore.properties
+
+# Logs and reports
+*.log
+*.hprof
+*.stacktrace
+
+# Misc
+/build
+/captures
+
+# Generated Android Studio files
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+/.idea/assetWizardSettings.xml
