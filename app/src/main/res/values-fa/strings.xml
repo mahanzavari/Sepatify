@@ -1,0 +1,155 @@
+<resources>
+    <string name="app_name">سپاتیفای</string>
+    <string name="tagline">پخش موسیقی و شبکه اجتماعی</string>
+
+    <!-- Navigation Bar Labels -->
+    <string name="nav_home">خانه</string>
+    <string name="nav_search">جستجو</string>
+    <string name="nav_playlists">لیست‌ها</string>
+    <string name="nav_downloads">دانلودها</string>
+    <string name="nav_chat">گفتگو</string>
+    <string name="nav_profile">پروفایل</string>
+
+    <!-- Auth Screen -->
+    <string name="login">ورود به سیستم </string>
+    <string name="register">ثبت نام</string>
+    <string name="email_hint">آدرس ایمیل</string>
+    <string name="password_hint">رمز عبور</string>
+    <string name="display_name_hint">نام نمایشی</string>
+    <string name="dont_have_account">حسابی ندارید؟ عضو شوید</string>
+    <string name="already_have_account">قبلاً ثبت نام کرده‌اید؟ وارد شوید</string>
+    <string name="auth_error">خطا در تأیید هویت</string>
+
+    <!-- Home Tab -->
+    <string name="home_title">خوراک خانه</string>
+    <string name="daily_recommendations">پیشنهادهای روزانه</string>
+    <string name="trending_songs">آهنگ‌های پرطرفدار</string>
+    <string name="new_releases">نسخه‌های جدید</string>
+    <string name="most_popular">محبوب‌ترین‌ها</string>
+    <string name="quick_liked">آهنگ‌های پسندیده</string>
+    <string name="quick_recent">به‌تازگی پخش شده</string>
+    <string name="quick_playlists">لیست‌های پخش من</string>
+    <string name="quick_artists">هنرمندان برتر</string>
+    <string name="local_playlists">لیست‌های پخش داخلی</string>
+    <string name="global_playlists">لیست‌های پخش جهانی</string>
+
+    <!-- Search Tab -->
+    <string name="search_hint">جستجوی آهنگ، هنرمند یا کلمات کلیدی…</string>
+    <string name="filter_all">همه</string>
+    <string name="filter_songs">آهنگ‌ها</string>
+    <string name="filter_artists">هنرمندان</string>
+    <string name="search_history">تاریخچه جستجو</string>
+    <string name="no_search_history">تاریخچه جستجو خالی است</string>
+    <string name="clear_history">پاک کردن همه</string>
+    <string name="no_results">نتیجه‌ای یافت نشد</string>
+    <string name="downloads_empty_title">هیچ فایل صوتی آفلاین وجود ندارد</string>
+    <string name="downloads_empty_subtitle">به صفحه پخش بروید تا موسیقی را بدون اتصال اینترنت دانلود و پخش کنید.</string>
+    <string name="empty_search_subtitle">یک عبارت متفاوت امتحان کنید یا فیلترها را پاک کنید.</string>
+    <string name="liked_empty_title">هنوز آهنگ مورد علاقه‌ای ندارید</string>
+    <string name="liked_empty_subtitle">چند آهنگ را پسند کنید تا در اینجا ظاهر شوند.</string>
+    <string name="recent_empty_title">تاریخچه پخش اخیر وجود ندارد</string>
+    <string name="recent_empty_subtitle">یک آهنگ پخش کنید تا برای بازپخش سریع در اینجا نمایش داده شود.</string>
+    <string name="followed_users_title">دوستان و هنرمندان دنبال‌شده</string>
+    <string name="followed_users_empty_title">هنوز ارتباطی وجود ندارد</string>
+    <string name="followed_users_empty_subtitle">در بخش اجتماعی برای پیدا کردن افراد دنبال‌پذیر جستجو کنید.</string>
+    <string name="unfollow">لغو دنبال کردن</string>
+
+    <!-- Downloads Tab -->
+    <string name="downloads_title">دانلودهای آفلاین</string>
+    <string name="no_downloads">هنوز آهنگی دانلود نشده است. برای ذخیره آهنگ‌ها به صورت آفلاین، نیاز به عضویت ویژه دارید.</string>
+    <string name="sort_by_title">مرتب‌سازی بر اساس عنوان</string>
+    <string name="sort_by_artist">مرتب‌سازی بر اساس هنرمند</string>
+    <string name="sort_by_date">مرتب‌سازی بر اساس تاریخ</string>
+    <string name="downloaded_badge">دانلود شده</string>
+    <string name="swipe_to_delete_hint">برای حذف آهنگ از کش حافظه، به چپ یا راست بکشید.</string>
+    <string name="downloading">در حال دانلود…</string>
+
+    <!-- Playlists Tab -->
+    <string name="playlists_title">مرکز لیست‌های پخش</string>
+    <string name="create_playlist">ایجاد لیست پخش جدید</string>
+    <string name="playlist_name_hint">نام لیست پخش</string>
+    <string name="playlist_desc_hint">توضیحات</string>
+    <string name="add_to_playlist">افزودن آهنگ به لیست پخش</string>
+    <string name="remove_from_playlist">حذف از لیست پخش</string>
+    <string name="user_playlists_category">لیست‌های پخش سفارشی من</string>
+    <string name="international_music_category">موسیقی بین‌المللی</string>
+    <string name="local_music_category">موسیقی محلی</string>
+    <string name="playlist_created_success">لیست پخش با موفقیت ایجاد شد</string>
+
+    <!-- Chat / Social Tab -->
+    <string name="chat_title">گفتگوهای اجتماعی</string>
+    <string name="search_users_hint">جستجوی کاربران برای گفتگو یا دنبال کردن…</string>
+    <string name="follow">دنبال کردن</string>
+    <string name="following">دنبال شده</string>
+    <string name="followers_count">دنبال‌کنندگان: %1$d</string>
+    <string name="typing">در حال نوشتن…</string>
+    <string name="message_hint">پیام…</string>
+    <string name="shared_song_card_title">آهنگ به اشتراک گذاشته شده</string>
+    <string name="play_now">پخش کنید</string>
+    <string name="message_sending">در حال ارسال</string>
+    <string name="message_delivered">تحویل داده شد</string>
+    <string name="message_read">خوانده شد</string>
+    <string name="no_chat_messages">پیامی وجود ندارد. یک مکالمه هم‌زمان و واقعی را شروع کنید!</string>
+
+    <!-- Profile Tab -->
+    <string name="profile_title">پروفایل من</string>
+    <string name="logout">خروج از حساب</string>
+    <string name="premium_user_badge">عضو طلایی ویژه</string>
+    <string name="regular_user_badge">عضویت رایگان</string>
+    <string name="upgrade_to_premium">شبیه‌سازی ارتقاء به ویژه</string>
+    <string name="premium_unlocked_dialog">تبریک می‌گوییم! امکانات طلایی ویژه برای شما فعال شد. حالا می‌توانید آهنگ‌ها را به صورت آفلاین دانلود کنید.</string>
+    <string name="language_settings">زبان نرم‌افزار</string>
+    <string name="theme_settings">تم برنامه</string>
+    <string name="font_size_settings">اندازه قلم</string>
+    <string name="english_lang">انگلیسی (en)</string>
+    <string name="persian_lang">فارسی (fa)</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تاریک</string>
+    <string name="theme_system">سیستم</string>
+    <string name="edit_profile_display_name">ویرایش نام نمایشی</string>
+    <string name="save_changes">ذخیره تغییرات</string>
+
+    <!-- Audio Player Now Playing -->
+    <string name="now_playing_title">در حال پخش</string>
+    <string name="speed_rate">سرعت: %1$.1fx</string>
+    <string name="sleep_timer">تایمر زمان خواب</string>
+    <string name="sleep_timer_off">تایمر خواب غیرفعال</string>
+    <string name="sleep_timer_minutes_val">%1$d دقیقه</string>
+    <string name="sleep_timer_set">تایمر خواب روی %1$d دقیقه تنظیم شد</string>
+    <string name="sleep_timer_inactive">پخش موزیک پس از اتمام تایمر به طور خودکار متوقف می‌شود.</string>
+
+    <!-- Downloads / Premium gating -->
+    <string name="download_song">دانلود برای پخش آفلاین</string>
+    <string name="upgrade_required_title">نیاز به عضویت ویژه</string>
+    <string name="download_requires_premium">دانلود آهنگ برای پخش آفلاین مخصوص کاربران ویژه است. حساب خود را ارتقا دهید.</string>
+    <string name="ok_label">تایید</string>
+    <string name="no_lyrics_found">متنی برای متن‌آهنگ یافت نشد</string>
+    <string name="no_track_active">در این لحظه آهنگی در حال پخش نیست</string>
+    <string name="drawer_account_section">حساب</string>
+    <string name="drawer_settings_section">تنظیمات</string>
+    <string name="drawer_account_details">جزئیات حساب</string>
+    <string name="drawer_privacy_social">حریم خصوصی و اجتماعی</string>
+    <string name="drawer_notifications">اعلان‌ها</string>
+    <string name="drawer_equalizer_audio">اکولایزر و افکت صوتی</string>
+    <string name="drawer_view_profile">مشاهده و ویرایش پروفایل</string>
+    <string name="drawer_guest_user">کاربر مهمان</string>
+    <string name="privacy_social_settings_title">تنظیمات حریم خصوصی و اجتماعی</string>
+    <string name="privacy_share_activity">به اشتراک‌گذاری فعالیت پخش</string>
+    <string name="privacy_share_activity_desc">مخاطبان شما بتوانند ببینند چه آهنگی پخش می‌کنید.</string>
+    <string name="privacy_private_session">جلسه خصوصی</string>
+    <string name="privacy_private_session_desc">به‌طور موقت فعالیت پخش خود را از مخاطبان پنهان کنید.</string>
+    <string name="privacy_profile_search">نمایش پروفایل در جستجو</string>
+    <string name="privacy_profile_search_desc">هر کسی بتواند پروفایل شما را در جستجو ببیند.</string>
+    <string name="notification_new_music">اعلان آهنگ‌های جدید</string>
+    <string name="notification_new_music_desc">وقتی هنرمندانی که دنبال می‌کنید آهنگ جدید منتشر می‌کنند، مطلع شوید.</string>
+    <string name="notification_social">هشدارهای پیام اجتماعی</string>
+    <string name="notification_social_desc">برای پیام‌های ورودی چت، هشدار فوری دریافت کنید.</string>
+    <string name="notification_promo">اخبار و پیشنهادهای ویژه</string>
+    <string name="notification_promo_desc">در مورد نسخه‌های ویژه و تخفیف‌ها به‌روز بمانید.</string>
+    <string name="matching_users_title">کاربران منطبق</string>
+    <string name="conversations_title">گفتگوها</string>
+    <string name="empty_conversations_title">هنوز گفتگویی وجود ندارد</string>
+    <string name="empty_conversations_message">چند نفر را دنبال کنید تا گفتگوهای زنده‌ای شروع شود.</string>
+    <string name="chat_thread_hint">برای باز کردن رشته پیام، لمس کنید</string>
+    <string name="chat_active_status">فعال</string>
+</resources>
