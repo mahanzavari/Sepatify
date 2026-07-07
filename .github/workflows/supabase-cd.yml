@@ -2,8 +2,8 @@ name: Deploy Database Migrations
 
 on:
   push:
-    branches:
-      - main  
+    branches: [ "main" , "CI-CD" ]
+    #   - main  
   workflow_dispatch:
 
 jobs:
