@@ -1,0 +1,50 @@
+name: Android Release CD
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on release tags like v1.0.0, v1.1.0 etc.
+
+jobs:
+  build-and-sign:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # Write Supabase properties dynamically so production builds compile with API endpoints
+      - name: Inject Production Secrets
+        run: |
+          echo "supabase.url=${{ secrets.SUPABASE_URL }}" >> local.properties
+          echo "supabase.anon.key=${{ secrets.SUPABASE_ANON_KEY }}" >> local.properties
+
+      # Reconstruct the physical keystore file inside the workspace
+      - name: Decrypt Android Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.keystore
+
+      # Build and sign the production Android App Bundle (AAB)
+      - name: Assemble Signed Release AAB
+        run: |
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=release-key.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+
+      # Save the generated signed AAB as a GitHub Action Artifact
+      - name: Upload Signed Production AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-bundle
+          path: app/build/outputs/bundle/release/app-release.aab

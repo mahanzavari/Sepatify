@@ -21,6 +21,7 @@
 *.pem
 *.p12
 *.keystore
+app/keystore-base64.txt
 local.properties
 app/release/
 app/debug/
