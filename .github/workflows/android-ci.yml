@@ -2,11 +2,11 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "develop" , "CI-CD"]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: [ "main", "develop" , "CI-CD"]
   workflow_dispatch:
-    
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
