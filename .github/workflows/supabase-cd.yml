@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main  
+  workflow_dispatch:
 
 jobs:
   deploy-database:
@@ -12,7 +13,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      PROJECT_ID: "uppyfwrazoaciylsdynh" # Your remote project reference ID
+      PROJECT_ID: "uppyfwrazoaciylsdynh" 
 
     steps:
       - name: Checkout Repository
