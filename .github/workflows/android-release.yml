@@ -26,19 +26,22 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      # Since local.properties is ignored by Git, regenerate it dynamically
       - name: Inject Production Secrets
         run: |
           echo "supabase.url=${{ secrets.SUPABASE_URL }}" >> local.properties
           echo "supabase.anon.key=${{ secrets.SUPABASE_ANON_KEY }}" >> local.properties
 
+      # Reconstruct the Android Keystore in the root of the project
       - name: Decrypt Android Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release-key.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release-key.keystore
 
+      # Build and sign the Release APK using the absolute path of GITHUB_WORKSPACE
       - name: Assemble Signed Release APK
         run: |
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=release-key.keystore \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/release-key.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
