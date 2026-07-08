@@ -45,18 +45,40 @@ fun HomeScreen(
     ) {
         when (val state = uiState) {
             HomeUiState.Loading -> {
-                // Skeletons according to FR-13: "All lists and cards shall display a shimmer skeleton animation while data loads"
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    ShimmerItem(height = 180.dp)
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                    // Carousel skeleton
+                    ShimmerItem(height = 180.dp, cornerRadius = 24.dp)
+
+                    // Bento quick-action skeletons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        ShimmerItem(modifier = Modifier.weight(1f), height = 50.dp)
-                        ShimmerItem(modifier = Modifier.weight(1f), height = 50.dp)
+                        ShimmerItem(modifier = Modifier.weight(1f), height = 138.dp, cornerRadius = 24.dp)
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ShimmerItem(height = 64.dp, cornerRadius = 24.dp)
+                            ShimmerItem(height = 64.dp, cornerRadius = 24.dp)
+                        }
                     }
-                    ShimmerItem(height = 140.dp)
-                    ShimmerItem(height = 140.dp)
+                    ShimmerItem(height = 68.dp, cornerRadius = 24.dp)
+
+                    // Horizontal song section skeletons (Most Popular, New Releases, etc.)
+                    repeat(3) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ShimmerItem(
+                                modifier = Modifier.fillMaxWidth(0.4f),
+                                height = 16.dp,
+                                cornerRadius = 4.dp
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                repeat(4) {
+                                    SongCardSkeleton()
+                                }
+                            }
+                        }
+                    }
                 }
             }
             is HomeUiState.Success -> {
@@ -471,6 +493,16 @@ fun HorizontalSongSection(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
         )
+        if (songs.isEmpty()) {
+            // Shimmer placeholders while this section's data is still arriving
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(5) { SongCardSkeleton() }
+            }
+        } else {
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp),
@@ -507,5 +539,6 @@ fun HorizontalSongSection(
                 }
             }
         }
+        } // end else
     }
 }

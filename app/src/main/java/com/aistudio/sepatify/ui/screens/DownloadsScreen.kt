@@ -32,6 +32,10 @@ fun DownloadsScreen(
 ) {
     val downloadedSongs by downloadViewModel.downloadedSongs.collectAsState()
     val activeDownloads by downloadViewModel.activeDownloads.collectAsState()
+    var isFirstLoad by remember { mutableStateOf(true) }
+    LaunchedEffect(downloadedSongs) {
+        if (isFirstLoad) isFirstLoad = false
+    }
 
     Column(
         modifier = Modifier
@@ -47,7 +51,14 @@ fun DownloadsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (downloadedSongs.isEmpty() && activeDownloads.isEmpty()) {
+        if (isFirstLoad) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(6) { SongRowSkeleton() }
+            }
+        } else if (downloadedSongs.isEmpty() && activeDownloads.isEmpty()) {
             EmptyStateView(
                 icon = Icons.Default.CloudDownload,
                 title = locString(R.string.downloads_empty_title),

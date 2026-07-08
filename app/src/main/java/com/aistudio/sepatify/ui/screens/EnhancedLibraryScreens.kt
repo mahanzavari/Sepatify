@@ -127,6 +127,10 @@ fun LikedSongsScreen(
     locString: (Int) -> String
 ) {
     val likedSongs by playlistViewModel.getSongsForPlaylist(-3L, "Liked").collectAsState(initial = emptyList())
+    var likedFirstLoad by remember { mutableStateOf(true) }
+    LaunchedEffect(likedSongs) {
+        if (likedFirstLoad) likedFirstLoad = false
+    }
 
     Column(
         modifier = Modifier
@@ -164,7 +168,17 @@ fun LikedSongsScreen(
             }
         }
 
-        if (likedSongs.isEmpty()) {
+        if (likedFirstLoad) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(7) { SongRowSkeleton() }
+            }
+        } else if (likedSongs.isEmpty()) {
             EmptyStateView(
                 icon = Icons.Default.Favorite,
                 title = locString(R.string.liked_empty_title),
@@ -224,6 +238,10 @@ fun RecentlyPlayedScreen(
     locString: (Int) -> String
 ) {
     val recentSongs by playlistViewModel.getRecentlyPlayedSongs().collectAsState(initial = emptyList())
+    var recentFirstLoad by remember { mutableStateOf(true) }
+    LaunchedEffect(recentSongs) {
+        if (recentFirstLoad) recentFirstLoad = false
+    }
 
     Column(
         modifier = Modifier
@@ -254,7 +272,17 @@ fun RecentlyPlayedScreen(
             }
         }
 
-        if (recentSongs.isEmpty()) {
+        if (recentFirstLoad) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(7) { SongRowSkeleton() }
+            }
+        } else if (recentSongs.isEmpty()) {
             EmptyStateView(
                 icon = Icons.Default.History,
                 title = locString(R.string.recent_empty_title),
