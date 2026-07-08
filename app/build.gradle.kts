@@ -25,11 +25,11 @@ val supabaseAnonKey: String = (localProperties.getProperty("SUPABASE_ANON_KEY")
   ?: "")
 
 android {
-  namespace = "com.example"
+  namespace = "com.aistudio.sepatify"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.sepatify.plgksq"
+    applicationId = "com.aistudio.sepatify"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
