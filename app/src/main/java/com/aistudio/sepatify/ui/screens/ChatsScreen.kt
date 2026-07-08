@@ -36,6 +36,10 @@ fun ChatsScreen(
     val searchUsersQuery by chatViewModel.searchQuery.collectAsState()
     val matchingUsers by chatViewModel.filteredUsers.collectAsState()
     val followedUsers by chatViewModel.followedUsers.collectAsState()
+    var chatsFirstLoad by remember { mutableStateOf(true) }
+    LaunchedEffect(followedUsers) {
+        if (chatsFirstLoad) chatsFirstLoad = false
+    }
 
     var chatInputText by remember { mutableStateOf("") }
 
@@ -127,7 +131,14 @@ fun ChatsScreen(
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
 
-                if (followedUsers.isEmpty()) {
+                if (chatsFirstLoad) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(6) { ChatRowSkeleton() }
+                    }
+                } else if (followedUsers.isEmpty()) {
                     EmptyStateView(
                         icon = Icons.Default.ChatBubbleOutline,
                         title = locString(R.string.empty_conversations_title),

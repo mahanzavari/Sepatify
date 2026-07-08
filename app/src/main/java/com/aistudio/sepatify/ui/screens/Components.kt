@@ -23,39 +23,191 @@ import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.model.Song
 import coil.compose.AsyncImage
 
+// ---------------------------------------------------------------------------
+// Shimmer foundation
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns an animated left-to-right shimmer [Brush] to apply as a background.
+ * All skeleton composables share this single brush so the sweep is in sync.
+ */
 @Composable
-fun ShimmerItem(modifier: Modifier = Modifier, height: Dp = 100.dp) {
+fun shimmerBrush(): Brush {
+    val shimmerBase   = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    val shimmerHighlight = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.20f)
+
     val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
+    val translateX by transition.animateFloat(
+        initialValue = -600f,
+        targetValue  = 1400f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            animation  = tween(durationMillis = 1100, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "shimmerTranslate"
+        label = "shimmerX"
     )
-
-    val shimmerColors = listOf(
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.2f),
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+    return Brush.linearGradient(
+        colors = listOf(shimmerBase, shimmerHighlight, shimmerBase),
+        start  = Offset(x = translateX,        y = 0f),
+        end    = Offset(x = translateX + 600f, y = 0f)
     )
+}
 
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset.Zero,
-        end = Offset(x = translateAnim, y = translateAnim)
-    )
-
+/** Generic filled rectangle skeleton block — used as a building block by the typed skeletons below. */
+@Composable
+fun ShimmerItem(
+    modifier: Modifier = Modifier,
+    height: Dp = 100.dp,
+    cornerRadius: Dp = 12.dp
+) {
+    val brush = shimmerBrush()
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(cornerRadius))
             .background(brush)
     )
 }
+
+// ---------------------------------------------------------------------------
+// Typed skeleton composables  (one per card shape used in the app)
+// ---------------------------------------------------------------------------
+
+/**
+ * Skeleton for a horizontal song row (cover thumbnail + two text lines).
+ * Used in: Search results, Liked Songs, Recently Played, Playlist detail, Chat.
+ */
+@Composable
+fun SongRowSkeleton(modifier: Modifier = Modifier) {
+    val brush = shimmerBrush()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Thumbnail
+        Box(
+            modifier = Modifier
+                .size(54.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(brush)
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.65f)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(brush)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.40f)
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(brush)
+            )
+        }
+    }
+}
+
+/**
+ * Skeleton for a vertical album card tile (110×110 image + two text lines below).
+ * Used in: HomeScreen horizontal rows (Most Popular, New Releases, etc.).
+ */
+@Composable
+fun SongCardSkeleton(modifier: Modifier = Modifier) {
+    val brush = shimmerBrush()
+    Column(
+        modifier = modifier.width(110.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(110.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(brush)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .height(12.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(brush)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.55f)
+                .height(10.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(brush)
+        )
+    }
+}
+
+/**
+ * Skeleton for a playlist grid card (matches the 134 dp bento card in PlaylistsScreen).
+ */
+@Composable
+fun PlaylistCardSkeleton(modifier: Modifier = Modifier) {
+    val brush = shimmerBrush()
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(134.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(brush)
+    )
+}
+
+/**
+ * Skeleton for a chat conversation row (avatar circle + two text lines).
+ * Used in: ChatsScreen conversation list.
+ */
+@Composable
+fun ChatRowSkeleton(modifier: Modifier = Modifier) {
+    val brush = shimmerBrush()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(brush)
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.50f)
+                    .height(14.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(brush)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.75f)
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(brush)
+            )
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +222,7 @@ fun CommonTopBar(
 ) {
     // TopBar according to NFR-13: "A common TopBar composable shall appear on all main screens with:
     // app logo and name (right), user avatar, notification icon, and settings icon (left)"
-    // Since we handle both RTL and LTR automatically via Row, 
+    // Since we handle both RTL and LTR automatically via Row,
     // placing settings, notifications, avatar on one side, and Logo and title on other side works beautifully.
     Surface(
         modifier = Modifier
@@ -98,7 +250,7 @@ fun CommonTopBar(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                
+
                 IconButton(onClick = onNotificationsClick) {
                     BadgedBox(badge = { Badge { Text("3") } }) {
                         Icon(
@@ -144,7 +296,7 @@ fun CommonTopBar(
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
-                
+
                 Box(
                     modifier = Modifier
                         .size(32.dp)
@@ -314,7 +466,7 @@ fun extractLyricsFromMp3(filePath: String): List<LyricLine>? {
             val s3 = header[8].toInt() and 0x7F
             val s4 = header[9].toInt() and 0x7F
             val tagSize = (s1 shl 21) or (s2 shl 14) or (s3 shl 7) or s4
-            
+
             val tagData = ByteArray(tagSize)
             var totalRead = 0
             while (totalRead < tagSize) {
@@ -322,7 +474,7 @@ fun extractLyricsFromMp3(filePath: String): List<LyricLine>? {
                 if (read == -1) break
                 totalRead += read
             }
-            
+
             var offset = 0
             while (offset < tagSize - 10) {
                 if (tagData[offset] == 'U'.toByte() &&
@@ -343,26 +495,26 @@ fun extractLyricsFromMp3(filePath: String): List<LyricLine>? {
                         val f4 = tagData[offset + 7].toInt() and 0xFF
                         (f1 shl 24) or (f2 shl 16) or (f3 shl 8) or f4
                     }
-                    
+
                     if (fSize <= 0 || offset + 10 + fSize > tagSize) break
-                    
+
                     val frameDataOffset = offset + 10
                     val encoding = tagData[frameDataOffset].toInt()
                     var textOffset = frameDataOffset + 1 + 3
-                    
+
                     if (encoding == 0 || encoding == 3) {
                         while (textOffset < frameDataOffset + fSize && tagData[textOffset] != 0.toByte()) {
                             textOffset++
                         }
                         textOffset++
                     } else {
-                        while (textOffset < frameDataOffset + fSize - 1 && 
+                        while (textOffset < frameDataOffset + fSize - 1 &&
                               !(tagData[textOffset] == 0.toByte() && tagData[textOffset + 1] == 0.toByte())) {
                             textOffset += 2
                         }
                         textOffset += 2
                     }
-                    
+
                     val textLen = (frameDataOffset + fSize) - textOffset
                     if (textLen > 0) {
                         val charset = when (encoding) {

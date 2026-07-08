@@ -261,11 +261,11 @@ fun SearchScreen(
                 }
             }
             SearchUiState.Loading -> {
-                Box(
+                LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    items(8) { SongRowSkeleton() }
                 }
             }
             is SearchUiState.Success -> {

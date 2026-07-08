@@ -44,6 +44,10 @@ fun PlaylistsScreen(
     val playlists by playlistViewModel.userPlaylists.collectAsState()
     var selectedPlaylist by remember { mutableStateOf<PlaylistEntity?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var playlistsFirstLoad by remember { mutableStateOf(true) }
+    LaunchedEffect(playlists) {
+        if (playlistsFirstLoad) playlistsFirstLoad = false
+    }
 
     var newPlaylistTitle by remember { mutableStateOf("") }
     var newPlaylistDesc by remember { mutableStateOf("") }
@@ -55,7 +59,7 @@ fun PlaylistsScreen(
     } else {
         android.Manifest.permission.READ_EXTERNAL_STORAGE
     }
-    
+
     var hasPermission by remember {
         mutableStateOf(
             androidx.core.content.ContextCompat.checkSelfPermission(
@@ -64,7 +68,7 @@ fun PlaylistsScreen(
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         )
     }
-    
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -122,6 +126,16 @@ fun PlaylistsScreen(
 
             val isDark = isSystemInDarkTheme()
 
+            if (playlistsFirstLoad) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(6) { PlaylistCardSkeleton() }
+                }
+            } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -199,6 +213,7 @@ fun PlaylistsScreen(
                     }
                 }
             }
+            } // end else (not first load)
         } else {
             // Detailed playlist View
             val plist = selectedPlaylist!!
@@ -215,7 +230,7 @@ fun PlaylistsScreen(
                     Text(text = plist.title, style = MaterialTheme.typography.titleLarge)
                     Text(text = plist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                 }
-                
+
                 // Show delete button only if user created it!
                 if (plist.isUserCreated) {
                     IconButton(onClick = {
