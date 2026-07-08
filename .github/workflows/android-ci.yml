@@ -1,0 +1,55 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main", "develop" , "CI-CD"]
+  pull_request:
+    branches: [ "main", "develop" , "CI-CD"]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      # This action automatically caches Gradle dependencies and build outputs to speed up run times
+
+    # Since local.properties is ignored by Git, regenerate it dynamically
+    # so the secrets-gradle-plugin can inject these values into your build
+    - name: Inject Secrets into local.properties
+      run: |
+        echo "supabase.url=${{ secrets.SUPABASE_URL }}" >> local.properties
+        echo "supabase.anon.key=${{ secrets.SUPABASE_ANON_KEY }}" >> local.properties
+        # Add other custom keys if defined in your build scripts
+
+    # - name: Run Lint
+    #   run: ./gradlew lintDebug
+
+    - name: Run Unit Tests
+      run: ./gradlew testDebugUnitTest
+
+    # Roborazzi is a JVM-based screenshot test runner. 
+    # If you have configured screenshot comparison, you can run this task:
+    - name: Verify Roborazzi Screenshots
+      run: ./gradlew verifyRoborazziDebug
+      continue-on-error: true # Prevents pipeline failure if you are still setting up baseline images
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+
+    - name: Upload Debug APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk

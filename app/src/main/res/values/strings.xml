@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sepatify</string>
+    <string name="tagline">Music Streaming and Social Network</string>
+
+    <!-- Navigation Bar Labels -->
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_playlists">Playlists</string>
+    <string name="nav_downloads">Downloads</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Auth Screen -->
+    <string name="login">Log In</string>
+    <string name="register">Register</string>
+    <string name="email_hint">Email Address</string>
+    <string name="password_hint">Password</string>
+    <string name="display_name_hint">Display Name</string>
+    <string name="dont_have_account">Don\'t have an account? Sign up</string>
+    <string name="already_have_account">Already registered? Log in</string>
+    <string name="auth_error">Authentication Error</string>
+
+    <!-- Home Tab -->
+    <string name="home_title">Home Feed</string>
+    <string name="daily_recommendations">Daily Recommendations</string>
+    <string name="trending_songs">Trending Songs</string>
+    <string name="new_releases">New Releases</string>
+    <string name="most_popular">Most Popular</string>
+    <string name="quick_liked">Liked Songs</string>
+    <string name="quick_recent">Recently Played</string>
+    <string name="quick_playlists">My Playlists</string>
+    <string name="quick_artists">Top Artists</string>
+    <string name="local_playlists">Local Playlists</string>
+    <string name="global_playlists">Global Playlists</string>
+
+    <!-- Search Tab -->
+    <string name="search_hint">Search songs, artists, or keywords…</string>
+    <string name="filter_all">All</string>
+    <string name="filter_songs">Songs</string>
+    <string name="filter_artists">Artists</string>
+    <string name="search_history">Search History</string>
+    <string name="no_search_history">Search history is empty</string>
+    <string name="clear_history">Clear All</string>
+    <string name="no_results">No results found</string>
+    <string name="downloads_empty_title">No offline audio files</string>
+    <string name="downloads_empty_subtitle">Go to the player page to download and play music without internet connection.</string>
+    <string name="empty_search_subtitle">Try a different term or clear filters.</string>
+    <string name="liked_empty_title">No favorite songs yet</string>
+    <string name="liked_empty_subtitle">Like some songs to see them appear here.</string>
+    <string name="recent_empty_title">No recent playback history</string>
+    <string name="recent_empty_subtitle">Play a song to see it here for quick playback.</string>
+    <string name="followed_users_title">Following Friends &amp; Artists</string>
+    <string name="followed_users_empty_title">No connections yet</string>
+    <string name="followed_users_empty_subtitle">Search in social section to find followable people.</string>
+    <string name="unfollow">Unfollow</string>
+
+    <!-- Downloads Tab -->
+    <string name="downloads_title">Offline Downloads</string>
+    <string name="no_downloads">No songs downloaded yet. You need a premium membership to save songs offline.</string>
+    <string name="sort_by_title">Sort by Title</string>
+    <string name="sort_by_artist">Sort by Artist</string>
+    <string name="sort_by_date">Sort by Date</string>
+    <string name="downloaded_badge">Downloaded</string>
+    <string name="swipe_to_delete_hint">Swipe left or right to delete song from cache.</string>
+    <string name="downloading">Downloading…</string>
+
+    <!-- Playlists Tab -->
+    <string name="playlists_title">Playlists Center</string>
+    <string name="create_playlist">Create New Playlist</string>
+    <string name="playlist_name_hint">Playlist Name</string>
+    <string name="playlist_desc_hint">Description</string>
+    <string name="add_to_playlist">Add Song to Playlist</string>
+    <string name="remove_from_playlist">Remove from Playlist</string>
+    <string name="user_playlists_category">My Custom Playlists</string>
+    <string name="international_music_category">International Music</string>
+    <string name="local_music_category">Local Music</string>
+    <string name="playlist_created_success">Playlist created successfully</string>
+
+    <!-- Chat / Social Tab -->
+    <string name="chat_title">Social Chats</string>
+    <string name="search_users_hint">Search users to chat or follow…</string>
+    <string name="follow">Follow</string>
+    <string name="following">Following</string>
+    <string name="followers_count">Followers: %1$d</string>
+    <string name="typing">Typing…</string>
+    <string name="message_hint">Message…</string>
+    <string name="shared_song_card_title">Shared Song</string>
+    <string name="play_now">Play Now</string>
+    <string name="message_sending">Sending</string>
+    <string name="message_delivered">Delivered</string>
+    <string name="message_read">Read</string>
+    <string name="no_chat_messages">No messages. Start a real-time, live conversation!</string>
+
+    <!-- Profile Tab -->
+    <string name="profile_title">My Profile</string>
+    <string name="logout">Log Out</string>
+    <string name="premium_user_badge">Premium Golden Member</string>
+    <string name="regular_user_badge">Free Membership</string>
+    <string name="upgrade_to_premium">Simulate Premium Upgrade</string>
+    <string name="premium_unlocked_dialog">Congratulations! Premium golden features unlocked. You can now download songs offline.</string>
+    <string name="language_settings">App Language</string>
+    <string name="theme_settings">App Theme</string>
+    <string name="font_size_settings">Font Size</string>
+    <string name="english_lang">English (en)</string>
+    <string name="persian_lang">Persian (fa)</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
+    <string name="edit_profile_display_name">Edit Display Name</string>
+    <string name="save_changes">Save Changes</string>
+
+    <!-- Audio Player Now Playing -->
+    <string name="now_playing_title">Now Playing</string>
+    <string name="speed_rate">Speed: %1$.1fx</string>
+    <string name="sleep_timer">Sleep Timer</string>
+    <string name="sleep_timer_off">Sleep Timer Off</string>
+    <string name="sleep_timer_minutes_val">%1$d minutes</string>
+    <string name="sleep_timer_set">Sleep timer set to %1$d minutes</string>
+    <string name="sleep_timer_inactive">Music playback will automatically stop after the timer ends.</string>
+
+    <!-- Downloads / Premium gating -->
+    <string name="download_song">Download for offline playback</string>
+    <string name="upgrade_required_title">Premium Required</string>
+    <string name="download_requires_premium">Downloading songs for offline playback is exclusive to premium users. Upgrade your account.</string>
+    <string name="ok_label">OK</string>
+    <string name="no_lyrics_found">No lyrics found</string>
+    <string name="no_track_active">No track is active currently</string>
+    <string name="drawer_account_section">Account</string>
+    <string name="drawer_settings_section">Settings</string>
+    <string name="drawer_account_details">Account Details</string>
+    <string name="drawer_privacy_social">Privacy &amp; Social</string>
+    <string name="drawer_notifications">Notifications</string>
+    <string name="drawer_equalizer_audio">Equalizer &amp; Audio Effects</string>
+    <string name="drawer_view_profile">View and Edit Profile</string>
+    <string name="drawer_guest_user">Guest User</string>
+    <string name="privacy_social_settings_title">Privacy &amp; Social Settings</string>
+    <string name="privacy_share_activity">Share Listening Activity</string>
+    <string name="privacy_share_activity_desc">Allow your followers to see what song you are playing.</string>
+    <string name="privacy_private_session">Private Session</string>
+    <string name="privacy_private_session_desc">Temporarily hide your listening activity from followers.</string>
+    <string name="privacy_profile_search">Show Profile in Search</string>
+    <string name="privacy_profile_search_desc">Anyone can find your profile in search.</string>
+    <string name="notification_new_music">New Music Notifications</string>
+    <string name="notification_new_music_desc">Get notified when artists you follow release new music.</string>
+    <string name="notification_social">Social Message Alerts</string>
+    <string name="notification_social_desc">Receive instant alerts for incoming chat messages.</string>
+    <string name="notification_promo">Promo News &amp; Offers</string>
+    <string name="notification_promo_desc">Stay updated on special releases and discounts.</string>
+    <string name="matching_users_title">Matching Users</string>
+    <string name="conversations_title">Conversations</string>
+    <string name="empty_conversations_title">No conversations yet</string>
+    <string name="empty_conversations_message">Follow some people to start live conversations.</string>
+    <string name="chat_thread_hint">Tap to open conversation thread</string>
+    <string name="chat_active_status">Active</string>
+</resources>
