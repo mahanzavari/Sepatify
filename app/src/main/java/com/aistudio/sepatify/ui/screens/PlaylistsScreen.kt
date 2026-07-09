@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -137,26 +138,26 @@ fun PlaylistsScreen(
         ) { isDetail ->
             if (!isDetail) {
                 // Main lists overview
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = locString(R.string.playlists_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Button(
-                        onClick = { showCreateDialog = true },
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Create playlist")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = locString(R.string.create_playlist), style = MaterialTheme.typography.labelSmall)
-                    }
-                }
+//                Row(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    horizontalArrangement = Arrangement.SpaceBetween,
+//                    verticalAlignment = Alignment.CenterVertically
+//                ) {
+//                    Text(
+//                        text = locString(R.string.playlists_title),
+//                        style = MaterialTheme.typography.titleLarge,
+//                        color = MaterialTheme.colorScheme.onBackground
+//                    )
+//                    Button(
+//                        onClick = { showCreateDialog = true },
+//                        shape = RoundedCornerShape(20.dp),
+//                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+//                    ) {
+//                        Icon(Icons.Default.Add, contentDescription = "Create playlist")
+//                        Spacer(modifier = Modifier.width(4.dp))
+//                        Text(text = locString(R.string.create_playlist), style = MaterialTheme.typography.labelSmall)
+//                    }
+//                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -228,8 +229,13 @@ fun PlaylistsScreen(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(100.dp))
-                                            .background(iconColor.copy(alpha = 0.35f))
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                            .background(textColor.copy(alpha = 0.24f))
+                                            .border(
+                                                width = 1.dp,
+                                                color = textColor.copy(alpha = 0.32f),
+                                                shape = RoundedCornerShape(100.dp)
+                                            )
+                                            .padding(horizontal = 10.dp, vertical = 5.dp)
                                     ) {
                                         Text(
                                             text = plt.category.uppercase(),
@@ -238,6 +244,7 @@ fun PlaylistsScreen(
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
+                                    Spacer(modifier = Modifier.height(10.dp))
                                     Column {
                                         Text(
                                             text = plt.title,
