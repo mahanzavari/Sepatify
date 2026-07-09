@@ -17,10 +17,15 @@ val localProperties = Properties().apply {
     localPropertiesFile.inputStream().use { load(it) }
   }
 }
+
+// Support both UPPERCASE_UNDERSCORE and lowercase.dot formats defensively
 val supabaseUrl: String = (localProperties.getProperty("SUPABASE_URL")
+  ?: localProperties.getProperty("supabase.url")
   ?: System.getenv("SUPABASE_URL")
   ?: "https://uppyfwrazoaciylsdynh.supabase.co")
+
 val supabaseAnonKey: String = (localProperties.getProperty("SUPABASE_ANON_KEY")
+  ?: localProperties.getProperty("supabase.anon.key")
   ?: System.getenv("SUPABASE_ANON_KEY")
   ?: "")
 

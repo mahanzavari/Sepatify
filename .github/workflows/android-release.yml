@@ -29,8 +29,8 @@ jobs:
       # Since local.properties is ignored by Git, regenerate it dynamically
       - name: Inject Production Secrets
         run: |
-          echo "supabase.url=${{ secrets.SUPABASE_URL }}" >> local.properties
-          echo "supabase.anon.key=${{ secrets.SUPABASE_ANON_KEY }}" >> local.properties
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> local.properties
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> local.properties
 
       # Reconstruct the Android Keystore in the root of the project
       - name: Decrypt Android Keystore
