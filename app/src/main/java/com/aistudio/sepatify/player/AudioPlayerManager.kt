@@ -1,9 +1,6 @@
 package com.aistudio.sepatify.player
-import com.aistudio.sepatify.service.PlaybackService
 
-import android.content.Intent
-import android.app.PendingIntent
-import com.aistudio.sepatify.MainActivity
+import android.content.ComponentName
 import android.content.Context
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
@@ -12,6 +9,7 @@ import android.media.audiofx.Virtualizer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -28,16 +26,13 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import androidx.core.content.ContextCompat
-import android.content.ComponentName
-import androidx.media3.session.MediaSession
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.service.PlaybackService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.util.concurrent.CopyOnWriteArrayList
 
 class AudioPlayerManager(private val context: Context) {
 
@@ -60,15 +55,16 @@ class AudioPlayerManager(private val context: Context) {
 
     val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
         .setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory))
+        // Audio Focus (FR): ExoPlayer will automatically pause/duck when it loses audio focus
+        // (e.g. phone calls, other apps' voice notes) and resume once focus is regained.
         .setAudioAttributes(
             AudioAttributes.Builder()
                 .setUsage(C.USAGE_MEDIA)
                 .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                 .build(),
-            true
+            /* handleAudioFocus = */ true
         )
         .build()
-    // private var mediaSession: MediaSession? = null
 
     // Audio Effects
     private var equalizer: Equalizer? = null
@@ -132,17 +128,25 @@ class AudioPlayerManager(private val context: Context) {
     private var progressJob: Job? = null
     private var crossfadeJob: Job? = null
     private val handler = Handler(Looper.getMainLooper())
+
     init {
-        // Connect to PlaybackService to ensure it's started and OS media controls are active.
+        // Connect to PlaybackService to ensure it's started and OS media controls (notification) are active.
         try {
             val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
             val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-            controllerFuture.addListener({}, ContextCompat.getMainExecutor(context))
+            
+            controllerFuture.addListener(
+                { 
+                    // Controller connected. 
+                    // Keeping this connection alive binds the service and creates the system notification.
+                }, 
+                ContextCompat.getMainExecutor(context)
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-            exoPlayer.addListener(object : Player.Listener {
+        exoPlayer.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _isPlaying.value = isPlaying
                 if (isPlaying) {
@@ -164,6 +168,49 @@ class AudioPlayerManager(private val context: Context) {
                     triggerCrossfadeIn()
                 } else {
                     exoPlayer.volume = 1.0f
+                }
+
+                // --- FAST ON-DEMAND ARTWORK EXTRACTION ---
+                // FIX: Check that mediaItem is not null before accessing mediaMetadata
+                if (matchedSong != null && mediaItem != null && mediaItem.mediaMetadata.artworkData == null) {
+                    val isLocal = matchedSong.id.startsWith("local_") || 
+                                  matchedSong.audioUrl.startsWith("/") || 
+                                  matchedSong.audioUrl.startsWith("file://")
+                    
+                    if (isLocal) {
+                        applicationScope.launch(Dispatchers.IO) {
+                            try {
+                                val retriever = android.media.MediaMetadataRetriever()
+                                val path = matchedSong.audioUrl.removePrefix("file://")
+                                retriever.setDataSource(path)
+                                val artworkData = retriever.embeddedPicture
+                                retriever.release()
+
+                                if (artworkData != null) {
+                                    withContext(Dispatchers.Main) {
+                                        // Ensure the player is still playing this exact track
+                                        val currentIndex = exoPlayer.currentMediaItemIndex
+                                        val currentItem = exoPlayer.currentMediaItem
+                                        
+                                        if (currentItem != null && currentItem.mediaId == songId) {
+                                            val newMetadata = currentItem.mediaMetadata.buildUpon()
+                                                .setArtworkData(artworkData, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                                                .build()
+                                                
+                                            val newItem = currentItem.buildUpon()
+                                                .setMediaMetadata(newMetadata)
+                                                .build()
+                                                
+                                            // Seamlessly updates the item; OS catches this instantly for the notification
+                                            exoPlayer.replaceMediaItem(currentIndex, newItem)
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
                 }
             }
 
@@ -200,12 +247,9 @@ class AudioPlayerManager(private val context: Context) {
         })
     }
 
-
-fun setPlaylist(songs: List<Song>) {
+    fun setPlaylist(songs: List<Song>) {
         _playlist.value = songs
-        
-        // Fast initial mapping
-        val initialMediaItems = songs.map { song ->
+        val mediaItems = songs.map { song ->
             MediaItem.Builder()
                 .setMediaId(song.id)
                 .setUri(Uri.parse(song.audioUrl))
@@ -218,47 +262,8 @@ fun setPlaylist(songs: List<Song>) {
                 )
                 .build()
         }
-        
-        exoPlayer.setMediaItems(initialMediaItems)
+        exoPlayer.setMediaItems(mediaItems)
         exoPlayer.prepare()
-
-        // Async background update to extract real local MP3 cover art for the notification
-        applicationScope.launch(Dispatchers.IO) {
-            val updatedItems = songs.mapIndexed { index, song ->
-                val isLocal = song.id.startsWith("local_") || song.audioUrl.startsWith("/") || song.audioUrl.startsWith("file://")
-                if (isLocal) {
-                    try {
-                        val retriever = android.media.MediaMetadataRetriever()
-                        val path = song.audioUrl.removePrefix("file://")
-                        retriever.setDataSource(path)
-                        val artworkData = retriever.embeddedPicture
-                        retriever.release()
-
-                        if (artworkData != null) {
-                            // Apply the actual byte array data to the MediaItem for the System Notification
-                            val newMetadata = initialMediaItems[index].mediaMetadata.buildUpon()
-                                .setArtworkData(artworkData, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
-                                .build()
-                            return@mapIndexed initialMediaItems[index].buildUpon()
-                                .setMediaMetadata(newMetadata)
-                                .build()
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-                initialMediaItems[index]
-            }
-
-            withContext(Dispatchers.Main) {
-                // Seamlessly update metadata without interrupting playback
-                if (_playlist.value == songs) {
-                    for (i in updatedItems.indices) {
-                        exoPlayer.replaceMediaItem(i, updatedItems[i])
-                    }
-                }
-            }
-        }
     }
 
     fun playSong(song: Song, customQueue: List<Song> = emptyList()) {
