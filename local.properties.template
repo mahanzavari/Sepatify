@@ -3,5 +3,5 @@ sdk.dir=/home/mahan/Android/Sdk
 
 # Supabase project credentials (see https://app.supabase.com -> Project Settings -> API).
 
-SUPABASE_URL=supabase_project_url_here
-SUPABASE_ANON_KEY=supabase_anon_key_here
+SUPABASE_URL=supabase_project_url
+SUPABASE_ANON_KEY=supabase_anon_key

@@ -37,8 +37,9 @@ class PreferencesManager(private val context: Context) {
         preferences[PREMIUM_KEY] ?: false
     }
 
-    val emailFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[USER_EMAIL_KEY] ?: ""
+    // CHANGED: Now returns String? (null) if key is not present, instead of falling back to ""
+    val emailFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[USER_EMAIL_KEY]
     }
 
     val displayNameFlow: Flow<String> = context.dataStore.data.map { preferences ->

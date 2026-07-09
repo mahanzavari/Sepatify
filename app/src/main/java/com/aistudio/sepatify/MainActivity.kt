@@ -115,12 +115,13 @@ class MainActivity : ComponentActivity() {
                         localizedContext.resources.getString(resId)
                     }
 
-                    if (userEmail == null) {
-                        // User not logged in, show Auth Screen
+                    // FIX: Enforce null/blank checks to prevent silent guest bypass
+                    if (userEmail.isNullOrBlank()) {
+                        // User not logged in, show Auth Screen backed by Supabase
                         LoginScreen(
                             authViewModel = authViewModel,
                             onAuthSuccess = { email, name ->
-                                // Navigation triggers login callback
+                                // Auth success callback is monitored inside LoginScreen
                             },
                             locString = locString
                         )
