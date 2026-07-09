@@ -133,6 +133,8 @@
     <string name="drawer_equalizer_audio">اکولایزر و افکت صوتی</string>
     <string name="drawer_view_profile">مشاهده و ویرایش پروفایل</string>
     <string name="drawer_guest_user">کاربر مهمان</string>
+    <string name="user_avatar_content_description">آواتار کاربر</string>
+    <string name="notification_settings_title">تنظیمات اعلان</string>
     <string name="privacy_social_settings_title">تنظیمات حریم خصوصی و اجتماعی</string>
     <string name="privacy_share_activity">به اشتراک‌گذاری فعالیت پخش</string>
     <string name="privacy_share_activity_desc">مخاطبان شما بتوانند ببینند چه آهنگی پخش می‌کنید.</string>

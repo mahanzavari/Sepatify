@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import com.aistudio.sepatify.ui.components.EqualizerDialog
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -42,6 +43,23 @@ import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
+
+private const val TAB_HOME = "home"
+private const val TAB_SEARCH = "search"
+private const val TAB_PLAYLISTS = "playlists"
+private const val TAB_DOWNLOADS = "downloads"
+private const val TAB_CHAT = "chat"
+private const val TAB_PROFILE = "profile"
+private const val TAB_LIKED = "liked"
+private const val TAB_RECENT = "recent"
+private const val TAB_FOLLOWED = "followed"
+
+private data class BottomNavItem(
+    val tabKey: String,
+    val titleResId: Int,
+    val icon: ImageVector,
+    val testTag: String
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -144,7 +162,7 @@ fun AppMainHub(
     isPremium: Boolean,
     locString: (Int) -> String
 ) {
-    var activeTab by remember { mutableStateOf("home") } // "home", "search", "playlists", "downloads", "chat", "profile", "liked", "recent", "followed"
+    var activeTab by remember { mutableStateOf(TAB_HOME) }
     var showNowPlayingOverlay by remember { mutableStateOf(false) }
 
     val currentSong by sharedAudioViewModel.currentSong.collectAsState()
@@ -173,15 +191,24 @@ fun AppMainHub(
         null
     }
 
+    val bottomNavItems = listOf(
+        BottomNavItem(TAB_HOME, R.string.nav_home, Icons.Default.Home, "nav_home"),
+        BottomNavItem(TAB_SEARCH, R.string.nav_search, Icons.Default.Search, "nav_search"),
+        BottomNavItem(TAB_PLAYLISTS, R.string.nav_playlists, Icons.Default.LibraryMusic, "nav_playlists"),
+        BottomNavItem(TAB_DOWNLOADS, R.string.nav_downloads, Icons.Default.Download, "nav_downloads"),
+        BottomNavItem(TAB_CHAT, R.string.nav_chat, Icons.Default.Chat, "nav_chat"),
+        BottomNavItem(TAB_PROFILE, R.string.nav_profile, Icons.Default.Person, "nav_profile")
+    )
+
     androidx.activity.compose.BackHandler(
-        enabled = showNowPlayingOverlay || activeTab != "home" || isPlaying || (activeTab == "chat" && activeChatUser != null)
+        enabled = showNowPlayingOverlay || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
     ) {
         if (showNowPlayingOverlay) {
             showNowPlayingOverlay = false
-        } else if (activeTab == "chat" && activeChatUser != null) {
+        } else if (activeTab == TAB_CHAT && activeChatUser != null) {
             activeChatUser = null
-        } else if (activeTab != "home") {
-            activeTab = "home"
+        } else if (activeTab != TAB_HOME) {
+            activeTab = TAB_HOME
         } else if (isPlaying) {
             activity?.moveTaskToBack(true)
         }
@@ -224,7 +251,7 @@ fun AppMainHub(
                         modifier = Modifier.size(32.dp)
                     )
                     Text(
-                        text = "Sepatify",
+                        text = locString(R.string.app_name),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -261,7 +288,7 @@ fun AppMainHub(
                                 if (avatarUrl.isNotEmpty()) {
                                     AsyncImage(
                                         model = avatarUrl,
-                                        contentDescription = "User Avatar",
+                                        contentDescription = locString(R.string.user_avatar_content_description),
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 } else {
@@ -282,17 +309,17 @@ fun AppMainHub(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "View & Edit Profile",
+                                    text = locString(R.string.drawer_view_profile),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     },
-                    selected = activeTab == "profile",
+                    selected = activeTab == TAB_PROFILE,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        activeTab = "profile"
+                        activeTab = TAB_PROFILE
                     },
                     modifier = Modifier.padding(horizontal = 12.dp),
                     colors = NavigationDrawerItemDefaults.colors(
@@ -317,10 +344,10 @@ fun AppMainHub(
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Person, contentDescription = null) },
                     label = { Text(locString(R.string.drawer_account_details)) },
-                    selected = activeTab == "profile",
+                    selected = activeTab == TAB_PROFILE,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        activeTab = "profile"
+                        activeTab = TAB_PROFILE
                     },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
@@ -378,7 +405,7 @@ fun AppMainHub(
                 bottomBar = {
                     if (!showNowPlayingOverlay) {
                         val isKeyboardVisible = WindowInsets.isImeVisible
-                        val showNavigationBar = !isKeyboardVisible && !(activeTab == "chat" && activeChatUser != null)
+                        val showNavigationBar = !isKeyboardVisible && !(activeTab == TAB_CHAT && activeChatUser != null)
 
                         Column(
                             modifier = Modifier
@@ -430,96 +457,23 @@ fun AppMainHub(
                                     containerColor = Color.Transparent,
                                     tonalElevation = 0.dp
                                 ) {
-                                    NavigationBarItem(
-                                        selected = (activeTab == "home"),
-                                        onClick = { activeTab = "home" },
-                                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                                        colors = navBarItemColors,
-                                        label = {
-                                            Text(
-                                                text = locString(R.string.nav_home),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        },
-                                        modifier = Modifier.testTag("nav_home")
-                                    )
-                                    NavigationBarItem(
-                                        selected = (activeTab == "search"),
-                                        onClick = { activeTab = "search" },
-                                        icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                                        colors = navBarItemColors,
-                                        label = {
-                                            Text(
-                                                text = locString(R.string.nav_search),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        },
-                                        modifier = Modifier.testTag("nav_search")
-                                    )
-                                    NavigationBarItem(
-                                        selected = (activeTab == "playlists"),
-                                        onClick = { activeTab = "playlists" },
-                                        icon = { Icon(Icons.Default.LibraryMusic, contentDescription = "Playlists") },
-                                        colors = navBarItemColors,
-                                        label = {
-                                            Text(
-                                                text = locString(R.string.nav_playlists),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        },
-                                        modifier = Modifier.testTag("nav_playlists")
-                                    )
-                                    NavigationBarItem(
-                                        selected = (activeTab == "downloads"),
-                                        onClick = { activeTab = "downloads" },
-                                        icon = { Icon(Icons.Default.Download, contentDescription = "Downloads") },
-                                        colors = navBarItemColors,
-                                        label = {
-                                            Text(
-                                                text = locString(R.string.nav_downloads),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        },
-                                        modifier = Modifier.testTag("nav_downloads")
-                                    )
-                                    NavigationBarItem(
-                                        selected = (activeTab == "chat"),
-                                        onClick = { activeTab = "chat" },
-                                        icon = { Icon(Icons.Default.Chat, contentDescription = "Social") },
-                                        colors = navBarItemColors,
-                                        label = {
-                                            Text(
-                                                text = locString(R.string.nav_chat),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        },
-                                        modifier = Modifier.testTag("nav_chat")
-                                    )
-                                    NavigationBarItem(
-                                        selected = (activeTab == "profile"),
-                                        onClick = { activeTab = "profile" },
-                                        icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                                        colors = navBarItemColors,
-                                        label = {
-                                            Text(
-                                                text = locString(R.string.nav_profile),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        },
-                                        modifier = Modifier.testTag("nav_profile")
-                                    )
+                                    bottomNavItems.forEach { item ->
+                                        NavigationBarItem(
+                                            selected = (activeTab == item.tabKey),
+                                            onClick = { activeTab = item.tabKey },
+                                            icon = { Icon(item.icon, contentDescription = locString(item.titleResId)) },
+                                            colors = navBarItemColors,
+                                            label = {
+                                                Text(
+                                                    text = locString(item.titleResId),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            },
+                                            modifier = Modifier.testTag(item.testTag)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -537,23 +491,23 @@ fun AppMainHub(
                         )
                 ) {
                     when (activeTab) {
-                        "home" -> HomeScreen(
+                        TAB_HOME -> HomeScreen(
                             homeViewModel = homeViewModel,
                             onSongSelect = { song, queue ->
                                 sharedAudioViewModel.playSong(song, queue)
                             },
                             onQuickActionClick = { action ->
                                 when (action) {
-                                    "liked" -> activeTab = "liked"
-                                    "recent" -> activeTab = "recent"
-                                    "playlists" -> activeTab = "playlists"
-                                    "artists" -> activeTab = "followed"
+                                    "liked" -> activeTab = TAB_LIKED
+                                    "recent" -> activeTab = TAB_RECENT
+                                    "playlists" -> activeTab = TAB_PLAYLISTS
+                                    "artists" -> activeTab = TAB_FOLLOWED
                                 }
                             },
                             locString = locString
                         )
 
-                        "search" -> SearchScreen(
+                        TAB_SEARCH -> SearchScreen(
                             searchViewModel = searchViewModel,
                             onSongSelect = { song, queue ->
                                 sharedAudioViewModel.playSong(song, queue)
@@ -561,7 +515,7 @@ fun AppMainHub(
                             locString = locString
                         )
 
-                        "playlists" -> PlaylistsScreen(
+                        TAB_PLAYLISTS -> PlaylistsScreen(
                             playlistViewModel = playlistViewModel,
                             onSongSelect = { song, queue ->
                                 sharedAudioViewModel.playSong(song, queue)
@@ -569,36 +523,36 @@ fun AppMainHub(
                             locString = locString
                         )
 
-                        "liked" -> LikedSongsScreen(
-                            playlistViewModel = playlistViewModel,
-                            sharedAudioViewModel = sharedAudioViewModel,
-                            onBackClick = { activeTab = "home" },
-                            onSongSelect = { song, queue ->
-                                sharedAudioViewModel.playSong(song, queue)
-                            },
-                            locString = locString
-                        )
-
-                        "recent" -> RecentlyPlayedScreen(
+                        TAB_LIKED -> LikedSongsScreen(
                             playlistViewModel = playlistViewModel,
                             sharedAudioViewModel = sharedAudioViewModel,
-                            onBackClick = { activeTab = "home" },
+                            onBackClick = { activeTab = TAB_HOME },
                             onSongSelect = { song, queue ->
                                 sharedAudioViewModel.playSong(song, queue)
                             },
                             locString = locString
                         )
 
-                        "followed" -> FollowedUsersScreen(
+                        TAB_RECENT -> RecentlyPlayedScreen(
+                            playlistViewModel = playlistViewModel,
+                            sharedAudioViewModel = sharedAudioViewModel,
+                            onBackClick = { activeTab = TAB_HOME },
+                            onSongSelect = { song, queue ->
+                                sharedAudioViewModel.playSong(song, queue)
+                            },
+                            locString = locString
+                        )
+
+                        TAB_FOLLOWED -> FollowedUsersScreen(
                             chatViewModel = chatViewModel,
                             locString = locString,
                             onUserClick = { user ->
                                 activeChatUser = user
-                                activeTab = "chat"
+                                activeTab = TAB_CHAT
                             }
                         )
 
-                        "downloads" -> DownloadsScreen(
+                        TAB_DOWNLOADS -> DownloadsScreen(
                             downloadViewModel = downloadViewModel,
                             isPremium = isPremium,
                             onSongSelect = { song, queue ->
@@ -607,7 +561,7 @@ fun AppMainHub(
                             locString = locString
                         )
 
-                        "chat" -> ChatsScreen(
+                        TAB_CHAT -> ChatsScreen(
                             chatViewModel = chatViewModel,
                             activeChatUser = activeChatUser,
                             onActiveChatUserChange = { activeChatUser = it },
@@ -617,7 +571,7 @@ fun AppMainHub(
                             locString = locString
                         )
 
-                        "profile" -> ProfileScreen(
+                        TAB_PROFILE -> ProfileScreen(
                             mainViewModel = mainViewModel,
                             locString = locString
                         )
@@ -764,7 +718,7 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Notification Settings", style = MaterialTheme.typography.titleLarge) },
+        title = { Text(locString(R.string.notification_settings_title), style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
