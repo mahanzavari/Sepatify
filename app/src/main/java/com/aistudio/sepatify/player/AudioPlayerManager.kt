@@ -242,6 +242,18 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
+    fun stopPlayback() {
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+        exoPlayer.playWhenReady = false
+        _currentSong.value = null
+        _isPlaying.value = false
+        _progress.value = 0L
+        _duration.value = 0L
+        _playlist.value = emptyList()
+        stopProgressTracker()
+    }
+
     fun playNext() {
         if (exoPlayer.hasNextMediaItem()) {
             exoPlayer.seekToNextMediaItem()

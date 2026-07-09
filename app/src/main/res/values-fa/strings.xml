@@ -134,6 +134,8 @@
     <string name="drawer_view_profile">مشاهده و ویرایش پروفایل</string>
     <string name="drawer_guest_user">کاربر مهمان</string>
     <string name="user_avatar_content_description">آواتار کاربر</string>
+    <string name="play_pause">پخش یا مکث</string>
+    <string name="dismiss_mini_player">بستن پخش‌کننده کوچک</string>
     <string name="notification_settings_title">تنظیمات اعلان</string>
     <string name="privacy_social_settings_title">تنظیمات حریم خصوصی و اجتماعی</string>
     <string name="privacy_share_activity">به اشتراک‌گذاری فعالیت پخش</string>

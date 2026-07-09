@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.aistudio.sepatify.R
@@ -324,13 +328,46 @@ fun MiniPlayer(
     duration: Long,
     onPlayPauseClick: () -> Unit,
     onPlayerBarClick: () -> Unit,
+    onDismiss: () -> Unit,
     coverModifier: Modifier = Modifier
 ) {
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = dragOffsetX,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "miniPlayerOffset"
+    )
+    val density = LocalDensity.current
+    val dismissThresholdPx = with(density) { 140.dp.toPx() }
+
+    LaunchedEffect(currentSong.id) {
+        dragOffsetX = 0f
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clickable { onPlayerBarClick() },
+            .offset(x = with(density) { animatedOffsetX.toDp() })
+            .pointerInput(currentSong.id) {
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        dragOffsetX = (dragOffsetX + dragAmount).coerceIn(-500f, 500f)
+                    },
+                    onDragEnd = {
+                        if (kotlin.math.abs(dragOffsetX) > dismissThresholdPx) {
+                            onDismiss()
+                        } else {
+                            dragOffsetX = 0f
+                        }
+                    }
+                )
+            }
+            .clickable {
+                if (kotlin.math.abs(dragOffsetX) < 8f) {
+                    onPlayerBarClick()
+                }
+            },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
@@ -373,12 +410,21 @@ fun MiniPlayer(
                         )
                     }
                 }
-                IconButton(onClick = onPlayPauseClick) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "PlayPause",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onPlayPauseClick) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = stringResource(R.string.play_pause),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.dismiss_mini_player),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             // Linear progress line

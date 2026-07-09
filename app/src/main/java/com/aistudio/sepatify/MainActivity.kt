@@ -164,6 +164,7 @@ fun AppMainHub(
 ) {
     var activeTab by remember { mutableStateOf(TAB_HOME) }
     var showNowPlayingOverlay by remember { mutableStateOf(false) }
+    var showMiniPlayer by remember { mutableStateOf(false) }
 
     val currentSong by sharedAudioViewModel.currentSong.collectAsState()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsState()
@@ -172,6 +173,12 @@ fun AppMainHub(
 
     val displayName by mainViewModel.userDisplayName.collectAsState()
     val avatarUrl by mainViewModel.userAvatar.collectAsState()
+
+    LaunchedEffect(currentSong?.id) {
+        if (currentSong != null) {
+            showMiniPlayer = true
+        }
+    }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -430,7 +437,7 @@ fun AppMainHub(
 
                             // Mini-player — the coverModifier is supplied by the
                             // SharedTransitionLayout wrapper below this composable.
-                            if (currentSong != null) {
+                            if (currentSong != null && showMiniPlayer) {
                                 MiniPlayer(
                                     currentSong = currentSong!!,
                                     isPlaying = isPlaying,
@@ -438,6 +445,10 @@ fun AppMainHub(
                                     duration = duration,
                                     onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
                                     onPlayerBarClick = { showNowPlayingOverlay = true },
+                                    onDismiss = {
+                                        sharedAudioViewModel.stopPlayback()
+                                        showMiniPlayer = false
+                                    },
                                     coverModifier = Modifier
                                 )
                             }
