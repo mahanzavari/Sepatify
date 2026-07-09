@@ -30,6 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
@@ -265,124 +269,187 @@ fun PlaylistsScreen(
                         }
                     }
                 }
-            } else {
+} else {
                 // Detailed playlist View
                 val plist = selectedPlaylist ?: return@AnimatedContent
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { selectedPlaylist = null }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = plist.title, style = MaterialTheme.typography.titleLarge)
-                        Text(text = plist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-                    }
-
-                    // Show delete button only if user created it!
-                    if (plist.isUserCreated) {
-                        IconButton(onClick = {
-                            playlistViewModel.deletePlaylist(plist.id)
-                            selectedPlaylist = null
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete Playlist", tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (plist.category == "Local" && !hasPermission) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Folder,
-                            contentDescription = "Storage Permission",
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Storage Permission Required",
-                            style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = "Sepatify needs permission to access your device storage so we can read and play your local audio files.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
-                        Button(
-                            onClick = { launcher.launch(permission) },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Text("Grant Permission")
+                        IconButton(onClick = { selectedPlaylist = null }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = plist.title, style = MaterialTheme.typography.titleLarge)
+                            Text(text = plist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                        }
+
+                        // Show delete button only if user created it!
+                        if (plist.isUserCreated) {
+                            IconButton(onClick = {
+                                playlistViewModel.deletePlaylist(plist.id)
+                                selectedPlaylist = null
+                            }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete Playlist", tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
-                } else {
-                    val pagedSongs = remember(plist.id, plist.category) {
-                        playlistViewModel.getSongsForPlaylistPaged(plist.id, plist.category)
-                    }.collectAsLazyPagingItems()
 
-                    if (pagedSongs.itemCount == 0) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().padding(vertical = 32.dp),
-                            contentAlignment = Alignment.Center
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (plist.category == "Local" && !hasPermission) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Icon(Icons.Default.QueueMusic, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
-                                Text(text = locString(R.string.no_results), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-                                Text(text = "Add a few tracks to this playlist and they will appear here.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), textAlign = TextAlign.Center)
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = "Storage Permission",
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Storage Permission Required",
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Sepatify needs permission to access your device storage so we can read and play your local audio files.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center
+                            )
+                            Button(
+                                onClick = { launcher.launch(permission) },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("Grant Permission")
                             }
                         }
                     } else {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            items(pagedSongs.itemCount, key = { index -> pagedSongs[index]?.id ?: index }) { index ->
-                                val s = pagedSongs[index] ?: return@items
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items) }
-                                        .padding(vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    val art = rememberSongArt(s)
-                                    AsyncImage(
-                                        model = art,
-                                        contentDescription = s.title,
-                                        modifier = Modifier
-                                            .size(50.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(text = s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                                        Text(text = s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-                                    }
+                        val pagedSongs = remember(plist.id, plist.category) {
+                            playlistViewModel.getSongsForPlaylistPaged(plist.id, plist.category)
+                        }.collectAsLazyPagingItems()
 
-                                    if (plist.isUserCreated) {
-                                        IconButton(onClick = {
-                                            playlistViewModel.removeSongFromPlaylist(plist.id, s.id)
-                                        }) {
-                                            Icon(Icons.Default.RemoveCircle, contentDescription = "Remove song", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                        if (pagedSongs.itemCount == 0) {
+                            Box(
+                                modifier = Modifier.fillMaxSize().padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Icon(Icons.Default.QueueMusic, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Text(text = locString(R.string.no_results), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                                    Text(text = "Add a few tracks to this playlist and they will appear here.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), textAlign = TextAlign.Center)
+                                }
+                            }
+                        } else {
+                            val listState = rememberLazyListState()
+
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                LazyColumn(
+                                    state = listState,
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(pagedSongs.itemCount, key = { index -> pagedSongs[index]?.id ?: index }) { index ->
+                                        val s = pagedSongs[index] ?: return@items
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items) }
+                                                .padding(vertical = 6.dp)
+                                                .padding(end = 24.dp), // Extra padding to prevent overlap with scrollbar
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            val art = rememberSongArt(s)
+                                            AsyncImage(
+                                                model = art,
+                                                contentDescription = s.title,
+                                                modifier = Modifier
+                                                    .size(50.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(text = s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                                                Text(text = s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                                            }
+
+                                            if (plist.isUserCreated) {
+                                                IconButton(onClick = {
+                                                    playlistViewModel.removeSongFromPlaylist(plist.id, s.id)
+                                                }) {
+                                                    Icon(Icons.Default.RemoveCircle, contentDescription = "Remove song", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Draggable Fast Scrollbar overlay
+                                val coroutineScope = rememberCoroutineScope()
+                                val totalItemsCount = listState.layoutInfo.totalItemsCount
+                                if (totalItemsCount > 0) {
+                                    val visibleItemsCount = listState.layoutInfo.visibleItemsInfo.size
+                                    val firstVisibleItemIndex = listState.firstVisibleItemIndex
+
+                                    val thumbHeightRatio = (visibleItemsCount.toFloat() / totalItemsCount.toFloat()).coerceIn(0.1f, 1f)
+
+                                    if (thumbHeightRatio < 1f) {
+                                        BoxWithConstraints(
+                                            modifier = Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .fillMaxHeight()
+                                                .width(24.dp) // Generous touch target
+                                        ) {
+                                            val trackHeightPx = constraints.maxHeight.toFloat()
+                                            val thumbHeightPx = trackHeightPx * thumbHeightRatio
+                                            val scrollableTrackPx = trackHeightPx - thumbHeightPx
+
+                                            val thumbOffsetYPx = if (totalItemsCount - visibleItemsCount > 0) {
+                                                (firstVisibleItemIndex.toFloat() / (totalItemsCount - visibleItemsCount)) * scrollableTrackPx
+                                            } else 0f
+
+                                            var accumulatedDrag by remember { mutableFloatStateOf(0f) }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .offset { androidx.compose.ui.unit.IntOffset(0, thumbOffsetYPx.toInt()) }
+                                                    .height(with(androidx.compose.ui.platform.LocalDensity.current) { thumbHeightPx.toDp() })
+                                                    .width(6.dp)
+                                                    .clip(RoundedCornerShape(3.dp))
+                                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                                                    .align(Alignment.TopEnd)
+                                                    .pointerInput(Unit) {
+                                                        detectVerticalDragGestures(
+                                                            onDragStart = { accumulatedDrag = thumbOffsetYPx },
+                                                            onVerticalDrag = { change, dragAmount ->
+                                                                change.consume()
+                                                                accumulatedDrag += dragAmount
+                                                                if (scrollableTrackPx > 0) {
+                                                                    val dragProportion = (accumulatedDrag / scrollableTrackPx).coerceIn(0f, 1f)
+                                                                    val targetIndex = (dragProportion * (totalItemsCount - visibleItemsCount)).toInt()
+                                                                    coroutineScope.launch {
+                                                                        listState.scrollToItem(targetIndex)
+                                                                    }
+                                                                }
+                                                            }
+                                                        )
+                                                    }
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
+                } // End Column Wrapper
             }
         }
 
