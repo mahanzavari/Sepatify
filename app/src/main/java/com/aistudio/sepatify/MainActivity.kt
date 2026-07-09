@@ -501,91 +501,118 @@ fun AppMainHub(
                             end = paddingValues.calculateEndPadding(LocalLayoutDirection.current)
                         )
                 ) {
-                    when (activeTab) {
-                        TAB_HOME -> HomeScreen(
-                            homeViewModel = homeViewModel,
-                            onSongSelect = { song, queue ->
-                                sharedAudioViewModel.playSong(song, queue)
-                            },
-                            onQuickActionClick = { action ->
-                                when (action) {
-                                    "liked" -> activeTab = TAB_LIKED
-                                    "recent" -> activeTab = TAB_RECENT
-                                    "playlists" -> activeTab = TAB_PLAYLISTS
-                                    "artists" -> activeTab = TAB_FOLLOWED
+                    AnimatedContent(
+                        targetState = activeTab,
+                        transitionSpec = {
+                            val initialIndex = bottomNavItems.indexOfFirst { it.tabKey == initialState }.takeIf { it >= 0 } ?: 0
+                            val targetIndex = bottomNavItems.indexOfFirst { it.tabKey == targetState }.takeIf { it >= 0 } ?: 0
+                            val direction = if (targetIndex >= initialIndex) 1 else -1
+
+                            (slideInHorizontally(
+                                initialOffsetX = { direction * it / 4 },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) + fadeIn(animationSpec = tween(180)))
+                                .togetherWith(
+                                    slideOutHorizontally(
+                                        targetOffsetX = { -direction * it / 4 },
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        )
+                                    ) + fadeOut(animationSpec = tween(120))
+                                )
+                        },
+                        label = "tabContentAnimation"
+                    ) { tab ->
+                        when (tab) {
+                            TAB_HOME -> HomeScreen(
+                                homeViewModel = homeViewModel,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                onQuickActionClick = { action ->
+                                    when (action) {
+                                        "liked" -> activeTab = TAB_LIKED
+                                        "recent" -> activeTab = TAB_RECENT
+                                        "playlists" -> activeTab = TAB_PLAYLISTS
+                                        "artists" -> activeTab = TAB_FOLLOWED
+                                    }
+                                },
+                                locString = locString
+                            )
+
+                            TAB_SEARCH -> SearchScreen(
+                                searchViewModel = searchViewModel,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_PLAYLISTS -> PlaylistsScreen(
+                                playlistViewModel = playlistViewModel,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_LIKED -> LikedSongsScreen(
+                                playlistViewModel = playlistViewModel,
+                                sharedAudioViewModel = sharedAudioViewModel,
+                                onBackClick = { activeTab = TAB_HOME },
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_RECENT -> RecentlyPlayedScreen(
+                                playlistViewModel = playlistViewModel,
+                                sharedAudioViewModel = sharedAudioViewModel,
+                                onBackClick = { activeTab = TAB_HOME },
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_FOLLOWED -> FollowedUsersScreen(
+                                chatViewModel = chatViewModel,
+                                locString = locString,
+                                onUserClick = { user ->
+                                    activeChatUser = user
+                                    activeTab = TAB_CHAT
                                 }
-                            },
-                            locString = locString
-                        )
+                            )
 
-                        TAB_SEARCH -> SearchScreen(
-                            searchViewModel = searchViewModel,
-                            onSongSelect = { song, queue ->
-                                sharedAudioViewModel.playSong(song, queue)
-                            },
-                            locString = locString
-                        )
+                            TAB_DOWNLOADS -> DownloadsScreen(
+                                downloadViewModel = downloadViewModel,
+                                isPremium = isPremium,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
 
-                        TAB_PLAYLISTS -> PlaylistsScreen(
-                            playlistViewModel = playlistViewModel,
-                            onSongSelect = { song, queue ->
-                                sharedAudioViewModel.playSong(song, queue)
-                            },
-                            locString = locString
-                        )
+                            TAB_CHAT -> ChatsScreen(
+                                chatViewModel = chatViewModel,
+                                activeChatUser = activeChatUser,
+                                onActiveChatUserChange = { activeChatUser = it },
+                                onPlaySharedSong = { song ->
+                                    sharedAudioViewModel.playSong(song)
+                                },
+                                locString = locString
+                            )
 
-                        TAB_LIKED -> LikedSongsScreen(
-                            playlistViewModel = playlistViewModel,
-                            sharedAudioViewModel = sharedAudioViewModel,
-                            onBackClick = { activeTab = TAB_HOME },
-                            onSongSelect = { song, queue ->
-                                sharedAudioViewModel.playSong(song, queue)
-                            },
-                            locString = locString
-                        )
-
-                        TAB_RECENT -> RecentlyPlayedScreen(
-                            playlistViewModel = playlistViewModel,
-                            sharedAudioViewModel = sharedAudioViewModel,
-                            onBackClick = { activeTab = TAB_HOME },
-                            onSongSelect = { song, queue ->
-                                sharedAudioViewModel.playSong(song, queue)
-                            },
-                            locString = locString
-                        )
-
-                        TAB_FOLLOWED -> FollowedUsersScreen(
-                            chatViewModel = chatViewModel,
-                            locString = locString,
-                            onUserClick = { user ->
-                                activeChatUser = user
-                                activeTab = TAB_CHAT
-                            }
-                        )
-
-                        TAB_DOWNLOADS -> DownloadsScreen(
-                            downloadViewModel = downloadViewModel,
-                            isPremium = isPremium,
-                            onSongSelect = { song, queue ->
-                                sharedAudioViewModel.playSong(song, queue)
-                            },
-                            locString = locString
-                        )
-
-                        TAB_CHAT -> ChatsScreen(
-                            chatViewModel = chatViewModel,
-                            activeChatUser = activeChatUser,
-                            onActiveChatUserChange = { activeChatUser = it },
-                            onPlaySharedSong = { song ->
-                                sharedAudioViewModel.playSong(song)
-                            },
-                            locString = locString
-                        )
-
-                        TAB_PROFILE -> ProfileScreen(
-                            mainViewModel = mainViewModel,
-                            locString = locString
-                        )
+                            TAB_PROFILE -> ProfileScreen(
+                                mainViewModel = mainViewModel,
+                                locString = locString
+                            )
+                        }
                     }
                 }
             } // Closes Scaffold
