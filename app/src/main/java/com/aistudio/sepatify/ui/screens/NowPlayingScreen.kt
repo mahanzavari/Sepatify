@@ -8,6 +8,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -33,6 +34,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -201,6 +203,10 @@ fun NowPlayingScreen(
         }
     }
 
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    var dragVelocity by remember { mutableFloatStateOf(0f) }
+    val dismissThresholdPx = 180f
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -215,6 +221,26 @@ fun NowPlayingScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(24.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onVerticalDrag = { _, dragAmount ->
+                        dragOffsetY = (dragOffsetY + dragAmount).coerceIn(0f, 1200f)
+                        dragVelocity = dragAmount
+                    },
+                    onDragEnd = {
+                        val shouldDismiss = dragOffsetY > dismissThresholdPx || dragVelocity > 480f
+                        if (shouldDismiss) {
+                            onBackClick()
+                        } else {
+                            dragOffsetY = 0f
+                        }
+                    }
+                )
+            }
+            .graphicsLayer {
+                translationY = dragOffsetY
+                alpha = 1f - (dragOffsetY / 900f).coerceIn(0f, 0.35f)
+            }
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),

@@ -1,5 +1,6 @@
 package com.aistudio.sepatify.player
 
+import android.content.ComponentName
 import android.content.Context
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
@@ -8,6 +9,7 @@ import android.media.audiofx.Virtualizer
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -22,14 +24,15 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.service.PlaybackService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.util.concurrent.CopyOnWriteArrayList
 
 class AudioPlayerManager(private val context: Context) {
 
@@ -50,7 +53,7 @@ class AudioPlayerManager(private val context: Context) {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
-    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
+    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
         .setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory))
         // Audio Focus (FR): ExoPlayer will automatically pause/duck when it loses audio focus
         // (e.g. phone calls, other apps' voice notes) and resume once focus is regained.
@@ -62,7 +65,6 @@ class AudioPlayerManager(private val context: Context) {
             /* handleAudioFocus = */ true
         )
         .build()
-    private var mediaSession: MediaSession? = null
 
     // Audio Effects
     private var equalizer: Equalizer? = null
@@ -128,9 +130,18 @@ class AudioPlayerManager(private val context: Context) {
     private val handler = Handler(Looper.getMainLooper())
 
     init {
-        // Build the MediaSession
+        // Connect to PlaybackService to ensure it's started and OS media controls (notification) are active.
         try {
-            mediaSession = MediaSession.Builder(context, exoPlayer).build()
+            val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+            val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+            
+            controllerFuture.addListener(
+                { 
+                    // Controller connected. 
+                    // Keeping this connection alive binds the service and creates the system notification.
+                }, 
+                ContextCompat.getMainExecutor(context)
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -157,6 +168,49 @@ class AudioPlayerManager(private val context: Context) {
                     triggerCrossfadeIn()
                 } else {
                     exoPlayer.volume = 1.0f
+                }
+
+                // --- FAST ON-DEMAND ARTWORK EXTRACTION ---
+                // FIX: Check that mediaItem is not null before accessing mediaMetadata
+                if (matchedSong != null && mediaItem != null && mediaItem.mediaMetadata.artworkData == null) {
+                    val isLocal = matchedSong.id.startsWith("local_") || 
+                                  matchedSong.audioUrl.startsWith("/") || 
+                                  matchedSong.audioUrl.startsWith("file://")
+                    
+                    if (isLocal) {
+                        applicationScope.launch(Dispatchers.IO) {
+                            try {
+                                val retriever = android.media.MediaMetadataRetriever()
+                                val path = matchedSong.audioUrl.removePrefix("file://")
+                                retriever.setDataSource(path)
+                                val artworkData = retriever.embeddedPicture
+                                retriever.release()
+
+                                if (artworkData != null) {
+                                    withContext(Dispatchers.Main) {
+                                        // Ensure the player is still playing this exact track
+                                        val currentIndex = exoPlayer.currentMediaItemIndex
+                                        val currentItem = exoPlayer.currentMediaItem
+                                        
+                                        if (currentItem != null && currentItem.mediaId == songId) {
+                                            val newMetadata = currentItem.mediaMetadata.buildUpon()
+                                                .setArtworkData(artworkData, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                                                .build()
+                                                
+                                            val newItem = currentItem.buildUpon()
+                                                .setMediaMetadata(newMetadata)
+                                                .build()
+                                                
+                                            // Seamlessly updates the item; OS catches this instantly for the notification
+                                            exoPlayer.replaceMediaItem(currentIndex, newItem)
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
                 }
             }
 
@@ -192,8 +246,6 @@ class AudioPlayerManager(private val context: Context) {
             }
         })
     }
-
-    fun getMediaSession(): MediaSession? = mediaSession
 
     fun setPlaylist(songs: List<Song>) {
         _playlist.value = songs
@@ -240,6 +292,18 @@ class AudioPlayerManager(private val context: Context) {
                 playSong(_playlist.value.first())
             }
         }
+    }
+
+    fun stopPlayback() {
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+        exoPlayer.playWhenReady = false
+        _currentSong.value = null
+        _isPlaying.value = false
+        _progress.value = 0L
+        _duration.value = 0L
+        _playlist.value = emptyList()
+        stopProgressTracker()
     }
 
     fun playNext() {
@@ -468,7 +532,6 @@ class AudioPlayerManager(private val context: Context) {
     fun release() {
         applicationScope.cancel()
         try {
-            mediaSession?.release()
             exoPlayer.release()
             equalizer?.release()
             bassBoost?.release()

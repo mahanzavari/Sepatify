@@ -82,6 +82,10 @@ class SharedAudioViewModel(
         audioPlayerManager.togglePlayPause()
     }
 
+    fun stopPlayback() {
+        audioPlayerManager.stopPlayback()
+    }
+
     fun playNext() {
         audioPlayerManager.playNext()
     }

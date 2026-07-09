@@ -9,6 +9,9 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,6 +24,7 @@ import androidx.compose.ui.Modifier
 import com.aistudio.sepatify.ui.components.EqualizerDialog
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -39,6 +43,23 @@ import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
+
+private const val TAB_HOME = "home"
+private const val TAB_SEARCH = "search"
+private const val TAB_PLAYLISTS = "playlists"
+private const val TAB_DOWNLOADS = "downloads"
+private const val TAB_CHAT = "chat"
+private const val TAB_PROFILE = "profile"
+private const val TAB_LIKED = "liked"
+private const val TAB_RECENT = "recent"
+private const val TAB_FOLLOWED = "followed"
+
+private data class BottomNavItem(
+    val tabKey: String,
+    val titleResId: Int,
+    val icon: ImageVector,
+    val testTag: String
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +94,8 @@ class MainActivity : ComponentActivity() {
             val layoutDirection = if (currentLanguage == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr
 
             // Find original ActivityResultRegistryOwner from original context because localizedContext does not implement it
-            var activityOwner: androidx.activity.result.ActivityResultRegistryOwner = context as androidx.activity.result.ActivityResultRegistryOwner
+            var activityOwner: androidx.activity.result.ActivityResultRegistryOwner =
+                context as androidx.activity.result.ActivityResultRegistryOwner
             var currentContext = context
             while (currentContext is android.content.ContextWrapper) {
                 if (currentContext is androidx.activity.result.ActivityResultRegistryOwner) {
@@ -122,7 +144,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalAnimationApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalLayoutApi::class,
+    ExperimentalSharedTransitionApi::class
+)
 @Composable
 fun AppMainHub(
     mainViewModel: MainViewModel,
@@ -135,8 +162,9 @@ fun AppMainHub(
     isPremium: Boolean,
     locString: (Int) -> String
 ) {
-    var activeTab by remember { mutableStateOf("home") } // "home", "search", "playlists", "downloads", "chat", "profile", "liked", "recent", "followed"
+    var activeTab by remember { mutableStateOf(TAB_HOME) }
     var showNowPlayingOverlay by remember { mutableStateOf(false) }
+    var showMiniPlayer by remember { mutableStateOf(false) }
 
     val currentSong by sharedAudioViewModel.currentSong.collectAsState()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsState()
@@ -145,6 +173,12 @@ fun AppMainHub(
 
     val displayName by mainViewModel.userDisplayName.collectAsState()
     val avatarUrl by mainViewModel.userAvatar.collectAsState()
+
+    LaunchedEffect(currentSong?.id) {
+        if (currentSong != null) {
+            showMiniPlayer = true
+        }
+    }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -164,15 +198,24 @@ fun AppMainHub(
         null
     }
 
+    val bottomNavItems = listOf(
+        BottomNavItem(TAB_HOME, R.string.nav_home, Icons.Default.Home, "nav_home"),
+        BottomNavItem(TAB_SEARCH, R.string.nav_search, Icons.Default.Search, "nav_search"),
+        BottomNavItem(TAB_PLAYLISTS, R.string.nav_playlists, Icons.Default.LibraryMusic, "nav_playlists"),
+        BottomNavItem(TAB_DOWNLOADS, R.string.nav_downloads, Icons.Default.Download, "nav_downloads"),
+        BottomNavItem(TAB_CHAT, R.string.nav_chat, Icons.Default.Chat, "nav_chat"),
+        BottomNavItem(TAB_PROFILE, R.string.nav_profile, Icons.Default.Person, "nav_profile")
+    )
+
     androidx.activity.compose.BackHandler(
-        enabled = showNowPlayingOverlay || activeTab != "home" || isPlaying || (activeTab == "chat" && activeChatUser != null)
+        enabled = showNowPlayingOverlay || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
     ) {
         if (showNowPlayingOverlay) {
             showNowPlayingOverlay = false
-        } else if (activeTab == "chat" && activeChatUser != null) {
+        } else if (activeTab == TAB_CHAT && activeChatUser != null) {
             activeChatUser = null
-        } else if (activeTab != "home") {
-            activeTab = "home"
+        } else if (activeTab != TAB_HOME) {
+            activeTab = TAB_HOME
         } else if (isPlaying) {
             activity?.moveTaskToBack(true)
         }
@@ -215,7 +258,7 @@ fun AppMainHub(
                         modifier = Modifier.size(32.dp)
                     )
                     Text(
-                        text = "Sepatify",
+                        text = locString(R.string.app_name),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -252,7 +295,7 @@ fun AppMainHub(
                                 if (avatarUrl.isNotEmpty()) {
                                     AsyncImage(
                                         model = avatarUrl,
-                                        contentDescription = "User Avatar",
+                                        contentDescription = locString(R.string.user_avatar_content_description),
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 } else {
@@ -273,17 +316,17 @@ fun AppMainHub(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "View & Edit Profile",
+                                    text = locString(R.string.drawer_view_profile),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     },
-                    selected = activeTab == "profile",
+                    selected = activeTab == TAB_PROFILE,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        activeTab = "profile"
+                        activeTab = TAB_PROFILE
                     },
                     modifier = Modifier.padding(horizontal = 12.dp),
                     colors = NavigationDrawerItemDefaults.colors(
@@ -308,10 +351,10 @@ fun AppMainHub(
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Person, contentDescription = null) },
                     label = { Text(locString(R.string.drawer_account_details)) },
-                    selected = activeTab == "profile",
+                    selected = activeTab == TAB_PROFILE,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        activeTab = "profile"
+                        activeTab = TAB_PROFILE
                     },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
@@ -366,274 +409,253 @@ fun AppMainHub(
                         )
                     }
                 },
-            bottomBar = {
-                if (!showNowPlayingOverlay) {
-                    val isKeyboardVisible = WindowInsets.isImeVisible
-                    val showNavigationBar = !isKeyboardVisible && !(activeTab == "chat" && activeChatUser != null)
+                bottomBar = {
+                    if (!showNowPlayingOverlay) {
+                        val isKeyboardVisible = WindowInsets.isImeVisible
+                        val showNavigationBar = !isKeyboardVisible && !(activeTab == TAB_CHAT && activeChatUser != null)
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.45f),
-                                        MaterialTheme.colorScheme.background.copy(alpha = 0.75f)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.background.copy(alpha = 0.45f),
+                                            MaterialTheme.colorScheme.background.copy(alpha = 0.75f)
+                                        )
                                     )
                                 )
-                            )
-                            .navigationBarsPadding()
-                            .imePadding()
-                    ) {
-                        if (currentSong != null || showNavigationBar) {
-                            HorizontalDivider(
-                                color = Color.White.copy(alpha = 0.08f),
-                                thickness = 0.5.dp
-                            )
-                        }
+                                .navigationBarsPadding()
+                                .imePadding()
+                        ) {
+                            if (currentSong != null || showNavigationBar) {
+                                HorizontalDivider(
+                                    color = Color.White.copy(alpha = 0.08f),
+                                    thickness = 0.5.dp
+                                )
+                            }
 
-                        // Floating mini player inside App bottom Scaffold context (FR-66)
-                        if (currentSong != null) {
-                            MiniPlayer(
-                                currentSong = currentSong!!,
-                                isPlaying = isPlaying,
-                                progress = progress,
-                                duration = duration,
-                                onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
-                                onPlayerBarClick = { showNowPlayingOverlay = true },
-                                coverModifier = Modifier
-                            )
-                        }
+                            // Mini-player — the coverModifier is supplied by the
+                            // SharedTransitionLayout wrapper below this composable.
+                            if (currentSong != null && showMiniPlayer) {
+                                MiniPlayer(
+                                    currentSong = currentSong!!,
+                                    isPlaying = isPlaying,
+                                    progress = progress,
+                                    duration = duration,
+                                    onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
+                                    onPlayerBarClick = { showNowPlayingOverlay = true },
+                                    onDismiss = {
+                                        sharedAudioViewModel.stopPlayback()
+                                        showMiniPlayer = false
+                                    },
+                                    coverModifier = Modifier
+                                )
+                            }
 
-                        if (showNavigationBar) {
-                            // Material 3 bottom Navigation Bar (NFR navigation rules)
-                            val navBarItemColors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
+                            if (showNavigationBar) {
+                                // Material 3 bottom Navigation Bar (NFR navigation rules)
+                                val navBarItemColors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
 
-                            NavigationBar(
-                                modifier = Modifier,
-                                containerColor = Color.Transparent,
-                                tonalElevation = 0.dp
-                            ) {
-                            NavigationBarItem(
-                                selected = (activeTab == "home"),
-                                onClick = { activeTab = "home" },
-                                icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                                colors = navBarItemColors,
-                                label = {
-                                    Text(
-                                        text = locString(R.string.nav_home),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.testTag("nav_home")
-                            )
-                            NavigationBarItem(
-                                selected = (activeTab == "search"),
-                                onClick = { activeTab = "search" },
-                                icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                                colors = navBarItemColors,
-                                label = {
-                                    Text(
-                                        text = locString(R.string.nav_search),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.testTag("nav_search")
-                            )
-                            NavigationBarItem(
-                                selected = (activeTab == "playlists"),
-                                onClick = { activeTab = "playlists" },
-                                icon = { Icon(Icons.Default.LibraryMusic, contentDescription = "Playlists") },
-                                colors = navBarItemColors,
-                                label = {
-                                    Text(
-                                        text = locString(R.string.nav_playlists),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.testTag("nav_playlists")
-                            )
-                            NavigationBarItem(
-                                selected = (activeTab == "downloads"),
-                                onClick = { activeTab = "downloads" },
-                                icon = { Icon(Icons.Default.Download, contentDescription = "Downloads") },
-                                colors = navBarItemColors,
-                                label = {
-                                    Text(
-                                        text = locString(R.string.nav_downloads),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.testTag("nav_downloads")
-                            )
-                            NavigationBarItem(
-                                selected = (activeTab == "chat"),
-                                onClick = { activeTab = "chat" },
-                                icon = { Icon(Icons.Default.Chat, contentDescription = "Social") },
-                                colors = navBarItemColors,
-                                label = {
-                                    Text(
-                                        text = locString(R.string.nav_chat),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.testTag("nav_chat")
-                            )
-                            NavigationBarItem(
-                                selected = (activeTab == "profile"),
-                                onClick = { activeTab = "profile" },
-                                icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                                colors = navBarItemColors,
-                                label = {
-                                    Text(
-                                        text = locString(R.string.nav_profile),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                modifier = Modifier.testTag("nav_profile")
-                            )
+                                NavigationBar(
+                                    modifier = Modifier,
+                                    containerColor = Color.Transparent,
+                                    tonalElevation = 0.dp
+                                ) {
+                                    bottomNavItems.forEach { item ->
+                                        NavigationBarItem(
+                                            selected = (activeTab == item.tabKey),
+                                            onClick = { activeTab = item.tabKey },
+                                            icon = { Icon(item.icon, contentDescription = locString(item.titleResId)) },
+                                            colors = navBarItemColors,
+                                            label = {
+                                                Text(
+                                                    text = locString(item.titleResId),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            },
+                                            modifier = Modifier.testTag(item.testTag)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
-        ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding(), // Prevents bottom bar & player from blocking list/button views
-                    start = paddingValues.calculateStartPadding(LocalLayoutDirection.current),
-                    end = paddingValues.calculateEndPadding(LocalLayoutDirection.current)
-                )
-        ) {
-            when (activeTab) {
-                "home" -> HomeScreen(
-                    homeViewModel = homeViewModel,
-                    onSongSelect = { song, queue ->
-                        sharedAudioViewModel.playSong(song, queue)
-                    },
-                    onQuickActionClick = { action ->
-                        when (action) {
-                            "liked" -> activeTab = "liked"
-                            "recent" -> activeTab = "recent"
-                            "playlists" -> activeTab = "playlists"
-                            "artists" -> activeTab = "followed"
+            ) { paddingValues ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = paddingValues.calculateTopPadding(),
+                            bottom = paddingValues.calculateBottomPadding(), // Prevents bottom bar & player from blocking list/button views
+                            start = paddingValues.calculateStartPadding(LocalLayoutDirection.current),
+                            end = paddingValues.calculateEndPadding(LocalLayoutDirection.current)
+                        )
+                ) {
+                    AnimatedContent(
+                        targetState = activeTab,
+                        transitionSpec = {
+                            val initialIndex = bottomNavItems.indexOfFirst { it.tabKey == initialState }.takeIf { it >= 0 } ?: 0
+                            val targetIndex = bottomNavItems.indexOfFirst { it.tabKey == targetState }.takeIf { it >= 0 } ?: 0
+                            val direction = if (targetIndex >= initialIndex) 1 else -1
+
+                            (slideInHorizontally(
+                                initialOffsetX = { direction * it / 4 },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) + fadeIn(animationSpec = tween(180)))
+                                .togetherWith(
+                                    slideOutHorizontally(
+                                        targetOffsetX = { -direction * it / 4 },
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        )
+                                    ) + fadeOut(animationSpec = tween(120))
+                                )
+                        },
+                        label = "tabContentAnimation"
+                    ) { tab ->
+                        when (tab) {
+                            TAB_HOME -> HomeScreen(
+                                homeViewModel = homeViewModel,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                onQuickActionClick = { action ->
+                                    when (action) {
+                                        "liked" -> activeTab = TAB_LIKED
+                                        "recent" -> activeTab = TAB_RECENT
+                                        "playlists" -> activeTab = TAB_PLAYLISTS
+                                        "artists" -> activeTab = TAB_FOLLOWED
+                                    }
+                                },
+                                locString = locString
+                            )
+
+                            TAB_SEARCH -> SearchScreen(
+                                searchViewModel = searchViewModel,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_PLAYLISTS -> PlaylistsScreen(
+                                playlistViewModel = playlistViewModel,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_LIKED -> LikedSongsScreen(
+                                playlistViewModel = playlistViewModel,
+                                sharedAudioViewModel = sharedAudioViewModel,
+                                onBackClick = { activeTab = TAB_HOME },
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_RECENT -> RecentlyPlayedScreen(
+                                playlistViewModel = playlistViewModel,
+                                sharedAudioViewModel = sharedAudioViewModel,
+                                onBackClick = { activeTab = TAB_HOME },
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_FOLLOWED -> FollowedUsersScreen(
+                                chatViewModel = chatViewModel,
+                                locString = locString,
+                                onUserClick = { user ->
+                                    activeChatUser = user
+                                    activeTab = TAB_CHAT
+                                }
+                            )
+
+                            TAB_DOWNLOADS -> DownloadsScreen(
+                                downloadViewModel = downloadViewModel,
+                                isPremium = isPremium,
+                                onSongSelect = { song, queue ->
+                                    sharedAudioViewModel.playSong(song, queue)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_CHAT -> ChatsScreen(
+                                chatViewModel = chatViewModel,
+                                activeChatUser = activeChatUser,
+                                onActiveChatUserChange = { activeChatUser = it },
+                                onPlaySharedSong = { song ->
+                                    sharedAudioViewModel.playSong(song)
+                                },
+                                locString = locString
+                            )
+
+                            TAB_PROFILE -> ProfileScreen(
+                                mainViewModel = mainViewModel,
+                                locString = locString
+                            )
                         }
-                    },
-                    locString = locString
-                )
-                "search" -> SearchScreen(
-                    searchViewModel = searchViewModel,
-                    onSongSelect = { song, queue ->
-                        sharedAudioViewModel.playSong(song, queue)
-                    },
-                    locString = locString
-                )
-                "playlists" -> PlaylistsScreen(
-                    playlistViewModel = playlistViewModel,
-                    onSongSelect = { song, queue ->
-                        sharedAudioViewModel.playSong(song, queue)
-                    },
-                    locString = locString
-                )
-                "liked" -> LikedSongsScreen(
-                    playlistViewModel = playlistViewModel,
-                    sharedAudioViewModel = sharedAudioViewModel,
-                    onBackClick = { activeTab = "home" },
-                    onSongSelect = { song, queue ->
-                        sharedAudioViewModel.playSong(song, queue)
-                    },
-                    locString = locString
-                )
-                "recent" -> RecentlyPlayedScreen(
-                    playlistViewModel = playlistViewModel,
-                    sharedAudioViewModel = sharedAudioViewModel,
-                    onBackClick = { activeTab = "home" },
-                    onSongSelect = { song, queue ->
-                        sharedAudioViewModel.playSong(song, queue)
-                    },
-                    locString = locString
-                )
-                "followed" -> FollowedUsersScreen(
-                    chatViewModel = chatViewModel,
-                    locString = locString,
-                    onUserClick = { user ->
-                        activeChatUser = user
-                        activeTab = "chat"
                     }
-                )
-                "downloads" -> DownloadsScreen(
-                    downloadViewModel = downloadViewModel,
-                    isPremium = isPremium,
-                    onSongSelect = { song, queue ->
-                        sharedAudioViewModel.playSong(song, queue)
-                    },
-                    locString = locString
-                )
-                "chat" -> ChatsScreen(
-                    chatViewModel = chatViewModel,
-                    activeChatUser = activeChatUser,
-                    onActiveChatUserChange = { activeChatUser = it },
-                    onPlaySharedSong = { song ->
-                        sharedAudioViewModel.playSong(song)
-                    },
-                    locString = locString
-                )
-                "profile" -> ProfileScreen(
-                    mainViewModel = mainViewModel,
-                    locString = locString
-                )
-            }
-        }
-    } // Closes Scaffold
-    } // Closes Box
+                }
+            } // Closes Scaffold
+        } // Closes Box
     } // Closes ModalNavigationDrawer
 
-    // FULL SCREEN OVERLAY NOW PLAYING DETAIL LAYER
-    AnimatedVisibility(
-        visible = showNowPlayingOverlay,
-        enter = slideInVertically(
-            initialOffsetY = { it },
-            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium)
-        ),
-        exit = slideOutVertically(
-            targetOffsetY = { it },
-            animationSpec = tween(durationMillis = 350)
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            NowPlayingScreen(
-                sharedAudioViewModel = sharedAudioViewModel,
-                downloadViewModel = downloadViewModel,
-                isPremium = isPremium,
-                onBackClick = { showNowPlayingOverlay = false },
-                locString = locString,
-                coverModifier = Modifier
+    // Shared element transition: album cover scales from mini-player up to full-screen player
+    SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
+        // Full-screen NowPlaying overlay (target state)
+        AnimatedVisibility(
+            visible = showNowPlayingOverlay,
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium)
+            ),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(durationMillis = 350)
             )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                NowPlayingScreen(
+                    sharedAudioViewModel = sharedAudioViewModel,
+                    downloadViewModel = downloadViewModel,
+                    isPremium = isPremium,
+                    onBackClick = { showNowPlayingOverlay = false },
+                    locString = locString,
+                    coverModifier = Modifier.sharedElement(
+                        state = rememberSharedContentState(key = "album_cover"),
+                        animatedVisibilityScope = this@AnimatedVisibility,
+                        boundsTransform = { _, _ ->
+                            spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        }
+                    )
+                )
+            }
         }
     }
 }
@@ -646,7 +668,12 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(locString(R.string.privacy_social_settings_title), style = MaterialTheme.typography.titleLarge) },
+        title = {
+            Text(
+                locString(R.string.privacy_social_settings_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -658,8 +685,16 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(locString(R.string.privacy_share_activity), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(locString(R.string.privacy_share_activity_desc), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            locString(R.string.privacy_share_activity),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            locString(R.string.privacy_share_activity_desc),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Switch(checked = shareHistory, onCheckedChange = { shareHistory = it })
                 }
@@ -670,8 +705,16 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(locString(R.string.privacy_private_session), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(locString(R.string.privacy_private_session_desc), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            locString(R.string.privacy_private_session),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            locString(R.string.privacy_private_session_desc),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Switch(checked = privateSession, onCheckedChange = { privateSession = it })
                 }
@@ -682,8 +725,16 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(locString(R.string.privacy_profile_search), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(locString(R.string.privacy_profile_search_desc), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            locString(R.string.privacy_profile_search),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            locString(R.string.privacy_profile_search_desc),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Switch(checked = profileVisibility, onCheckedChange = { profileVisibility = it })
                 }
@@ -705,7 +756,7 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Notification Settings", style = MaterialTheme.typography.titleLarge) },
+        title = { Text(locString(R.string.notification_settings_title), style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -717,8 +768,16 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(locString(R.string.notification_new_music), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(locString(R.string.notification_new_music_desc), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            locString(R.string.notification_new_music),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            locString(R.string.notification_new_music_desc),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Switch(checked = newMusic, onCheckedChange = { newMusic = it })
                 }
@@ -729,8 +788,16 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(locString(R.string.notification_social), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(locString(R.string.notification_social_desc), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            locString(R.string.notification_social),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            locString(R.string.notification_social_desc),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Switch(checked = socialAlerts, onCheckedChange = { socialAlerts = it })
                 }
@@ -741,8 +808,16 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(locString(R.string.notification_promo), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(locString(R.string.notification_promo_desc), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            locString(R.string.notification_promo),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            locString(R.string.notification_promo_desc),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Switch(checked = systemUpdates, onCheckedChange = { systemUpdates = it })
                 }

@@ -134,6 +134,10 @@
     <string name="drawer_equalizer_audio">Equalizer &amp; Audio Effects</string>
     <string name="drawer_view_profile">View and Edit Profile</string>
     <string name="drawer_guest_user">Guest User</string>
+    <string name="user_avatar_content_description">User Avatar</string>
+    <string name="play_pause">Play or pause</string>
+    <string name="dismiss_mini_player">Dismiss mini player</string>
+    <string name="notification_settings_title">Notification Settings</string>
     <string name="privacy_social_settings_title">Privacy &amp; Social Settings</string>
     <string name="privacy_share_activity">Share Listening Activity</string>
     <string name="privacy_share_activity_desc">Allow your followers to see what song you are playing.</string>
