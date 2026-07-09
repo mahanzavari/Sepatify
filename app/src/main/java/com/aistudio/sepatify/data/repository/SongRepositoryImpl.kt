@@ -61,7 +61,11 @@ class SongRepositoryImpl(
                 songCacheDao.insertAll(remote.map { it.toCacheEntity() })
             }
         } catch (e: Exception) {
-            // Offline or backend not configured yet - keep serving whatever is cached locally.
+            // Offline or backend not configured yet.
+            // Seed demo songs so the UI is never blank on first launch.
+            if (songCacheDao.count() == 0) {
+                songCacheDao.insertAll(DEMO_SONGS)
+            }
         }
     }
 
@@ -402,3 +406,21 @@ class SongRepositoryImpl(
 private fun SongDto.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category)
 private fun SongDto.toCacheEntity() = SongCacheEntity(id, title, artistName, coverImageUrl, audioUrl, category)
 private fun SongCacheEntity.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category)
+
+private val DEMO_SONGS: List<SongCacheEntity> = listOf(
+    SongCacheEntity("demo_1", "Midnight Haze", "Luna Ray", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", "Trending"),
+    SongCacheEntity("demo_2", "Electric Soul", "The Neons", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", "Trending"),
+    SongCacheEntity("demo_3", "Velvet Dreams", "Aurora Sky", "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", "Trending"),
+    SongCacheEntity("demo_4", "Golden Hour", "Crest Wave", "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", "Recommendation"),
+    SongCacheEntity("demo_5", "Neon Nights", "Digital Pulse", "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", "Recommendation"),
+    SongCacheEntity("demo_6", "Summer Fade", "Coastal Drift", "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", "Recommendation"),
+    SongCacheEntity("demo_7", "Crystal Clear", "Sky Mirrors", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", "NewRelease"),
+    SongCacheEntity("demo_8", "Deep Blue", "Ocean Minds", "https://images.unsplash.com/photo-1500673922987-e212871fec22?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", "NewRelease"),
+    SongCacheEntity("demo_9", "Fire Dance", "Ember Glow", "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3", "Popular"),
+    SongCacheEntity("demo_10", "Urban Pulse", "City Beats", "https://images.unsplash.com/photo-1501386761578-eaa54b8295c8?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3", "Popular"),
+    SongCacheEntity("demo_11", "Jungle Rhythm", "Tropicana", "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3", "Popular"),
+    SongCacheEntity("demo_12", "Phantom Wave", "Ghost Signal", "https://images.unsplash.com/photo-1446057032654-9d8885db76c6?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3", "Popular"),
+    SongCacheEntity("demo_13", "Canvas Sky", "Palette & Co.", "https://images.unsplash.com/photo-1478147427282-58a87a433e2f?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", "Popular"),
+    SongCacheEntity("demo_14", "Void Dancer", "Echo Chamber", "https://images.unsplash.com/photo-1458560871784-56d23406c091?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", "Popular"),
+    SongCacheEntity("demo_15", "Storm Catcher", "Wind Theory", "https://images.unsplash.com/photo-1484876065684-b683cf17d276?w=400&q=80", "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", "Popular")
+)
