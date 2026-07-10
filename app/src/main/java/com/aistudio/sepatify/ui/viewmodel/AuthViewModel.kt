@@ -39,8 +39,9 @@ class AuthViewModel(
             if (authRepository.hasValidSession()) {
                 val profile = authRepository.currentProfile()
                 if (profile != null) {
-                    mainViewModel.setUserSession(profile.username, profile.displayName)
-                    mainViewModel.setPremium(profile.isPremium, syncRemote = false)
+                        mainViewModel.setUserSession(profile.username, profile.displayName)
+                        mainViewModel.setPremium(profile.isPremium, syncRemote = false)
+                        mainViewModel.updateProfileAvatar(profile.avatarUrl ?: "")
                 } else {
                     mainViewModel.logout()
                 }
@@ -64,6 +65,7 @@ class AuthViewModel(
                     val displayName = profile?.displayName ?: email.trim().substringBefore("@")
                     mainViewModel.setUserSession(email.trim(), displayName)
                     mainViewModel.setPremium(profile?.isPremium ?: false, syncRemote = false)
+                    mainViewModel.updateProfileAvatar(profile?.avatarUrl ?: "")
                     _uiState.value = AuthUiState.Success(email.trim(), displayName)
                 }
                 .onFailure { error ->
@@ -93,6 +95,7 @@ class AuthViewModel(
                     val displayName = profile?.displayName ?: name.trim()
                     mainViewModel.setUserSession(email.trim(), displayName)
                     mainViewModel.setPremium(profile?.isPremium ?: false, syncRemote = false)
+                    mainViewModel.updateProfileAvatar(profile?.avatarUrl ?: "")
                     _uiState.value = AuthUiState.Success(email.trim(), displayName)
                 }
                 .onFailure { error ->

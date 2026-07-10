@@ -72,7 +72,15 @@ class MainViewModel(
     fun updateAvatar(avatar: String) {
         viewModelScope.launch {
             preferencesManager.updateProfileAvatar(avatar)
-            runCatching { authRepository.updateAvatarUrl(avatar) }
+            if (avatar.startsWith("file://")) {
+                val file = java.io.File(java.net.URI(avatar))
+                authRepository.uploadAvatar(file).onSuccess { publicUrl ->
+                    // Save the persistent remote URL to DataStore once uploaded
+                    preferencesManager.updateProfileAvatar(publicUrl)
+                }
+            } else {
+                runCatching { authRepository.updateAvatarUrl(avatar) }
+            }
         }
     }
 

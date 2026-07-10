@@ -261,11 +261,13 @@ fun ProfileScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = if (isPremium) locString(R.string.premium_user_badge) else locString(R.string.regular_user_badge), style = MaterialTheme.typography.titleMedium, color = if (isPremium) Color(0xFF4A3700) else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
-                        if (!isPremium) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(onClick = { mainViewModel.setPremium(true) }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(10.dp)) {
-                                Text(locString(R.string.upgrade_to_premium), style = MaterialTheme.typography.labelLarge)
-                            }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { mainViewModel.setPremium(!isPremium) }, 
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isPremium) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary), 
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(if (isPremium) "Cancel Premium" else locString(R.string.upgrade_to_premium), style = MaterialTheme.typography.labelLarge, color = Color.White)
                         }
                     }
                     Icon(imageVector = if (isPremium) Icons.Default.WorkspacePremium else Icons.Default.StarOutline, contentDescription = null, tint = if (isPremium) Color(0xFF4A3700) else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
