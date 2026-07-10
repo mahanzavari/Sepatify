@@ -1,5 +1,8 @@
 package com.aistudio.sepatify.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,7 +23,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
@@ -39,6 +41,16 @@ fun ProfileScreen(
     val currentTheme by mainViewModel.currentTheme.collectAsState()
     val currentLang by mainViewModel.currentLanguage.collectAsState()
 
+    // لانچر مخصوص متریال ۳ برای باز کردن گالری و انتخاب تصویر
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        // اگر کاربر عکسی انتخاب کرد، آدرس آن (URI) را به ویومدل می‌فرستیم تا ذخیره و آپدیت شود
+        uri?.let {
+            mainViewModel.updateAvatar(it.toString())
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -49,7 +61,7 @@ fun ProfileScreen(
     ) {
         item { Spacer(modifier = Modifier.height(12.dp)) }
 
-        // --- بخش آواتار و اطلاعات کاربری ---
+        // --- بخش آواتار و اطلاعات کاربری (اصلاح شده برای باز کردن گالری) ---
         item {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
@@ -58,7 +70,12 @@ fun ProfileScreen(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable {
-                            mainViewModel.updateAvatar("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&q=80")
+                            // باز کردن گالری گوشی فقط برای انتخاب تصاویر
+                            photoPickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -72,7 +89,12 @@ fun ProfileScreen(
                             }
                         )
                     } else {
-                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(44.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(44.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -132,7 +154,7 @@ fun ProfileScreen(
             }
         }
 
-        // --- منوی تنظیمات (با دکمه‌های هم‌سطح و فوق‌العاده فیت) ---
+        // --- منوی تنظیمات ---
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -144,7 +166,7 @@ fun ProfileScreen(
                     // تنظیمات پوسته (Theme)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically // برای تراز شدن بهتر با دکمه‌های کوچک‌تر
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Contrast,
@@ -244,7 +266,6 @@ fun ProfileScreen(
     }
 }
 
-// --- کامپوننت چیپ اصلاح شده با دکمه‌های بسیار فیت و شیک ---
 // --- کامپوننت چیپ اصلاح شده بدون باگ حذف حروف ---
 @Composable
 fun MinimalChip(
@@ -267,14 +288,14 @@ fun MinimalChip(
     ) {
         Text(
             text = text,
-            fontSize = 12.sp, // سایز فیکس، استاندارد و بسیار فیت برای دکمه‌های ۳ تایی
+            fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
             maxLines = 1,
-            softWrap = false, // مانع از شکستن یا حذف حروف در حالت فشرده
+            softWrap = false,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 4.dp) // پدینگ افقی کم برای باز شدن فضا جهت نمایش کامل کلمات
+                .padding(vertical = 8.dp, horizontal = 4.dp)
         )
     }
 }

@@ -3,6 +3,7 @@ package com.aistudio.sepatify.ui.screens
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -224,10 +226,6 @@ fun CommonTopBar(
     onAvatarClick: () -> Unit,
     onNotificationsClick: () -> Unit
 ) {
-    // TopBar according to NFR-13: "A common TopBar composable shall appear on all main screens with:
-    // app logo and name (right), user avatar, notification icon, and settings icon (left)"
-    // Since we handle both RTL and LTR automatically via Row,
-    // placing settings, notifications, avatar on one side, and Logo and title on other side works beautifully.
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,27 +263,87 @@ fun CommonTopBar(
                     }
                 }
 
+                // سیستم پالس و انیمیشن
+                val avatarScale = if (isPremium) 1.04f else 1f
+                val pulse = rememberInfiniteTransition(label = "premiumAvatarPulse")
+                val pulseAlpha by pulse.animateFloat(
+                    initialValue = 0.35f,
+                    targetValue = 0.75f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1200),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "premiumAvatarPulseAlpha"
+                )
+
+                // کامپوننت ریشه آواتار (بدون کلیپ لبه‌ها برای جلوگیری از ناقص شدن ستاره)
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                        .clickable { onAvatarClick() },
+                        .size(40.dp) // اندازه بیرونی کل باکس
+                        .scale(avatarScale),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (avatarUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = avatarUrl,
-                            contentDescription = "Avatar",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        val initial = if (displayName.isNotEmpty()) displayName.take(1).uppercase() else "G"
-                        Text(
-                            text = initial,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    // دایره اصلی آواتار
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .align(Alignment.Center)
+                            .clip(CircleShape)
+                            .background(if (isPremium) Color(0xFFFFF3C4) else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            .border(
+                                width = if (isPremium) 2.dp else 0.dp,
+                                color = if (isPremium) Color(0xFFFFD54F) else Color.Transparent,
+                                shape = CircleShape
+                            )
+                            .clickable { onAvatarClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isPremium) {
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFD54F).copy(alpha = pulseAlpha))
+                            )
+                        }
+
+                        if (avatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = "Avatar",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            val initial = if (displayName.isNotEmpty()) displayName.take(1).uppercase() else "G"
+                            Text(
+                                text = initial,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (isPremium) Color(0xFF8D6E00) else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // بج ستاره طلایی (خارج از کلیپ آواتار رندر می‌شود تا کاملاً فیت و بی‌نقص باشد)
+                    if (isPremium) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .offset(x = 2.dp, y = 2.dp) // متمایل کردن ظریف ستاره به گوشه بیرونی
+                                .size(16.dp) // کمی بزرگتر برای ایجاد حاشیه امن
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFD54F))
+                                .border(1.dp, Color.White, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Premium",
+                                tint = Color(0xFF7A4F00),
+                                modifier = Modifier.size(11.dp) // سایز آیکون داخلی متناسب با دایره
+                            )
+                        }
                     }
                 }
             }
