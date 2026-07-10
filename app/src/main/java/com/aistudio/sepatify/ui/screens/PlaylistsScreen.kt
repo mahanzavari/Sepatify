@@ -139,8 +139,31 @@ fun PlaylistsScreen(
             label = "playlistScreenTransition"
         ) { isDetail ->
             if (!isDetail) {
+                // Main lists overview
+//                Row(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    horizontalArrangement = Arrangement.SpaceBetween,
+//                    verticalAlignment = Alignment.CenterVertically
+//                ) {
+//                    Text(
+//                        text = locString(R.string.playlists_title),
+//                        style = MaterialTheme.typography.titleLarge,
+//                        color = MaterialTheme.colorScheme.onBackground
+//                    )
+//                    Button(
+//                        onClick = { showCreateDialog = true },
+//                        shape = RoundedCornerShape(20.dp),
+//                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+//                    ) {
+//                        Icon(Icons.Default.Add, contentDescription = "Create playlist")
+//                        Spacer(modifier = Modifier.width(4.dp))
+//                        Text(text = locString(R.string.create_playlist), style = MaterialTheme.typography.labelSmall)
+//                    }
+//                }
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Two column playlist grids
+                // "Playlists shall be displayed in a two-column LazyVerticalGrid"
                 val totalPlaylists = listOf(
                     PlaylistEntity(-3, locString(R.string.quick_liked), "Your liked tracks", false, "Liked"),
                     PlaylistEntity(-1, locString(R.string.international_music_category), "Seeded playlist tracks", false, "International"),
@@ -204,7 +227,8 @@ fun PlaylistsScreen(
                                         .padding(16.dp),
                                     verticalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    // شرط قبلی حذف شد؛ حالا تمام کتگوری‌ها باکس مربوط به خود را رندر می‌کنند
+                                    // Removed old condition. All categories render here.
+                                    // Transparent container for category icons (no border, no background color)
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(100.dp))
@@ -229,8 +253,9 @@ fun PlaylistsScreen(
                                                 )
                                             }
                                             "International" -> {
+                                                // Added language icon for international category
                                                 Icon(
-                                                    imageVector = Icons.Default.Language, // آیکون بین‌المللی کره زمین
+                                                    imageVector = Icons.Default.Language,
                                                     contentDescription = "International",
                                                     tint = textColor,
                                                     modifier = Modifier.size(16.dp)
