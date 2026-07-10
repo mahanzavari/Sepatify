@@ -226,6 +226,29 @@ fun CommonTopBar(
     onAvatarClick: () -> Unit,
     onNotificationsClick: () -> Unit
 ) {
+    // --- تنظیمات انیمیشن افکت درخشش (Shimmer) شیشه‌ای روی آواتار ---
+    val shimmerTransition = rememberInfiniteTransition(label = "avatarShimmerTransition")
+    val shimmerOffset by shimmerTransition.animateFloat(
+        initialValue = -150f,
+        targetValue = 350f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerOffset"
+    )
+
+    // ایجاد یک گرادینت نوری سفید و شیشه‌ای مایل (بدون تغییر دادن رنگ طبیعی عکس)
+    val lightShimmerBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.0f),
+            Color.White.copy(alpha = 0.42f), // شدت انعکاس نور روی عکس
+            Color.White.copy(alpha = 0.0f)
+        ),
+        start = Offset(x = shimmerOffset, y = 0f),
+        end = Offset(x = shimmerOffset + 70f, y = 70f)
+    )
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -263,23 +286,12 @@ fun CommonTopBar(
                     }
                 }
 
-                // سیستم پالس و انیمیشن
+                // بخش مدیریت لایه‌ها و پالس آواتار پرمیوم
                 val avatarScale = if (isPremium) 1.04f else 1f
-                val pulse = rememberInfiniteTransition(label = "premiumAvatarPulse")
-                val pulseAlpha by pulse.animateFloat(
-                    initialValue = 0.35f,
-                    targetValue = 0.75f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1200),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "premiumAvatarPulseAlpha"
-                )
 
-                // کامپوننت ریشه آواتار (بدون کلیپ لبه‌ها برای جلوگیری از ناقص شدن ستاره)
                 Box(
                     modifier = Modifier
-                        .size(40.dp) // اندازه بیرونی کل باکس
+                        .size(40.dp)
                         .scale(avatarScale),
                     contentAlignment = Alignment.Center
                 ) {
@@ -289,24 +301,17 @@ fun CommonTopBar(
                             .size(36.dp)
                             .align(Alignment.Center)
                             .clip(CircleShape)
-                            .background(if (isPremium) Color(0xFFFFF3C4) else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            // حاشیه طلایی لوکس دور عکس برای کاربر پرمیوم
                             .border(
                                 width = if (isPremium) 2.dp else 0.dp,
-                                color = if (isPremium) Color(0xFFFFD54F) else Color.Transparent,
+                                color = Color(0xFFFFD54F),
                                 shape = CircleShape
                             )
                             .clickable { onAvatarClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isPremium) {
-                            Box(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFFFD54F).copy(alpha = pulseAlpha))
-                            )
-                        }
-
+                        // ۱. رندر عکس گالری کاربر با رنگ ۱۰۰٪ واقعی و اصلی
                         if (avatarUrl.isNotEmpty()) {
                             AsyncImage(
                                 model = avatarUrl,
@@ -320,18 +325,27 @@ fun CommonTopBar(
                             Text(
                                 text = initial,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = if (isPremium) Color(0xFF8D6E00) else MaterialTheme.colorScheme.primary
+                                color = if (isPremium) Color(0xFF7A4F00) else MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // ۲. لایه افکت انعکاس نور (شیمر شیشه‌ای پویا بدون کدر یا تیره کردن تصویر)
+                        if (isPremium) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(lightShimmerBrush)
                             )
                         }
                     }
 
-                    // بج ستاره طلایی (خارج از کلیپ آواتار رندر می‌شود تا کاملاً فیت و بی‌نقص باشد)
+                    // بج ستاره طلایی ثابت در گوشه پایینی آواتار بدون خورده شدن لبه‌ها
                     if (isPremium) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .offset(x = 2.dp, y = 2.dp) // متمایل کردن ظریف ستاره به گوشه بیرونی
-                                .size(16.dp) // کمی بزرگتر برای ایجاد حاشیه امن
+                                .offset(x = 2.dp, y = 2.dp)
+                                .size(16.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xFFFFD54F))
                                 .border(1.dp, Color.White, CircleShape),
@@ -341,7 +355,7 @@ fun CommonTopBar(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = "Premium",
                                 tint = Color(0xFF7A4F00),
-                                modifier = Modifier.size(11.dp) // سایز آیکون داخلی متناسب با دایره
+                                modifier = Modifier.size(11.dp)
                             )
                         }
                     }
