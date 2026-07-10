@@ -25,7 +25,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,7 +58,6 @@ fun PlaylistsScreen(
 
     var newPlaylistTitle by remember { mutableStateOf("") }
     var newPlaylistDesc by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("User") }
 
     val context = LocalContext.current
     val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -141,32 +139,8 @@ fun PlaylistsScreen(
             label = "playlistScreenTransition"
         ) { isDetail ->
             if (!isDetail) {
-                // Main lists overview
-//                Row(
-//                    modifier = Modifier.fillMaxWidth(),
-//                    horizontalArrangement = Arrangement.SpaceBetween,
-//                    verticalAlignment = Alignment.CenterVertically
-//                ) {
-//                    Text(
-//                        text = locString(R.string.playlists_title),
-//                        style = MaterialTheme.typography.titleLarge,
-//                        color = MaterialTheme.colorScheme.onBackground
-//                    )
-//                    Button(
-//                        onClick = { showCreateDialog = true },
-//                        shape = RoundedCornerShape(20.dp),
-//                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-//                    ) {
-//                        Icon(Icons.Default.Add, contentDescription = "Create playlist")
-//                        Spacer(modifier = Modifier.width(4.dp))
-//                        Text(text = locString(R.string.create_playlist), style = MaterialTheme.typography.labelSmall)
-//                    }
-//                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Two column playlist grids
-                // "Playlists shall be displayed in a two-column LazyVerticalGrid"
                 val totalPlaylists = listOf(
                     PlaylistEntity(-3, locString(R.string.quick_liked), "Your liked tracks", false, "Liked"),
                     PlaylistEntity(-1, locString(R.string.international_music_category), "Seeded playlist tracks", false, "International"),
@@ -193,7 +167,7 @@ fun PlaylistsScreen(
                     ) {
                         items(totalPlaylists) { plt ->
                             val index = totalPlaylists.indexOf(plt)
-                            val (backgroundColor, textColor, iconColor) = when (index % 4) {
+                            val (backgroundColor, textColor, _) = when (index % 4) {
                                 0 -> if (isDark) {
                                     Triple(sepatifyColors.playlistAccentBlue, sepatifyColors.playlistAccentBlueLight, sepatifyColors.playlistAccentBlueLight.copy(alpha = 0.7f))
                                 } else {
@@ -230,24 +204,49 @@ fun PlaylistsScreen(
                                         .padding(16.dp),
                                     verticalArrangement = Arrangement.SpaceBetween
                                 ) {
+                                    // شرط قبلی حذف شد؛ حالا تمام کتگوری‌ها باکس مربوط به خود را رندر می‌کنند
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(100.dp))
                                             .background(textColor.copy(alpha = 0.24f))
-                                            .border(
-                                                width = 1.dp,
-                                                color = textColor.copy(alpha = 0.32f),
-                                                shape = RoundedCornerShape(100.dp)
-                                            )
                                             .padding(horizontal = 10.dp, vertical = 5.dp)
                                     ) {
-                                        Text(
-                                            text = plt.category.uppercase(),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = textColor,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        when (plt.category) {
+                                            "Liked" -> {
+                                                Icon(
+                                                    imageVector = Icons.Default.Favorite,
+                                                    contentDescription = "Liked",
+                                                    tint = textColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            "Local" -> {
+                                                Icon(
+                                                    imageVector = Icons.Default.Folder,
+                                                    contentDescription = "Local",
+                                                    tint = textColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            "International" -> {
+                                                Icon(
+                                                    imageVector = Icons.Default.Language, // آیکون بین‌المللی کره زمین
+                                                    contentDescription = "International",
+                                                    tint = textColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            else -> {
+                                                Text(
+                                                    text = plt.category.uppercase(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = textColor,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
                                     }
+
                                     Spacer(modifier = Modifier.height(10.dp))
                                     Column {
                                         Text(
@@ -269,7 +268,7 @@ fun PlaylistsScreen(
                         }
                     }
                 }
-} else {
+            } else {
                 // Detailed playlist View
                 val plist = selectedPlaylist ?: return@AnimatedContent
 
@@ -287,7 +286,6 @@ fun PlaylistsScreen(
                             Text(text = plist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                         }
 
-                        // Show delete button only if user created it!
                         if (plist.isUserCreated) {
                             IconButton(onClick = {
                                 playlistViewModel.deletePlaylist(plist.id)
@@ -354,7 +352,7 @@ fun PlaylistsScreen(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 LazyColumn(
                                     state = listState,
-                                    contentPadding = PaddingValues(bottom = 200.dp), // Clear the floating miniplayer + navbar overlay
+                                    contentPadding = PaddingValues(bottom = 200.dp),
                                     verticalArrangement = Arrangement.spacedBy(10.dp),
                                     modifier = Modifier.fillMaxSize()
                                 ) {
@@ -365,7 +363,7 @@ fun PlaylistsScreen(
                                                 .fillMaxWidth()
                                                 .clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items) }
                                                 .padding(vertical = 6.dp)
-                                                .padding(end = 24.dp), // Extra padding to prevent overlap with scrollbar
+                                                .padding(end = 24.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
@@ -393,7 +391,6 @@ fun PlaylistsScreen(
                                     }
                                 }
 
-                                // Draggable Fast Scrollbar overlay
                                 val coroutineScope = rememberCoroutineScope()
                                 val totalItemsCount = listState.layoutInfo.totalItemsCount
                                 if (totalItemsCount > 0) {
@@ -407,7 +404,7 @@ fun PlaylistsScreen(
                                             modifier = Modifier
                                                 .align(Alignment.CenterEnd)
                                                 .fillMaxHeight()
-                                                .width(24.dp) // Generous touch target
+                                                .width(24.dp)
                                         ) {
                                             val trackHeightPx = constraints.maxHeight.toFloat()
                                             val thumbHeightPx = trackHeightPx * thumbHeightRatio
@@ -450,11 +447,10 @@ fun PlaylistsScreen(
                             }
                         }
                     }
-                } // End Column Wrapper
+                }
             }
         }
 
-        // CREATE NEW PLAYLIST DIALOG
         if (showCreateDialog) {
             AlertDialog(
                 onDismissRequest = { showCreateDialog = false },
