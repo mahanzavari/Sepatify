@@ -82,9 +82,9 @@ fun ProfileScreen(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = "تنظیم کادر تصویر پروفایل", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = locString(R.string.crop_dialog_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = "عکس را بزرگ کنید یا بکشید تا درون دایره تنظیم شود", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    Text(text = locString(R.string.crop_dialog_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
 
                     var scale by remember { mutableStateOf(1f) }
@@ -126,7 +126,7 @@ fun ProfileScreen(
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(onClick = { showCropDialog = false }, modifier = Modifier.weight(1f)) {
-                            Text("انصراف")
+                            Text(locString(R.string.cancel))
                         }
                         Button(
                             onClick = {
@@ -148,7 +148,7 @@ fun ProfileScreen(
                             },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("تایید نهایی")
+                            Text(locString(R.string.confirm))
                         }
                     }
                 }
@@ -157,7 +157,8 @@ fun ProfileScreen(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(horizontal = 24.dp),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 200.dp), // Clear the floating miniplayer + navbar overlay
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(28.dp)
     ) {

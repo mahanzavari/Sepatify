@@ -214,7 +214,7 @@ fun LikedSongsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 200.dp), // Clear the floating miniplayer + navbar overlay
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(likedSongs, key = { it.id }) { song ->
@@ -294,7 +294,7 @@ fun RecentlyPlayedScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 200.dp), // Clear the floating miniplayer + navbar overlay
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(recentSongs, key = { it.id }) { song ->

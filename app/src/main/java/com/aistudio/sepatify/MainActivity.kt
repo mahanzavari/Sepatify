@@ -450,6 +450,7 @@ fun AppMainHub(
                 ) {
                     AnimatedContent(
                         targetState = activeTab,
+                        modifier = Modifier.fillMaxSize(),
                         transitionSpec = {
                             val initialIndex = bottomNavItems.indexOfFirst { it.tabKey == initialState }.takeIf { it >= 0 } ?: 0
                             val targetIndex = bottomNavItems.indexOfFirst { it.tabKey == targetState }.takeIf { it >= 0 } ?: 0
