@@ -61,6 +61,3 @@ keystore.properties
 /.idea/assetWizardSettings.xml
 /.idea/assetWizardSettings.xml
 
-# sdk
-build.gradle.kts
-local.properties
