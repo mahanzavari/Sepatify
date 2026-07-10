@@ -3,6 +3,7 @@ package com.aistudio.sepatify.ui.screens
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -224,10 +226,29 @@ fun CommonTopBar(
     onAvatarClick: () -> Unit,
     onNotificationsClick: () -> Unit
 ) {
-    // TopBar according to NFR-13: "A common TopBar composable shall appear on all main screens with:
-    // app logo and name (right), user avatar, notification icon, and settings icon (left)"
-    // Since we handle both RTL and LTR automatically via Row,
-    // placing settings, notifications, avatar on one side, and Logo and title on other side works beautifully.
+    // --- تنظیمات انیمیشن افکت درخشش (Shimmer) شیشه‌ای روی آواتار ---
+    val shimmerTransition = rememberInfiniteTransition(label = "avatarShimmerTransition")
+    val shimmerOffset by shimmerTransition.animateFloat(
+        initialValue = -150f,
+        targetValue = 350f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerOffset"
+    )
+
+    // ایجاد یک گرادینت نوری سفید و شیشه‌ای مایل (بدون تغییر دادن رنگ طبیعی عکس)
+    val lightShimmerBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.0f),
+            Color.White.copy(alpha = 0.42f), // شدت انعکاس نور روی عکس
+            Color.White.copy(alpha = 0.0f)
+        ),
+        start = Offset(x = shimmerOffset, y = 0f),
+        end = Offset(x = shimmerOffset + 70f, y = 70f)
+    )
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,27 +286,78 @@ fun CommonTopBar(
                     }
                 }
 
+                // بخش مدیریت لایه‌ها و پالس آواتار پرمیوم
+                val avatarScale = if (isPremium) 1.04f else 1f
+
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                        .clickable { onAvatarClick() },
+                        .size(40.dp)
+                        .scale(avatarScale),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (avatarUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = avatarUrl,
-                            contentDescription = "Avatar",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        val initial = if (displayName.isNotEmpty()) displayName.take(1).uppercase() else "G"
-                        Text(
-                            text = initial,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    // دایره اصلی آواتار
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .align(Alignment.Center)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            // حاشیه طلایی لوکس دور عکس برای کاربر پرمیوم
+                            .border(
+                                width = if (isPremium) 2.dp else 0.dp,
+                                color = Color(0xFFFFD54F),
+                                shape = CircleShape
+                            )
+                            .clickable { onAvatarClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // ۱. رندر عکس گالری کاربر با رنگ ۱۰۰٪ واقعی و اصلی
+                        if (avatarUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = avatarUrl,
+                                contentDescription = "Avatar",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            val initial = if (displayName.isNotEmpty()) displayName.take(1).uppercase() else "G"
+                            Text(
+                                text = initial,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (isPremium) Color(0xFF7A4F00) else MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // ۲. لایه افکت انعکاس نور (شیمر شیشه‌ای پویا بدون کدر یا تیره کردن تصویر)
+                        if (isPremium) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(lightShimmerBrush)
+                            )
+                        }
+                    }
+
+                    // بج ستاره طلایی ثابت در گوشه پایینی آواتار بدون خورده شدن لبه‌ها
+                    if (isPremium) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .offset(x = 2.dp, y = 2.dp)
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFD54F))
+                                .border(1.dp, Color.White, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Premium",
+                                tint = Color(0xFF7A4F00),
+                                modifier = Modifier.size(11.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -370,7 +442,7 @@ fun MiniPlayer(
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
         ),
         border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.12f))
     ) {

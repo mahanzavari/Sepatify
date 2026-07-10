@@ -354,6 +354,7 @@ fun PlaylistsScreen(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 LazyColumn(
                                     state = listState,
+                                    contentPadding = PaddingValues(bottom = 200.dp), // Clear the floating miniplayer + navbar overlay
                                     verticalArrangement = Arrangement.spacedBy(10.dp),
                                     modifier = Modifier.fillMaxSize()
                                 ) {

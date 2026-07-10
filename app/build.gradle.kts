@@ -153,6 +153,7 @@ dependencies {
   implementation(libs.androidx.paging.runtime.ktx)
   implementation(libs.androidx.paging.compose)
 
+  //user can crop profile picture with this
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

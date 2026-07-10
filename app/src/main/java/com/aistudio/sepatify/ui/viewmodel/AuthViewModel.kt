@@ -32,6 +32,9 @@ class AuthViewModel(
     private val _effects = Channel<AuthEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
+    private val _isCheckingSession = MutableStateFlow(true)
+    val isCheckingSession: StateFlow<Boolean> = _isCheckingSession.asStateFlow()
+
     init {
         // If a Supabase session already exists on disk (previous app launch), restore it
         // silently so the user isn't sent back to the login screen unnecessarily.
@@ -41,12 +44,15 @@ class AuthViewModel(
                 if (profile != null) {
                     mainViewModel.setUserSession(profile.username, profile.displayName)
                     mainViewModel.setPremium(profile.isPremium, syncRemote = false)
-                } else {
-                    mainViewModel.logout()
+                    mainViewModel.updateProfileAvatar(profile.avatarUrl ?: "")
                 }
+                // Do nothing if profile is null (e.g. offline). They remain logged in 
+                // via their cached DataStore session handled by MainViewModel.
             } else {
                 mainViewModel.logout()
             }
+            // Verification is complete, allow the UI to render
+            _isCheckingSession.value = false
         }
     }
 
@@ -64,6 +70,7 @@ class AuthViewModel(
                     val displayName = profile?.displayName ?: email.trim().substringBefore("@")
                     mainViewModel.setUserSession(email.trim(), displayName)
                     mainViewModel.setPremium(profile?.isPremium ?: false, syncRemote = false)
+                    mainViewModel.updateProfileAvatar(profile?.avatarUrl ?: "")
                     _uiState.value = AuthUiState.Success(email.trim(), displayName)
                 }
                 .onFailure { error ->
@@ -93,6 +100,7 @@ class AuthViewModel(
                     val displayName = profile?.displayName ?: name.trim()
                     mainViewModel.setUserSession(email.trim(), displayName)
                     mainViewModel.setPremium(profile?.isPremium ?: false, syncRemote = false)
+                    mainViewModel.updateProfileAvatar(profile?.avatarUrl ?: "")
                     _uiState.value = AuthUiState.Success(email.trim(), displayName)
                 }
                 .onFailure { error ->

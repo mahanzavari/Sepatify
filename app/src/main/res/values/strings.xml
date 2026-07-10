@@ -146,6 +146,10 @@
     <string name="privacy_profile_search">Show Profile in Search</string>
     <string name="privacy_profile_search_desc">Anyone can find your profile in search.</string>
     <string name="notification_new_music">New Music Notifications</string>
+    <string name="crop_dialog_title">Adjust Profile Picture</string>
+    <string name="crop_dialog_desc">Scale or drag the image to fit inside the circle.</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
     <string name="notification_new_music_desc">Get notified when artists you follow release new music.</string>
     <string name="notification_social">Social Message Alerts</string>
     <string name="notification_social_desc">Receive instant alerts for incoming chat messages.</string>

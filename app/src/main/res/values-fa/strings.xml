@@ -145,6 +145,10 @@
     <string name="privacy_profile_search">نمایش پروفایل در جستجو</string>
     <string name="privacy_profile_search_desc">هر کسی بتواند پروفایل شما را در جستجو ببیند.</string>
     <string name="notification_new_music">اعلان آهنگ‌های جدید</string>
+    <string name="crop_dialog_title">تنظیم کادر تصویر پروفایل</string>
+    <string name="crop_dialog_desc">عکس را بزرگ کنید یا بکشید تا درون دایره تنظیم شود</string>
+    <string name="cancel">انصراف</string>
+    <string name="confirm">تایید نهایی</string>
     <string name="notification_new_music_desc">وقتی هنرمندانی که دنبال می‌کنید آهنگ جدید منتشر می‌کنند، مطلع شوید.</string>
     <string name="notification_social">هشدارهای پیام اجتماعی</string>
     <string name="notification_social_desc">برای پیام‌های ورودی چت، هشدار فوری دریافت کنید.</string>
