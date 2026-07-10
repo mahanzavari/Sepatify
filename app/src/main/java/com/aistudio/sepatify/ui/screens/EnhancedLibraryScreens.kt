@@ -138,8 +138,8 @@ fun LikedSongsScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
-                        MaterialTheme.colorScheme.background
+                        MaterialTheme.colorScheme.background,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
                     )
                 )
             )

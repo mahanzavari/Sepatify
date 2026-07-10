@@ -442,7 +442,7 @@ fun MiniPlayer(
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
         ),
         border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.12f))
     ) {

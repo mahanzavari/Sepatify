@@ -415,46 +415,27 @@ fun AppMainHub(
                         val isKeyboardVisible = WindowInsets.isImeVisible
                         val showNavigationBar = !isKeyboardVisible && !(activeTab == TAB_CHAT && activeChatUser != null)
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.background.copy(alpha = 0.45f),
-                                            MaterialTheme.colorScheme.background.copy(alpha = 0.75f)
+                        if (showNavigationBar) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .navigationBarsPadding()
+                                    .imePadding()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.0f),
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                                                MaterialTheme.colorScheme.background
+                                            )
                                         )
                                     )
-                                )
-                                .navigationBarsPadding()
-                                .imePadding()
-                        ) {
-                            if (currentSong != null || showNavigationBar) {
+                            ) {
                                 HorizontalDivider(
                                     color = Color.White.copy(alpha = 0.08f),
                                     thickness = 0.5.dp
                                 )
-                            }
 
-                            // Mini-player — the coverModifier is supplied by the
-                            // SharedTransitionLayout wrapper below this composable.
-                            if (currentSong != null && showMiniPlayer) {
-                                MiniPlayer(
-                                    currentSong = currentSong!!,
-                                    isPlaying = isPlaying,
-                                    progress = progress,
-                                    duration = duration,
-                                    onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
-                                    onPlayerBarClick = { showNowPlayingOverlay = true },
-                                    onDismiss = {
-                                        sharedAudioViewModel.stopPlayback()
-                                        showMiniPlayer = false
-                                    },
-                                    coverModifier = Modifier
-                                )
-                            }
-
-                            if (showNavigationBar) {
                                 // Material 3 bottom Navigation Bar (NFR navigation rules)
                                 val navBarItemColors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -612,6 +593,29 @@ fun AppMainHub(
                             TAB_PROFILE -> ProfileScreen(
                                 mainViewModel = mainViewModel,
                                 locString = locString
+                            )
+                        }
+                    }
+
+                    // Mini-player floats purely over the content.
+                    if (!showNowPlayingOverlay && currentSong != null && showMiniPlayer) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 4.dp)
+                        ) {
+                            MiniPlayer(
+                                currentSong = currentSong!!,
+                                isPlaying = isPlaying,
+                                progress = progress,
+                                duration = duration,
+                                onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
+                                onPlayerBarClick = { showNowPlayingOverlay = true },
+                                onDismiss = {
+                                    sharedAudioViewModel.stopPlayback()
+                                    showMiniPlayer = false
+                                },
+                                coverModifier = Modifier
                             )
                         }
                     }
