@@ -39,12 +39,12 @@ class AuthViewModel(
             if (authRepository.hasValidSession()) {
                 val profile = authRepository.currentProfile()
                 if (profile != null) {
-                        mainViewModel.setUserSession(profile.username, profile.displayName)
-                        mainViewModel.setPremium(profile.isPremium, syncRemote = false)
-                        mainViewModel.updateProfileAvatar(profile.avatarUrl ?: "")
-                } else {
-                    mainViewModel.logout()
+                    mainViewModel.setUserSession(profile.username, profile.displayName)
+                    mainViewModel.setPremium(profile.isPremium, syncRemote = false)
+                    mainViewModel.updateProfileAvatar(profile.avatarUrl ?: "")
                 }
+                // Do nothing if profile is null (e.g. offline). They remain logged in 
+                // via their cached DataStore session handled by MainViewModel.
             } else {
                 mainViewModel.logout()
             }
