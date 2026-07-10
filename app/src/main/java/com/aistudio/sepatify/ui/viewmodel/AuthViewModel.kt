@@ -32,6 +32,9 @@ class AuthViewModel(
     private val _effects = Channel<AuthEffect>(Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
+    private val _isCheckingSession = MutableStateFlow(true)
+    val isCheckingSession: StateFlow<Boolean> = _isCheckingSession.asStateFlow()
+
     init {
         // If a Supabase session already exists on disk (previous app launch), restore it
         // silently so the user isn't sent back to the login screen unnecessarily.
@@ -48,6 +51,8 @@ class AuthViewModel(
             } else {
                 mainViewModel.logout()
             }
+            // Verification is complete, allow the UI to render
+            _isCheckingSession.value = false
         }
     }
 
