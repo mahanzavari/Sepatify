@@ -25,7 +25,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,7 +58,6 @@ fun PlaylistsScreen(
 
     var newPlaylistTitle by remember { mutableStateOf("") }
     var newPlaylistDesc by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("User") }
 
     val context = LocalContext.current
     val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -162,7 +160,6 @@ fun PlaylistsScreen(
 //                        Text(text = locString(R.string.create_playlist), style = MaterialTheme.typography.labelSmall)
 //                    }
 //                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Two column playlist grids
@@ -193,7 +190,7 @@ fun PlaylistsScreen(
                     ) {
                         items(totalPlaylists) { plt ->
                             val index = totalPlaylists.indexOf(plt)
-                            val (backgroundColor, textColor, iconColor) = when (index % 4) {
+                            val (backgroundColor, textColor, _) = when (index % 4) {
                                 0 -> if (isDark) {
                                     Triple(sepatifyColors.playlistAccentBlue, sepatifyColors.playlistAccentBlueLight, sepatifyColors.playlistAccentBlueLight.copy(alpha = 0.7f))
                                 } else {
@@ -230,24 +227,51 @@ fun PlaylistsScreen(
                                         .padding(16.dp),
                                     verticalArrangement = Arrangement.SpaceBetween
                                 ) {
+                                    // Removed old condition. All categories render here.
+                                    // Transparent container for category icons (no border, no background color)
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(100.dp))
                                             .background(textColor.copy(alpha = 0.24f))
-                                            .border(
-                                                width = 1.dp,
-                                                color = textColor.copy(alpha = 0.32f),
-                                                shape = RoundedCornerShape(100.dp)
-                                            )
                                             .padding(horizontal = 10.dp, vertical = 5.dp)
                                     ) {
-                                        Text(
-                                            text = plt.category.uppercase(),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = textColor,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        when (plt.category) {
+                                            "Liked" -> {
+                                                Icon(
+                                                    imageVector = Icons.Default.Favorite,
+                                                    contentDescription = "Liked",
+                                                    tint = textColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            "Local" -> {
+                                                Icon(
+                                                    imageVector = Icons.Default.Folder,
+                                                    contentDescription = "Local",
+                                                    tint = textColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            "International" -> {
+                                                // Added language icon for international category
+                                                Icon(
+                                                    imageVector = Icons.Default.Language,
+                                                    contentDescription = "International",
+                                                    tint = textColor,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                            else -> {
+                                                Text(
+                                                    text = plt.category.uppercase(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = textColor,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
                                     }
+
                                     Spacer(modifier = Modifier.height(10.dp))
                                     Column {
                                         Text(
@@ -269,7 +293,7 @@ fun PlaylistsScreen(
                         }
                     }
                 }
-} else {
+            } else {
                 // Detailed playlist View
                 val plist = selectedPlaylist ?: return@AnimatedContent
 
@@ -287,7 +311,6 @@ fun PlaylistsScreen(
                             Text(text = plist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                         }
 
-                        // Show delete button only if user created it!
                         if (plist.isUserCreated) {
                             IconButton(onClick = {
                                 playlistViewModel.deletePlaylist(plist.id)
@@ -354,7 +377,7 @@ fun PlaylistsScreen(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 LazyColumn(
                                     state = listState,
-                                    contentPadding = PaddingValues(bottom = 200.dp), // Clear the floating miniplayer + navbar overlay
+                                    contentPadding = PaddingValues(bottom = 200.dp),
                                     verticalArrangement = Arrangement.spacedBy(10.dp),
                                     modifier = Modifier.fillMaxSize()
                                 ) {
@@ -365,7 +388,7 @@ fun PlaylistsScreen(
                                                 .fillMaxWidth()
                                                 .clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items) }
                                                 .padding(vertical = 6.dp)
-                                                .padding(end = 24.dp), // Extra padding to prevent overlap with scrollbar
+                                                .padding(end = 24.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
@@ -393,7 +416,6 @@ fun PlaylistsScreen(
                                     }
                                 }
 
-                                // Draggable Fast Scrollbar overlay
                                 val coroutineScope = rememberCoroutineScope()
                                 val totalItemsCount = listState.layoutInfo.totalItemsCount
                                 if (totalItemsCount > 0) {
@@ -407,7 +429,7 @@ fun PlaylistsScreen(
                                             modifier = Modifier
                                                 .align(Alignment.CenterEnd)
                                                 .fillMaxHeight()
-                                                .width(24.dp) // Generous touch target
+                                                .width(24.dp)
                                         ) {
                                             val trackHeightPx = constraints.maxHeight.toFloat()
                                             val thumbHeightPx = trackHeightPx * thumbHeightRatio
@@ -450,11 +472,10 @@ fun PlaylistsScreen(
                             }
                         }
                     }
-                } // End Column Wrapper
+                }
             }
         }
 
-        // CREATE NEW PLAYLIST DIALOG
         if (showCreateDialog) {
             AlertDialog(
                 onDismissRequest = { showCreateDialog = false },
