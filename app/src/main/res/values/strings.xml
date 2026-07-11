@@ -162,4 +162,31 @@
     <string name="chat_thread_hint">Tap to open conversation thread</string>
     <string name="chat_active_status">Active</string>
     <string name="exclusive_tracks">Featured &amp; Exclusive</string>
+
+<!-- Search Screen -->
+    <string name="search_top_genres">Your top genres</string>
+    <string name="search_browse_all">Browse all</string>
+    <string name="genre_pop">Pop</string>
+    <string name="genre_indie">Indie</string>
+    <string name="genre_rock">Rock</string>
+    <string name="genre_r_b">R&amp;B</string>
+    <string name="genre_podcasts">Podcasts</string>
+    <string name="genre_made_for_you">Made For You</string>
+    <string name="genre_charts">Charts</string>
+    <string name="genre_new_releases_tag">New Releases</string>
+
+    <!-- Playlist Storage & Empty Permissions -->
+    <string name="permission_storage_required">Storage Permission Required</string>
+    <string name="permission_storage_desc">Sepatify needs permission to access your device storage so we can read and play your local audio files.</string>
+    <string name="permission_grant_btn">Grant Permission</string>
+    <string name="playlist_empty_desc">Add a few tracks to this playlist and they will appear here.</string>
+
+    <!-- Social Chat say hello -->
+    <string name="chat_say_hello_title">Say Hello!</string>
+    <string name="chat_say_hello_desc">Start a real-time conversation or share your favorite songs directly with your contacts.</string>
+    <string name="cancel_premium">Cancel Premium</string>
+    <string name="chat_lookup_desc">Lookup</string>
+    <string name="chat_icon_desc">Chat icon</string>
+    <string name="send_desc">Send</string>
+    <string name="back_desc">Back</string>
 </resources>

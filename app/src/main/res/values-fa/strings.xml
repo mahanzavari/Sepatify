@@ -161,4 +161,31 @@
     <string name="chat_thread_hint">برای باز کردن رشته پیام، لمس کنید</string>
     <string name="chat_active_status">فعال</string>
     <string name="exclusive_tracks">آهنگ‌های ویژه و اختصاصی</string>
+    
+<!-- Search Screen -->
+    <string name="search_top_genres">ژانرهای برتر شما</string>
+    <string name="search_browse_all">مرور همه</string>
+    <string name="genre_pop">پاپ</string>
+    <string name="genre_indie">ایندی</string>
+    <string name="genre_rock">راک</string>
+    <string name="genre_r_b">آر اند بی</string>
+    <string name="genre_podcasts">پادکست‌ها</string>
+    <string name="genre_made_for_you">ساخته شده برای شما</string>
+    <string name="genre_charts">جدول‌های موسیقی</string>
+    <string name="genre_new_releases_tag">آثار جدید</string>
+
+    <!-- Playlist Storage & Empty Permissions -->
+    <string name="permission_storage_required">مجوز دسترسی به حافظه الزامی است</string>
+    <string name="permission_storage_desc">سپاتیفای برای خواندن و پخش فایل‌های صوتی محلی شما به دسترسی حافظه دستگاه نیاز دارد.</string>
+    <string name="permission_grant_btn">اعطای مجوز</string>
+    <string name="playlist_empty_desc">چند قطعه به این لیست اضافه کنید تا در اینجا نمایش داده شوند.</string>
+
+    <!-- Social Chat say hello -->
+    <string name="chat_say_hello_title">سلام کنید!</string>
+    <string name="chat_say_hello_desc">یک گفتگوی زنده را شروع کنید یا آهنگ‌های محبوب خود را مستقیماً با دوستانتان به اشتراک بگذارید.</string>
+    <string name="cancel_premium">لغو عضویت ویژه</string>
+    <string name="chat_lookup_desc">جستجو</string>
+    <string name="chat_icon_desc">آیکون چت</string>
+    <string name="send_desc">ارسال</string>
+    <string name="back_desc">بازگشت</string>
 </resources>
