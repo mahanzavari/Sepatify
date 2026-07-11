@@ -62,8 +62,8 @@ fun HomeScreen(
                     }
                     ShimmerItem(height = 68.dp, cornerRadius = 24.dp)
 
-                    // Horizontal song section skeletons (Most Popular, New Releases, etc.)
-                    repeat(3) {
+                    // Horizontal song section skeletons (Updated to 5 rows to include Exclusive)
+                    repeat(5) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             ShimmerItem(
                                 modifier = Modifier.fillMaxWidth(0.4f),
@@ -83,7 +83,6 @@ fun HomeScreen(
             }
             is HomeUiState.Success -> {
                 // 1. CAROUSEL (Hero Bento Card)
-                // "The home screen shall display a top carousel of new albums, daily recommendations, and trending songs"
                 val carouselSongs = (state.trending.take(3) + state.recommendations.take(3)).distinct()
                 val pagerState = rememberPagerState(pageCount = { carouselSongs.size })
 
@@ -92,7 +91,7 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .height(200.dp)
                         .padding(horizontal = 16.dp, vertical = 10.dp)
-                        .clip(RoundedCornerShape(24.dp)) // heavily rounded bento corners
+                        .clip(RoundedCornerShape(24.dp))
                 ) {
                     HorizontalPager(state = pagerState) { page ->
                         val song = carouselSongs[page]
@@ -153,7 +152,6 @@ fun HomeScreen(
                 }
 
                 // 2. QUICK ACTIONS (Bento Grid Style)
-                // "Four quick-action buttons shall be present: Liked Songs, Recently Played, My Playlists, Top Artists"
                 val isDark = isSystemInDarkTheme()
 
                 val likedBg = if (isDark) Color(0xFF003354) else Color(0xFFD0E4FF)
@@ -232,7 +230,13 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // 3. HORIZONTAL SECTIONS
-                // "Horizontal LazyRow sections shall display: Most Popular, New Releases, Global Playlists, Local Playlists"
+                
+                HorizontalSongSection(
+                    title = locString(R.string.exclusive_tracks),
+                    songs = state.exclusiveSongs,
+                    onSongSelect = { onSongSelect(it, state.exclusiveSongs) }
+                )
+
                 HorizontalSongSection(
                     title = locString(R.string.most_popular),
                     songs = state.mostPopular,
@@ -503,42 +507,42 @@ fun HorizontalSongSection(
                 items(5) { SongCardSkeleton() }
             }
         } else {
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(songs) { song ->
-                Column(
-                    modifier = Modifier
-                        .width(110.dp)
-                        .clickable { onSongSelect(song) },
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    val art = rememberSongArt(song)
-                    AsyncImage(
-                        model = art,
-                        contentDescription = song.title,
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(songs) { song ->
+                    Column(
                         modifier = Modifier
-                            .size(110.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                    Text(
-                        text = song.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = song.artistName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        maxLines = 1
-                    )
+                            .width(110.dp)
+                            .clickable { onSongSelect(song) },
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val art = rememberSongArt(song)
+                        AsyncImage(
+                            model = art,
+                            contentDescription = song.title,
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = song.artistName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            maxLines = 1
+                        )
+                    }
                 }
             }
-        }
-        } // end else
+        } 
     }
 }

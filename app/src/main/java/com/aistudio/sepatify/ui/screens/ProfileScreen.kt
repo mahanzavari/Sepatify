@@ -41,6 +41,9 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import com.aistudio.sepatify.R
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.MainViewModel
 import java.io.File
 import java.io.FileOutputStream
@@ -61,6 +64,10 @@ fun ProfileScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var showCropDialog by remember { mutableStateOf(false) }
 
+    val colors = MaterialTheme.sepatifyColors
+    val dimens = MaterialTheme.sepatifyDimens
+    val shapes = MaterialTheme.sepatifyShapes
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -70,27 +77,26 @@ fun ProfileScreen(
         }
     }
 
-    // --- دیالوگ با ابزار برش واقعی Bitmap ---
     if (showCropDialog && selectedImageUri != null) {
         Dialog(onDismissRequest = { showCropDialog = false }) {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth().padding(dimens.spaceNormal),
+                shape = shapes.card,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.padding(dimens.spaceLarge),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(text = locString(R.string.crop_dialog_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(dimens.spaceEight))
                     Text(text = locString(R.string.crop_dialog_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(dimens.spaceLarge))
 
                     var scale by remember { mutableStateOf(1f) }
                     var offsetX by remember { mutableStateOf(0f) }
                     var offsetY by remember { mutableStateOf(0f) }
-                    var viewSize by remember { mutableStateOf(200f) } // سایز باکس دایره به پیکسل
+                    var viewSize by remember { mutableStateOf(200f) }
 
                     Box(
                         modifier = Modifier
@@ -98,7 +104,7 @@ fun ProfileScreen(
                             .onGloballyPositioned { viewSize = it.size.width.toFloat() }
                             .clip(CircleShape)
                             .background(Color.Black.copy(alpha = 0.05f))
-                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                            .border(dimens.borderThick, MaterialTheme.colorScheme.primary, CircleShape)
                             .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, _ ->
                                     scale = (scale * zoom).coerceIn(1f, 5f)
@@ -122,15 +128,14 @@ fun ProfileScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(dimens.spaceLarge))
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
                         OutlinedButton(onClick = { showCropDialog = false }, modifier = Modifier.weight(1f)) {
                             Text(locString(R.string.cancel))
                         }
                         Button(
                             onClick = {
-                                // انجام عملیات ریاضی و جابه‌جایی واقعی پیکسل‌ها روی تصویر
                                 val croppedUri = cropBitmapAndSave(
                                     context = context,
                                     uri = selectedImageUri!!,
@@ -158,53 +163,52 @@ fun ProfileScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 200.dp), // Clear the floating miniplayer + navbar overlay
+        contentPadding = PaddingValues(start = dimens.spaceLarge, end = dimens.spaceLarge, bottom = dimens.spaceBottomOverScroll),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(28.dp)
+        verticalArrangement = Arrangement.spacedBy(dimens.spaceExtraLarge)
     ) {
-        item { Spacer(modifier = Modifier.height(12.dp)) }
+        item { Spacer(modifier = Modifier.height(dimens.spaceTwelve)) }
 
-        // --- بخش آواتار با افکت درخشش طلایی برای پرمیوم ---
         item {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 val avatarScale = if (isPremium) 1.04f else 1f
-                val pulse = rememberInfiniteTransition(label = "profileAvatarPulse")
+                val pulse = rememberInfiniteTransition(label = "")
                 val pulseAlpha by pulse.animateFloat(
                     initialValue = 0.30f,
                     targetValue = 0.70f,
                     animationSpec = infiniteRepeatable(animation = tween(1300, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse),
-                    label = "profileAvatarPulseAlpha"
+                    label = ""
                 )
 
-                Box(modifier = Modifier.size(116.dp).scale(avatarScale), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size(dimens.sizeAvatarFrame).scale(avatarScale), contentAlignment = Alignment.Center) {
                     Box(
                         modifier = Modifier
-                            .size(108.dp)
+                            .size(dimens.sizeAvatarBig)
                             .align(Alignment.Center)
                             .clip(CircleShape)
                             .background(if (isPremium) Color(0xFFFFF3C4) else MaterialTheme.colorScheme.surfaceVariant)
-                            .border(width = if (isPremium) 3.dp else 0.dp, color = if (isPremium) Color(0xFFFFD54F) else Color.Transparent, shape = CircleShape)
+                            .border(width = if (isPremium) dimens.borderHeavy else dimens.zero, color = if (isPremium) colors.premiumGoldAccent else Color.Transparent, shape = CircleShape)
                             .clickable {
                                 photoPickerLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         if (isPremium) {
-                            Box(modifier = Modifier.matchParentSize().clip(CircleShape).background(Color(0xFFFFD54F).copy(alpha = pulseAlpha)))
+                            Box(modifier = Modifier.matchParentSize().clip(CircleShape).background(colors.premiumGoldAccent.copy(alpha = pulseAlpha)))
                         }
 
                         if (avatarUrl.isNotEmpty()) {
                             SubcomposeAsyncImage(
                                 model = avatarUrl,
-                                contentDescription = "Avatar",
+                                contentDescription = displayName,
                                 modifier = Modifier.fillMaxSize().clip(CircleShape),
                                 loading = { Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.outlineVariant)) }
                             )
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(44.dp),
+                                contentDescription = displayName,
+                                modifier = Modifier.size(dimens.sizeAvatarMedium),
                                 tint = if (isPremium) Color(0xFF8D6E00) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -212,37 +216,32 @@ fun ProfileScreen(
 
                     if (isPremium) {
                         Box(
-                            modifier = Modifier.align(Alignment.BottomEnd).offset(x = (-2).dp, y = (-2).dp).size(24.dp).clip(CircleShape).background(Color(0xFFFFD54F)).border(1.5.dp, Color.White, CircleShape),
+                            modifier = Modifier.align(Alignment.BottomEnd).offset(x = -dimens.spaceTwo, y = -dimens.spaceTwo).size(dimens.sizeScrollbarTrack).clip(CircleShape).background(colors.premiumGoldAccent).border(dimens.borderMedium, Color.White, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(imageVector = Icons.Default.Star, contentDescription = "Premium", tint = Color(0xFF7A4F00), modifier = Modifier.size(15.dp))
+                            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = colors.premiumGoldTextDark, modifier = Modifier.size(dimens.sizeIconSmall))
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(dimens.spaceNormal))
                 Text(text = displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(dimens.spaceFour))
                 Text(text = email ?: "", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
             }
         }
 
-        // --- کارت پرمیوم با گرادینت طلایی درخشان ---
         item {
-            val shimmerTransition = rememberInfiniteTransition(label = "premiumCardShimmer")
+            val shimmerTransition = rememberInfiniteTransition(label = "")
             val shimmerOffset by shimmerTransition.animateFloat(
                 initialValue = -500f, targetValue = 1500f,
                 animationSpec = infiniteRepeatable(animation = tween(durationMillis = 2500, easing = LinearEasing), repeatMode = RepeatMode.Restart),
-                label = "shimmerOffset"
+                label = ""
             )
-
-            val goldBase = Color(0xFFF1C40F)
-            val goldLight = Color(0xFFFDE16D)
-            val goldDark = Color(0xFFD4AC0D)
 
             val premiumGradient = if (isPremium) {
                 Brush.linearGradient(
-                    colors = listOf(goldDark, goldBase, goldLight, goldBase, goldDark),
+                    colors = listOf(colors.premiumGoldDark, colors.premiumGoldAccent, colors.premiumGoldLight, colors.premiumGoldAccent, colors.premiumGoldDark),
                     start = androidx.compose.ui.geometry.Offset(x = shimmerOffset, y = 0f),
                     end = androidx.compose.ui.geometry.Offset(x = shimmerOffset + 400f, y = 400f)
                 )
@@ -252,55 +251,54 @@ fun ProfileScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = shapes.dialog,
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Row(
-                    modifier = Modifier.background(premiumGradient).padding(24.dp).fillMaxWidth(),
+                    modifier = Modifier.background(premiumGradient).padding(dimens.spaceLarge).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = if (isPremium) locString(R.string.premium_user_badge) else locString(R.string.regular_user_badge), style = MaterialTheme.typography.titleMedium, color = if (isPremium) Color(0xFF4A3700) else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(text = if (isPremium) locString(R.string.premium_user_badge) else locString(R.string.regular_user_badge), style = MaterialTheme.typography.titleMedium, color = if (isPremium) colors.premiumGoldTextDark else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(dimens.spaceTwelve))
                         Button(
                             onClick = { mainViewModel.setPremium(!isPremium) }, 
                             colors = ButtonDefaults.buttonColors(containerColor = if (isPremium) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary), 
-                            shape = RoundedCornerShape(10.dp)
+                            shape = shapes.button
                         ) {
-                            Text(if (isPremium) "Cancel Premium" else locString(R.string.upgrade_to_premium), style = MaterialTheme.typography.labelLarge, color = Color.White)
+                            Text(if (isPremium) locString(R.string.cancel_premium) else locString(R.string.upgrade_to_premium), style = MaterialTheme.typography.labelLarge, color = Color.White)
                         }
                     }
-                    Icon(imageVector = if (isPremium) Icons.Default.WorkspacePremium else Icons.Default.StarOutline, contentDescription = null, tint = if (isPremium) Color(0xFF4A3700) else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(32.dp))
+                    Icon(imageVector = if (isPremium) Icons.Default.WorkspacePremium else Icons.Default.StarOutline, contentDescription = null, tint = if (isPremium) colors.premiumGoldTextDark else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(dimens.sizeIconLarge))
                 }
             }
         }
 
-        // --- منوی تنظیمات پوسته و زبان ---
         item {
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-                Column(modifier = Modifier.padding(16.dp)) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = shapes.dialog, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                Column(modifier = Modifier.padding(dimens.spaceNormal)) {
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Outlined.Contrast, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(dimens.spaceNormal))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = locString(R.string.theme_settings), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Spacer(modifier = Modifier.height(dimens.spaceTwelve))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(dimens.spaceEight)) {
                                 listOf("system" to R.string.theme_system, "dark" to R.string.theme_dark, "light" to R.string.theme_light).forEach { (mode, nameRes) ->
                                     MinimalChip(text = locString(nameRes), isSelected = currentTheme == mode, onClick = { mainViewModel.updateTheme(mode) }, modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                     }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = dimens.spaceNormal), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Outlined.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(dimens.spaceNormal))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = locString(R.string.language_settings), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Spacer(modifier = Modifier.height(dimens.spaceTwelve))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(dimens.spaceEight)) {
                                 listOf("en" to R.string.english_lang, "fa" to R.string.persian_lang).forEach { (lang, nameRes) ->
                                     MinimalChip(text = locString(nameRes), isSelected = currentLang == lang, onClick = { mainViewModel.updateLanguage(lang) }, modifier = Modifier.weight(1f))
                                 }
@@ -311,21 +309,19 @@ fun ProfileScreen(
             }
         }
 
-        // --- دکمه خروج مینیمال ---
         item {
-            Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { mainViewModel.logout() }.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().clip(shapes.button).clickable { mainViewModel.logout() }.padding(vertical = dimens.spaceTwelve), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(dimens.sizeIconNormal))
+                    Spacer(modifier = Modifier.width(dimens.spaceEight))
                     Text(locString(R.string.logout), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceHuge))
         }
     }
 }
 
-// --- متد پس‌زمینه برای اعمال ریاضی ماتریس و ذخیره فیزیکی کادر جدید عکس ---
 fun cropBitmapAndSave(context: Context, uri: Uri, scale: Float, offsetX: Float, offsetY: Float, viewSize: Float): Uri? {
     return try {
         val inputStream = context.contentResolver.openInputStream(uri)
@@ -335,7 +331,6 @@ fun cropBitmapAndSave(context: Context, uri: Uri, scale: Float, offsetX: Float, 
         val bitmapWidth = originalBitmap.width
         val bitmapHeight = originalBitmap.height
 
-        // محاسبه نسبت مقیاس پیش‌فرض تصویر به دایره
         val viewAspectRatio = viewSize / viewSize
         val bitmapAspectRatio = bitmapWidth.toFloat() / bitmapHeight.toFloat()
 
@@ -347,7 +342,6 @@ fun cropBitmapAndSave(context: Context, uri: Uri, scale: Float, offsetX: Float, 
 
         val finalScale = baseScale * scale
 
-        // ماتریس معکوس برای تبدیل جابه‌جایی UI به مختصات واقعی پیکسل‌های عکس
         val matrix = Matrix()
         matrix.postScale(finalScale, finalScale)
 
@@ -359,7 +353,6 @@ fun cropBitmapAndSave(context: Context, uri: Uri, scale: Float, offsetX: Float, 
         val width = viewSize / finalScale
         val height = viewSize / finalScale
 
-        // محدوده زوم شده را دقیقاً بر اساس پیکسل فیزیکی برش بده
         val cropX = left.toInt().coerceIn(0, (bitmapWidth - 1))
         val cropY = top.toInt().coerceIn(0, (bitmapHeight - 1))
         val cropW = width.toInt().coerceIn(1, (bitmapWidth - cropX))
@@ -367,7 +360,6 @@ fun cropBitmapAndSave(context: Context, uri: Uri, scale: Float, offsetX: Float, 
 
         val croppedBitmap = Bitmap.createBitmap(originalBitmap, cropX, cropY, cropW, cropH)
 
-        // ذخیره فایل جدید در دایرکتوری کش برنامه
         val croppedFile = File(context.cacheDir, "cropped_avatar_${System.currentTimeMillis()}.jpg")
         val outputStream = FileOutputStream(croppedFile)
         croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
