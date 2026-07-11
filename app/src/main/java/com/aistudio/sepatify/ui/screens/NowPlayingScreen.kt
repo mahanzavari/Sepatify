@@ -728,12 +728,19 @@ fun NowPlayingScreen(
                     label = "thumbScale"
                 )
 
-                Slider(
-                    value = progressPct,
-                    onValueChange = { sharedAudioViewModel.seekTo((it * duration).toLong()) },
-                    interactionSource = sliderInteractionSource,
-                    // Custom continuous track with no cuts or gaps
-                    track = { _ ->
+            Slider(
+                value = progressPct,
+                onValueChange = { sharedAudioViewModel.seekTo((it * duration).toLong()) },
+                interactionSource = sliderInteractionSource,
+                // Custom continuous track — wrapped in a fixed-height box so its
+                // vertical center never shifts regardless of the animated thickness.
+                track = { _ ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp), // fixed reference height, shared with thumb below
+                        contentAlignment = Alignment.Center
+                    ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -748,9 +755,17 @@ fun NowPlayingScreen(
                                     .background(MaterialTheme.colorScheme.primary, CircleShape)
                             )
                         }
-                    },
-                    // Animated thumb that only appears when interacting
-                    thumb = {
+                    }
+                },
+                // Animated thumb — same fixed-height box as the track above, so its
+                // center always lands exactly on the track's center, not just its own box's center.
+                thumb = {
+                    Box(
+                        modifier = Modifier
+                            .height(24.dp) // must match track's outer box height
+                            .width(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(12.dp)
@@ -760,9 +775,10 @@ fun NowPlayingScreen(
                                 }
                                 .background(MaterialTheme.colorScheme.primary, CircleShape)
                         )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
 
                 // Static layout structure prevents any screen layout shifts
                 Row(
