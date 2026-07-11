@@ -321,3 +321,67 @@ fun ProfileScreen(
         }
     }
 }
+
+fun cropBitmapAndSave(context: Context, uri: Uri, scale: Float, offsetX: Float, offsetY: Float, viewSize: Float): Uri? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val originalBitmap = BitmapFactory.decodeStream(inputStream) ?: return null
+        inputStream?.close()
+
+        val bitmapWidth = originalBitmap.width
+        val bitmapHeight = originalBitmap.height
+
+        val viewAspectRatio = viewSize / viewSize
+        val bitmapAspectRatio = bitmapWidth.toFloat() / bitmapHeight.toFloat()
+
+        val baseScale = if (bitmapAspectRatio > viewAspectRatio) {
+            viewSize / bitmapHeight.toFloat()
+        } else {
+            viewSize / bitmapWidth.toFloat()
+        }
+
+        val finalScale = baseScale * scale
+
+        val matrix = Matrix()
+        matrix.postScale(finalScale, finalScale)
+
+        val displayWidth = bitmapWidth * finalScale
+        val displayHeight = bitmapHeight * finalScale
+
+        val left = ((displayWidth - viewSize) / 2f - offsetX) / finalScale
+        val top = ((displayHeight - viewSize) / 2f - offsetY) / finalScale
+        val width = viewSize / finalScale
+        val height = viewSize / finalScale
+
+        val cropX = left.toInt().coerceIn(0, (bitmapWidth - 1))
+        val cropY = top.toInt().coerceIn(0, (bitmapHeight - 1))
+        val cropW = width.toInt().coerceIn(1, (bitmapWidth - cropX))
+        val cropH = height.toInt().coerceIn(1, (bitmapHeight - cropY))
+
+        val croppedBitmap = Bitmap.createBitmap(originalBitmap, cropX, cropY, cropW, cropH)
+
+        val croppedFile = File(context.cacheDir, "cropped_avatar_${System.currentTimeMillis()}.jpg")
+        val outputStream = FileOutputStream(croppedFile)
+        croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+        outputStream.flush()
+        outputStream.close()
+
+        Uri.fromFile(croppedFile)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+@Composable
+fun MinimalChip(text: String, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.clip(RoundedCornerShape(8.dp)).clickable { onClick() },
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(8.dp),
+        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
+    ) {
+        Text(text = text, fontSize = 12.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, maxLines = 1, softWrap = false, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp))
+    }
+}

@@ -54,6 +54,7 @@ fun ChatsScreen(
             .padding(dimens.spaceNormal)
     ) {
         if (activeChatUser == null) {
+            // General Chats / Contacts Hub
             Text(
                 text = locString(R.string.chat_title),
                 style = MaterialTheme.typography.titleLarge,
@@ -62,6 +63,7 @@ fun ChatsScreen(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
+            // User queries search
             OutlinedTextField(
                 value = searchUsersQuery,
                 onValueChange = { chatViewModel.updateSearchQuery(it) },
@@ -74,6 +76,7 @@ fun ChatsScreen(
             Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
             if (searchUsersQuery.isNotEmpty()) {
+                // Search Lookup list Results
                 Text(
                     text = locString(R.string.matching_users_title),
                     style = MaterialTheme.typography.titleSmall,
@@ -125,6 +128,7 @@ fun ChatsScreen(
                     }
                 }
             } else {
+                // Default Chat feed for followed users
                 Text(
                     text = locString(R.string.conversations_title),
                     style = MaterialTheme.typography.titleSmall,
@@ -161,7 +165,7 @@ fun ChatsScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(dimens.spaceSuperHuge)
+                                        .size(dimens.sizeAvatarLarge)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
@@ -179,6 +183,7 @@ fun ChatsScreen(
                 }
             }
         } else {
+            // DIRECT DISCUSSION THREAD VIEW
             val user = activeChatUser
             val pagedMessages = chatViewModel.getMessagesPaged(user).collectAsLazyPagingItems()
             val otherIsTyping = remember(user) { chatViewModel.getTypingState(user) }.collectAsState(initial = false)
@@ -203,6 +208,7 @@ fun ChatsScreen(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
+            // Message Bubble list
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -235,9 +241,10 @@ fun ChatsScreen(
                         ) {
                             Column(modifier = Modifier.padding(dimens.spaceTwelve)) {
                                 if (msg.isSongShare) {
+                                    // Custom Shared song card
                                     Card(
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                                        shape = shapes.extraSmall,
+                                        shape = MaterialTheme.shapes.extraSmall,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(bottom = dimens.spaceEight)
@@ -262,8 +269,8 @@ fun ChatsScreen(
                                                 model = msg.songCover,
                                                 contentDescription = msg.songTitle,
                                                 modifier = Modifier
-                                                    .size(dimens.sizeSongThumbnailSmall)
-                                                    .clip(shapes.extraSmall)
+                                                    .size(dimens.sizeAvatarNormal)
+                                                    .clip(MaterialTheme.shapes.extraSmall)
                                             )
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(text = msg.songTitle ?: "", style = MaterialTheme.typography.labelMedium)
@@ -286,6 +293,7 @@ fun ChatsScreen(
                             }
                         }
 
+                        // Tick marks alignment
                         if (isMe) {
                             Row(
                                 modifier = Modifier.padding(top = dimens.spaceTwo),
@@ -306,7 +314,7 @@ fun ChatsScreen(
                                     imageVector = iconVector,
                                     contentDescription = statusText,
                                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(dimens.sizeIconTiny)
+                                    modifier = Modifier.size(dimens.spaceTwelve)
                                 )
                                 Text(
                                     text = statusText,
@@ -321,6 +329,7 @@ fun ChatsScreen(
 
             Spacer(modifier = Modifier.height(dimens.spaceTen))
 
+            // Message entry footer row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -342,7 +351,7 @@ fun ChatsScreen(
                     },
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        .size(dimens.heightChatRow)
+                        .size(dimens.sizeAvatarLarge)
                 ) {
                     Icon(Icons.Default.Send, contentDescription = locString(R.string.send_desc), tint = MaterialTheme.colorScheme.onPrimary)
                 }

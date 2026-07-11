@@ -71,25 +71,21 @@ data class SepatifyColors(
     val surfaceMuted: Color = SurfaceMuted,
     val surfaceHighlight: Color = SurfaceHighlight,
     
-    // Bento & Playlist Accents (Dark Mode)
     val playlistAccentBlue: Color = PlaylistAccentBlue,
     val playlistAccentPurple: Color = PlaylistAccentPurple,
     val playlistAccentRose: Color = PlaylistAccentRose,
     val playlistAccentMint: Color = PlaylistAccentMint,
     
-    // Bento & Playlist Accents (Light Mode)
     val playlistAccentBlueLight: Color = PlaylistAccentBlueLight,
     val playlistAccentPurpleLight: Color = PlaylistAccentPurpleLight,
     val playlistAccentRoseLight: Color = PlaylistAccentRoseLight,
     val playlistAccentMintLight: Color = PlaylistAccentMintLight,
     
-    // Light Mode Contrast Texts
     val playlistTextBlueDark: Color = Color(0xFF001D35),
     val playlistTextPurpleDark: Color = Color(0xFF21005D),
     val playlistTextRoseDark: Color = Color(0xFF410002),
     val playlistTextMintDark: Color = Color(0xFF003916),
 
-    // Search Browse Genre Cards Colors
     val genrePop: Color = Color(0xFF27856A),
     val genreIndie: Color = Color(0xFF477C2B),
     val genreRock: Color = Color(0xFFE8115B),
@@ -99,13 +95,11 @@ data class SepatifyColors(
     val genreCharts: Color = Color(0xFF8D67AB),
     val genreNewReleases: Color = Color(0xFFE1306C),
 
-    // Premium UI Elements Gold Colors
     val premiumGoldAccent: Color = Color(0xFFFFD54F),
     val premiumGoldTextDark: Color = Color(0xFF7A4F00),
     val premiumGoldLight: Color = Color(0xFFFDE16D),
     val premiumGoldDark: Color = Color(0xFFD4AC0D),
     
-    // General overlay tokens
     val neutralGrey: Color = Color(0x1B79747E)
 )
 
@@ -116,6 +110,7 @@ data class SepatifyDimens(
     val borderMedium: Dp = 1.5.dp,
     val borderThick: Dp = 2.dp,
     val borderHeavy: Dp = 3.dp,
+    val borderGiga: Dp = 1.5.dp,
     
     val spaceTwo: Dp = 2.dp,
     val spaceThree: Dp = 3.dp,
@@ -133,23 +128,36 @@ data class SepatifyDimens(
     val spaceHuge: Dp = 32.dp,
     val spaceMega: Dp = 48.dp,
     val spaceGiga: Dp = 54.dp,
-    val spaceTera: Dp = 64.dp,
+    val spaceGiant: Dp = 64.dp,
+    val spaceTera: Dp = 64.dp, // Defined as 64.dp
     val spacePeta: Dp = 68.dp,
     val spaceExa: Dp = 80.dp,
     val spaceZetta: Dp = 100.dp,
     val spaceYotta: Dp = 110.dp,
     
+    val sizeIconSmall: Dp = 16.dp,
+    val sizeIconNormal: Dp = 18.dp,
+    val sizeIconLarge: Dp = 24.dp,
+    val sizeIconExtraLarge: Dp = 32.dp,
+    
     val sizeAvatarSmall: Dp = 36.dp,
     val sizeAvatarNormal: Dp = 40.dp,
     val sizeAvatarMedium: Dp = 44.dp,
     val sizeAvatarLarge: Dp = 48.dp,
+    val sizeAvatarBig: Dp = 108.dp,
     val sizeAvatarHuge: Dp = 108.dp,
     val sizeAvatarFrame: Dp = 116.dp,
+    
+    val sizeSongThumbnailSmall: Dp = 40.dp,
+    val sizeSongThumbnailMedium: Dp = 50.dp,
+    val sizeSongThumbnailNormal: Dp = 54.dp,
+    val sizeSongThumbnailLarge: Dp = 110.dp,
     
     val heightBentoSmall: Dp = 64.dp,
     val heightBentoWide: Dp = 68.dp,
     val heightBentoMedium: Dp = 138.dp,
     val heightPlaylistCard: Dp = 134.dp,
+    val heightGenreCard: Dp = 100.dp,
     
     val sizeScrollbarThumb: Dp = 6.dp,
     val sizeScrollbarTrack: Dp = 24.dp,
@@ -162,6 +170,7 @@ data class SepatifyShapes(
     val chip: RoundedCornerShape = RoundedCornerShape(999.dp),
     val dialog: RoundedCornerShape = RoundedCornerShape(20.dp),
     val button: RoundedCornerShape = RoundedCornerShape(16.dp),
+    val small: RoundedCornerShape = RoundedCornerShape(12.dp),
     val chatBubbleMe: RoundedCornerShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 0.dp, bottomStart = 16.dp),
     val chatBubbleOther: RoundedCornerShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 0.dp)
 )
