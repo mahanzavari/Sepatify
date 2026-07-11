@@ -50,6 +50,42 @@ class ChatRepositoryImpl(
 
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
+        repoScope.launch { syncRecentConversations() }
+    }
+
+    override fun getRecentConversations(): Flow<List<String>> {
+        repoScope.launch {
+            if (authRepository.hasValidSession()) {
+                syncRecentConversations()
+            }
+        }
+        return chatMessageDao.getRecentConversations()
+    }
+
+    private suspend fun syncRecentConversations() {
+        val myId = authRepository.currentUserId() ?: return
+        try {
+            // Query Supabase using actual UUIDs based on your schema
+            val remoteMessages = Supa.client.from("chat_messages")
+                .select(columns = Columns.ALL) {
+                    filter {
+                        or {
+                            eq("sender_id", myId)
+                            eq("receiver_id", myId)
+                        }
+                    }
+                    order("created_at", Order.DESCENDING)
+                    limit(100)
+                }
+                .decodeList<ChatMessageDto>()
+
+            // upsertRemoteMessage (which already exists in your file) will automatically
+            // map the UUIDs to Usernames and save them to the local Room database.
+            remoteMessages.forEach { upsertRemoteMessage(it, myId) }
+        } catch (e: Exception) {
+            // Fails silently if offline; Room will still serve cached history
+            e.printStackTrace()
+        }
     }
 
     // ---------------------------------------------------------------------

@@ -117,6 +117,16 @@ interface ChatMessageDao {
     """)
     fun getMessagesBetweenUsersPaged(user1: String, user2: String): PagingSource<Int, ChatMessageEntity>
 
+
+    @Query("""
+        SELECT CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END 
+        FROM chat_messages
+        WHERE senderName = 'Me' OR receiverName = 'Me'
+        GROUP BY CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END
+        ORDER BY MAX(timestamp) DESC
+    """)
+    fun getRecentConversations(): Flow<List<String>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: ChatMessageEntity): Long
 
