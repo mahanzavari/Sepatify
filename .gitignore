@@ -61,3 +61,6 @@ keystore.properties
 /.idea/assetWizardSettings.xml
 /.idea/assetWizardSettings.xml
 
+# abbas handling
+gradle.properties
+app/build.gradle.kts
