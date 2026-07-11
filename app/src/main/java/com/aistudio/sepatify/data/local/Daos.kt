@@ -125,11 +125,14 @@ interface ChatMessageDao {
 
 
     @Query("""
-        SELECT CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END 
-        FROM chat_messages
-        WHERE senderName = 'Me' OR receiverName = 'Me'
-        GROUP BY CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END
-        ORDER BY MAX(timestamp) DESC
+        SELECT contactName FROM (
+            SELECT CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END AS contactName,
+                   MAX(timestamp) AS lastMsgTime
+            FROM chat_messages
+            WHERE senderName = 'Me' OR receiverName = 'Me'
+            GROUP BY CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END
+        )
+        ORDER BY lastMsgTime DESC
     """)
     fun getRecentConversations(): Flow<List<String>>
 
