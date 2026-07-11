@@ -160,4 +160,5 @@
     <string name="empty_conversations_message">چند نفر را دنبال کنید تا گفتگوهای زنده‌ای شروع شود.</string>
     <string name="chat_thread_hint">برای باز کردن رشته پیام، لمس کنید</string>
     <string name="chat_active_status">فعال</string>
+    <string name="exclusive_tracks">آهنگ‌های ویژه و اختصاصی</string>
 </resources>

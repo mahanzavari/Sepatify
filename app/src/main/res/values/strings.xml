@@ -161,4 +161,5 @@
     <string name="empty_conversations_message">Follow some people to start live conversations.</string>
     <string name="chat_thread_hint">Tap to open conversation thread</string>
     <string name="chat_active_status">Active</string>
+    <string name="exclusive_tracks">Featured &amp; Exclusive</string>
 </resources>

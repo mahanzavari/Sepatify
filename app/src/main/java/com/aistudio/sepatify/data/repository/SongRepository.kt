@@ -10,6 +10,7 @@ interface SongRepository {
     fun getTrendingSongs(): Flow<List<Song>>
     fun getDailyRecommendations(): Flow<List<Song>>
     fun getNewReleases(): Flow<List<Song>>
+    fun getExclusiveSongs(): Flow<List<Song>>
     fun getMostPopular(): Flow<List<Song>>
     fun getLocalPlaylists(): Flow<List<Song>>
     fun getGlobalPlaylists(): Flow<List<Song>>

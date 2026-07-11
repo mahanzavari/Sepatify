@@ -16,7 +16,8 @@ sealed interface HomeUiState {
         val newReleases: List<Song>,
         val mostPopular: List<Song>,
         val globalPlaylistSongs: List<Song> = emptyList(),
-        val localPlaylistSongs: List<Song> = emptyList()
+        val localPlaylistSongs: List<Song> = emptyList(),
+        val exclusiveSongs: List<Song> = emptyList() // Added Exclusive
     ) : HomeUiState
 }
 
@@ -31,10 +32,11 @@ class HomeViewModel(
         loadHomeData()
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun loadHomeData() {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
-            delay(1200) // Shimmer animation rule requirement NFR-05: "All shimmer loading animations shall appear before any list data is available"
+            delay(1200) // Shimmer animation rule requirement NFR-05
 
             combine(
                 songRepository.getTrendingSongs(),
@@ -42,15 +44,17 @@ class HomeViewModel(
                 songRepository.getNewReleases(),
                 songRepository.getMostPopular(),
                 songRepository.getGlobalPlaylists(),
-                songRepository.getLocalPlaylists()
+                songRepository.getLocalPlaylists(),
+                songRepository.getExclusiveSongs() // Added to Flow list
             ) { values ->
                 HomeUiState.Success(
-                    trending = values[0],
-                    recommendations = values[1],
-                    newReleases = values[2],
-                    mostPopular = values[3],
-                    globalPlaylistSongs = values[4],
-                    localPlaylistSongs = values[5]
+                    trending = values[0] as List<Song>,
+                    recommendations = values[1] as List<Song>,
+                    newReleases = values[2] as List<Song>,
+                    mostPopular = values[3] as List<Song>,
+                    globalPlaylistSongs = values[4] as List<Song>,
+                    localPlaylistSongs = values[5] as List<Song>,
+                    exclusiveSongs = values[6] as List<Song> // Maps to 7th flow
                 )
             }.collect { state ->
                 _uiState.value = state
