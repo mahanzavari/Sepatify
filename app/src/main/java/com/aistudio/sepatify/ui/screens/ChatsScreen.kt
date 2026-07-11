@@ -23,6 +23,8 @@ import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.ChatMessageEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
 
 @Composable
@@ -42,44 +44,43 @@ fun ChatsScreen(
     }
 
     var chatInputText by remember { mutableStateOf("") }
+    val dimens = MaterialTheme.sepatifyDimens
+    val shapes = MaterialTheme.sepatifyShapes
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .padding(dimens.spaceNormal)
     ) {
         if (activeChatUser == null) {
-            // General Chats / Contacts Hub
             Text(
                 text = locString(R.string.chat_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            // User queries search
             OutlinedTextField(
                 value = searchUsersQuery,
                 onValueChange = { chatViewModel.updateSearchQuery(it) },
                 placeholder = { Text(locString(R.string.search_users_hint)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Lookup") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = locString(R.string.chat_lookup_desc)) },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp)
+                shape = shapes.card
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
             if (searchUsersQuery.isNotEmpty()) {
-                // Search Lookup list Results
                 Text(
                     text = locString(R.string.matching_users_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 ) {
                     items(matchingUsers) { usr ->
@@ -88,17 +89,17 @@ fun ChatsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onActiveChatUserChange(usr) }
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = dimens.spaceEight),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                horizontalArrangement = Arrangement.spacedBy(dimens.spaceTen)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(40.dp)
+                                        .size(dimens.sizeAvatarNormal)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                                     contentAlignment = Alignment.Center
@@ -110,7 +111,7 @@ fun ChatsScreen(
 
                             Button(
                                 onClick = { chatViewModel.toggleFollow(usr) },
-                                shape = RoundedCornerShape(16.dp),
+                                shape = shapes.button,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isFollowingFlow.value) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
                                 )
@@ -124,7 +125,6 @@ fun ChatsScreen(
                     }
                 }
             } else {
-                // Default Chat feed for followed users
                 Text(
                     text = locString(R.string.conversations_title),
                     style = MaterialTheme.typography.titleSmall,
@@ -134,7 +134,7 @@ fun ChatsScreen(
                 if (chatsFirstLoad) {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(dimens.spaceFour)
                     ) {
                         items(6) { ChatRowSkeleton() }
                     }
@@ -147,7 +147,7 @@ fun ChatsScreen(
                     )
                 } else {
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(dimens.spaceTen),
                         modifier = Modifier.fillMaxWidth().weight(1f)
                     ) {
                         items(followedUsers) { user ->
@@ -155,13 +155,13 @@ fun ChatsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onActiveChatUserChange(user) }
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = dimens.spaceEight),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(48.dp)
+                                        .size(dimens.spaceSuperHuge)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
@@ -172,15 +172,14 @@ fun ChatsScreen(
                                     Text(text = user, style = MaterialTheme.typography.bodyLarge)
                                     Text(text = locString(R.string.chat_thread_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                                 }
-                                Icon(Icons.Default.Chat, contentDescription = "Chat icon", tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
+                                Icon(Icons.Default.Chat, contentDescription = locString(R.string.chat_icon_desc), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
                             }
                         }
                     }
                 }
             }
         } else {
-            // DIRECT DISCUSSION THREAD VIEW
-            val user = activeChatUser!!
+            val user = activeChatUser
             val pagedMessages = chatViewModel.getMessagesPaged(user).collectAsLazyPagingItems()
             val otherIsTyping = remember(user) { chatViewModel.getTypingState(user) }.collectAsState(initial = false)
 
@@ -189,9 +188,9 @@ fun ChatsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { onActiveChatUserChange(null) }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.Default.ArrowBack, contentDescription = locString(R.string.back_desc))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(dimens.spaceEight))
                 Column {
                     Text(text = user, style = MaterialTheme.typography.titleMedium)
                     if (otherIsTyping.value) {
@@ -202,22 +201,21 @@ fun ChatsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            // Message Bubble list
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
+                verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
+                contentPadding = PaddingValues(vertical = dimens.spaceEight)
             ) {
                 item {
                     if (pagedMessages.itemCount == 0) {
                         EmptyStateView(
                             icon = Icons.Default.ChatBubbleOutline,
-                            title = "Say Hello!",
-                            subtitle = "Start a real-time conversation or share your favorite songs directly with your contacts.",
+                            title = locString(R.string.chat_say_hello_title),
+                            subtitle = locString(R.string.chat_say_hello_desc),
                             modifier = Modifier.fillMaxWidth().height(220.dp)
                         )
                     }
@@ -231,20 +229,18 @@ fun ChatsScreen(
                         horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
                     ) {
                         Surface(
-                            shape = if (isMe) RoundedCornerShape(16.dp, 16.dp, 0.dp, 16.dp) else RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp),
+                            shape = if (isMe) shapes.chatBubbleMe else shapes.chatBubbleOther,
                             color = if (isMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.widthIn(max = 280.dp)
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
+                            Column(modifier = Modifier.padding(dimens.spaceTwelve)) {
                                 if (msg.isSongShare) {
-                                    // Custom Shared song card!
-                                    // "FR-96: Users shall be able to share a song in chat; the song shall appear as a custom mini-card that triggers playback on tap"
                                     Card(
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = shapes.extraSmall,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 8.dp)
+                                            .padding(bottom = dimens.spaceEight)
                                             .clickable {
                                                 onPlaySharedSong(
                                                     Song(
@@ -258,16 +254,16 @@ fun ChatsScreen(
                                             }
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(8.dp),
+                                            modifier = Modifier.padding(dimens.spaceEight),
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceEight)
                                         ) {
                                             AsyncImage(
                                                 model = msg.songCover,
                                                 contentDescription = msg.songTitle,
                                                 modifier = Modifier
-                                                    .size(40.dp)
-                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .size(dimens.sizeSongThumbnailSmall)
+                                                    .clip(shapes.extraSmall)
                                             )
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(text = msg.songTitle ?: "", style = MaterialTheme.typography.labelMedium)
@@ -275,7 +271,7 @@ fun ChatsScreen(
                                             }
                                             Icon(
                                                 imageVector = Icons.Default.PlayArrow,
-                                                contentDescription = "Tape",
+                                                contentDescription = msg.songTitle,
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
@@ -290,13 +286,11 @@ fun ChatsScreen(
                             }
                         }
 
-                        // Tick marks alignment
-                        // "FR-94: Messages shall display status indicators: Sending (clock), Delivered (single check), Read (double check)"
                         if (isMe) {
                             Row(
-                                modifier = Modifier.padding(top = 2.dp),
+                                modifier = Modifier.padding(top = dimens.spaceTwo),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwo)
                             ) {
                                 val statusText = when (msg.status) {
                                     "Sending" -> locString(R.string.message_sending)
@@ -312,7 +306,7 @@ fun ChatsScreen(
                                     imageVector = iconVector,
                                     contentDescription = statusText,
                                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(12.dp)
+                                    modifier = Modifier.size(dimens.sizeIconTiny)
                                 )
                                 Text(
                                     text = statusText,
@@ -325,20 +319,19 @@ fun ChatsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceTen))
 
-            // Message entry footer row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(dimens.spaceEight)
             ) {
                 OutlinedTextField(
                     value = chatInputText,
                     onValueChange = { chatInputText = it },
                     placeholder = { Text(locString(R.string.message_hint)) },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(24.dp)
+                    shape = shapes.card
                 )
                 IconButton(
                     onClick = {
@@ -349,9 +342,9 @@ fun ChatsScreen(
                     },
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        .size(46.dp)
+                        .size(dimens.heightChatRow)
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.onPrimary)
+                    Icon(Icons.Default.Send, contentDescription = locString(R.string.send_desc), tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }

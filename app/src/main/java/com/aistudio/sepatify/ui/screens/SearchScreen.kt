@@ -23,6 +23,9 @@ import androidx.paging.compose.itemKey
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.SearchUiState
 import com.aistudio.sepatify.ui.viewmodel.SearchViewModel
 
@@ -38,36 +41,37 @@ fun SearchScreen(
     val history by searchViewModel.searchHistory.collectAsState()
 
     val filters = listOf("All", "Songs", "Artists")
+    val colors = MaterialTheme.sepatifyColors
+    val dimens = MaterialTheme.sepatifyDimens
+    val shapes = MaterialTheme.sepatifyShapes
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .padding(dimens.spaceNormal)
     ) {
-        // Search Input Bar
         OutlinedTextField(
             value = query,
             onValueChange = { searchViewModel.updateSearchQuery(it) },
             placeholder = { Text(locString(R.string.search_hint)) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search icon") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = locString(R.string.nav_search)) },
             trailingIcon = if (query.isNotEmpty()) {
                 {
                     IconButton(onClick = { searchViewModel.updateSearchQuery("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        Icon(Icons.Default.Clear, contentDescription = locString(R.string.clear_history))
                     }
                 }
             } else null,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp)
+            shape = shapes.chip
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-        // Filter chips (Songs, Artists)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(dimens.spaceEight)
         ) {
             filters.forEach { filterItem ->
                 val localizedFilter = when (filterItem) {
@@ -84,13 +88,12 @@ fun SearchScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
-        // Search Content
         when (val state = uiState) {
             SearchUiState.Idle -> {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     if (history.isNotEmpty()) {
@@ -117,17 +120,17 @@ fun SearchScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { searchViewModel.updateSearchQuery(historyItem) }
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = dimens.spaceFour),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceTen)
                                 ) {
                                     Icon(
                                         Icons.Default.History,
-                                        contentDescription = "History item icon",
+                                        contentDescription = locString(R.string.search_history),
                                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                                     )
                                     Text(text = historyItem, style = MaterialTheme.typography.bodyMedium)
@@ -135,7 +138,7 @@ fun SearchScreen(
                                 IconButton(onClick = { searchViewModel.deleteHistoryItem(historyItem) }) {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "Delete from history",
+                                        contentDescription = locString(R.string.clear_history),
                                         tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                                     )
                                 }
@@ -145,31 +148,31 @@ fun SearchScreen(
 
                     item {
                         Text(
-                            text = "Your top genres",
+                            text = locString(R.string.search_top_genres),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.padding(vertical = dimens.spaceFour)
                         )
                     }
 
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "Pop",
-                                    backgroundColor = Color(0xFF27856A),
+                                    title = locString(R.string.genre_pop),
+                                    backgroundColor = colors.genrePop,
                                     imageUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("Pop") }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "Indie",
-                                    backgroundColor = Color(0xFF477C2B),
+                                    title = locString(R.string.genre_indie),
+                                    backgroundColor = colors.genreIndie,
                                     imageUrl = "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("Indie") }
                                 )
@@ -180,20 +183,20 @@ fun SearchScreen(
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "Rock",
-                                    backgroundColor = Color(0xFFE8115B),
+                                    title = locString(R.string.genre_rock),
+                                    backgroundColor = colors.genreRock,
                                     imageUrl = "https://images.unsplash.com/photo-1487180142328-0c4e37023af5?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("Rock") }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "R&B",
-                                    backgroundColor = Color(0xFFD84080),
+                                    title = locString(R.string.genre_r_b),
+                                    backgroundColor = colors.genreRandB,
                                     imageUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("R&B") }
                                 )
@@ -203,31 +206,31 @@ fun SearchScreen(
 
                     item {
                         Text(
-                            text = "Browse all",
+                            text = locString(R.string.search_browse_all),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.padding(vertical = dimens.spaceFour)
                         )
                     }
 
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "Podcasts",
-                                    backgroundColor = Color(0xFF2296F3),
+                                    title = locString(R.string.genre_podcasts),
+                                    backgroundColor = colors.genrePodcasts,
                                     imageUrl = "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("Podcasts") }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "Made For You",
-                                    backgroundColor = Color(0xFF1E3264),
+                                    title = locString(R.string.genre_made_for_you),
+                                    backgroundColor = colors.genreMadeForYou,
                                     imageUrl = "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("Made For You") }
                                 )
@@ -238,20 +241,20 @@ fun SearchScreen(
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "Charts",
-                                    backgroundColor = Color(0xFF8D67AB),
+                                    title = locString(R.string.genre_charts),
+                                    backgroundColor = colors.genreCharts,
                                     imageUrl = "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("Charts") }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 BrowseGenreCard(
-                                    title = "New Releases",
-                                    backgroundColor = Color(0xFFE1306C),
+                                    title = locString(R.string.genre_new_releases_tag),
+                                    backgroundColor = colors.genreNewReleases,
                                     imageUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&q=80",
                                     onClick = { searchViewModel.updateSearchQuery("New Releases") }
                                 )
@@ -263,14 +266,12 @@ fun SearchScreen(
             SearchUiState.Loading -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(dimens.spaceFour)
                 ) {
                     items(8) { SongRowSkeleton() }
                 }
             }
             is SearchUiState.Success -> {
-                // Paginated via Paging 3 (Postgrest `.range()` under the hood) instead of loading
-                // the whole result set into a plain LazyColumn.
                 val pagedItems = searchViewModel.pagedResults.collectAsLazyPagingItems()
                 if (pagedItems.itemCount == 0) {
                     EmptyStateView(
@@ -281,7 +282,7 @@ fun SearchScreen(
                     )
                 } else {
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(dimens.spaceTen),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(pagedItems.itemCount, key = pagedItems.itemKey { it.id }) { index ->
@@ -290,23 +291,23 @@ fun SearchScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onSongSelect(song, state.results) }
-                                    .padding(vertical = 6.dp),
+                                    .padding(vertical = dimens.spaceSix),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                             ) {
                                 val art = rememberSongArt(song)
                                 AsyncImage(
                                     model = art,
                                     contentDescription = song.title,
                                     modifier = Modifier
-                                        .size(54.dp)
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .size(dimens.sizeSongThumbnailNormal)
+                                        .clip(MaterialTheme.shapes.extraSmall)
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                                     Text(text = song.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                                 }
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Play icon", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.PlayArrow, contentDescription = song.title, tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -323,18 +324,20 @@ fun BrowseGenreCard(
     imageUrl: String,
     onClick: () -> Unit
 ) {
+    val dimens = MaterialTheme.sepatifyDimens
+    val shapes = MaterialTheme.sepatifyShapes
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
+            .height(dimens.heightGenreCard)
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = shapes.small,
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(shapes.small)
         ) {
             Text(
                 text = title,
@@ -343,18 +346,18 @@ fun BrowseGenreCard(
                 color = Color.White,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(12.dp)
+                    .padding(dimens.spaceTwelve)
             )
 
             AsyncImage(
                 model = imageUrl,
-                contentDescription = null,
+                contentDescription = title,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .offset(x = 16.dp, y = 16.dp)
-                    .size(64.dp)
+                    .offset(x = dimens.spaceNormal, y = dimens.spaceNormal)
+                    .size(dimens.spaceGiant)
                     .graphicsLayer { rotationZ = 25f }
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(MaterialTheme.shapes.extraSmall)
             )
         }
     }
