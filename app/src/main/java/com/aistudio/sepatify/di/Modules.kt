@@ -31,7 +31,7 @@ val appModule = module {
     single<DownloadRepository> { DownloadRepositoryImpl(androidContext(), get(), get()) }
 
     // ViewModels
-    viewModel { MainViewModel(get(), get()) }
+    viewModel { MainViewModel(get(), get(), get()) }
     viewModel { AuthViewModel(get(), get()) }
     viewModel { HomeViewModel(get()) }
     viewModel { SearchViewModel(get(), get()) }
