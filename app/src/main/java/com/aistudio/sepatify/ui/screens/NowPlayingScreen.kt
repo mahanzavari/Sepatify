@@ -7,6 +7,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -76,8 +78,33 @@ fun NowPlayingScreen(
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
 
+    // =======================================================
+    // 1. DYNAMIC VINYL ROTATION ANGLE LINKED TO PLAYBACK SPEED
+    // =======================================================
+    var finalAngle by remember { mutableFloatStateOf(0f) }
+
+    LaunchedEffect(isPlaying, speed) {
+        if (isPlaying) {
+            while (true) {
+                val baseRotationSpeed = 1.2f
+                finalAngle += (baseRotationSpeed * speed)
+
+                if (finalAngle >= 360f) {
+                    finalAngle -= 360f
+                }
+                kotlinx.coroutines.delay(16L)
+            }
+        }
+    }
+
+    val coverScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1.0f else 0.95f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "coverScale"
+    )
+    // =======================================================
+
     // 1. EXTRACT COLOR USING PALETTE API (FR-72)
-    // "The screen background color shall be dynamically derived from the album cover’s dominant color using the Android Palette API"
     LaunchedEffect(currentSong) {
         currentSong?.let { song ->
             coroutineScope.launch(Dispatchers.IO) {
@@ -115,13 +142,13 @@ fun NowPlayingScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    // Fallback to random moody dark colors
                     dominantColor = Color(0xFF1E3524)
                 }
             }
         }
     }
 
+    // Rest of your UI code goes here...
     // 2. ALBUM COVER ROTATION VALUE (FR-71)
     // "The album artwork shall rotate continuously while playing and stop when paused"
     val infiniteTransition = rememberInfiniteTransition(label = "rotation")
@@ -134,14 +161,7 @@ fun NowPlayingScreen(
         ),
         label = "angle"
     )
-    val finalAngle = if (isPlaying) rotationAngle else 0f
 
-    // Animated transitions for playback controls
-    val coverScale by animateFloatAsState(
-        targetValue = if (isPlaying) 1.04f else 0.94f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
-        label = "coverScale"
-    )
 
     val playPauseScale by animateFloatAsState(
         targetValue = if (isPlaying) 1.08f else 1.0f,
@@ -459,27 +479,80 @@ fun NowPlayingScreen(
                                 .fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
+                            // Animated disk size based on playback state (e.g., isPlaying)
+                            // If you don't have isPlaying variable, replace it with your playback state or use a fixed size like 230.dp
+                            val targetDiskSize by animateDpAsState(
+                                targetValue = if (isPlaying) 230.dp else 220.dp,
+                                animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                                label = "diskSize"
+                            )
+
+                            // Main vinyl record with animated smaller size
                             Box(
                                 modifier = Modifier
-                                    .size(240.dp)
+                                    .size(targetDiskSize)
+                                    .aspectRatio(1f)
                                     .graphicsLayer {
                                         scaleX = coverScale
                                         scaleY = coverScale
+                                        shadowElevation = 10.dp.toPx()
+                                        shape = CircleShape
+                                        clip = true
                                     }
-                                    .clip(CircleShape)
                                     .rotate(finalAngle)
-                                    .background(Color.Black)
-                                    .padding(12.dp),
+                                    .background(Color.Black, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val art = rememberSongArt(song)
-                                AsyncImage(
-                                    model = art,
-                                    contentDescription = song.title,
-                                    modifier = coverModifier
-                                        .fillMaxSize()
-                                        .clip(CircleShape),
-                                    contentScale = ContentScale.Crop
+                                // Vinyl grooves
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    val center = this.center
+                                    val maxRadius = size.minDimension / 2
+
+                                    val maxRadiusInt = maxRadius.toInt()
+                                    val minRadiusInt = (maxRadius * 0.45f).toInt()
+
+                                    for (r in maxRadiusInt downTo minRadiusInt step 12) {
+                                        drawCircle(
+                                            color = Color.White.copy(alpha = 0.04f),
+                                            radius = r.toFloat(),
+                                            center = center,
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                                        )
+                                    }
+
+                                    // Outer rim shine
+                                    drawCircle(
+                                        color = Color.White.copy(alpha = 0.08f),
+                                        radius = maxRadius - 4.dp.toPx(),
+                                        center = center,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
+                                    )
+                                }
+
+                                // Center album art sticker - strictly circular
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize(0.42f)
+                                        .aspectRatio(1f)
+                                        .clip(CircleShape)
+                                        .background(Color.DarkGray),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val art = rememberSongArt(song)
+                                    AsyncImage(
+                                        model = art,
+                                        contentDescription = song.title,
+                                        modifier = coverModifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+
+                                // Center spindle hole
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize(0.04f)
+                                        .aspectRatio(1f)
+                                        .background(Color(0xFF1A1A1A), CircleShape)
                                 )
                             }
                         }
@@ -572,21 +645,45 @@ fun NowPlayingScreen(
 
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .fillMaxWidth(0.85f) // Reduces the width to 85% of the screen width
                                 .height(60.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             val primaryColor = MaterialTheme.colorScheme.primary
+
+                            // Create an infinite transition for a continuous fluid animation
+                            val infiniteTransition = rememberInfiniteTransition(label = "EqualizerTransition")
+
+                            // Animate a scale factor between 0.4f and 1.2f to add rhythmic bounce
+                            val animationScale by infiniteTransition.animateFloat(
+                                initialValue = 0.4f,
+                                targetValue = 1.2f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = 450, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "EqualizerScale"
+                            )
+
                             Canvas(modifier = Modifier.fillMaxSize()) {
-                                val barWidth = 8.dp.toPx()
-                                val gap = 6.dp.toPx()
                                 val totalBars = visualizerBars.size
-                                val totalWidth = (totalBars * barWidth) + ((totalBars - 1) * gap)
-                                val startX = (size.width - totalWidth) / 2
+                                if (totalBars == 0) return@Canvas
+
+                                val gapFraction = 0.50f
+                                val availableWidth = size.width
+
+                                val barWidth = (availableWidth * (1f - gapFraction)) / totalBars
+                                val gap = (availableWidth * gapFraction) / (totalBars - 1).coerceAtLeast(1)
 
                                 for (i in 0 until totalBars) {
-                                    val barHeight = visualizerBars[i].dp.toPx()
-                                    val x = startX + i * (barWidth + gap)
+                                    // Apply a unique wave offset per bar using sinus function so they don't bounce all at once
+                                    val waveOffset = kotlin.math.sin(i.toFloat() * 0.5f) * 0.3f
+                                    val dynamicScale = (animationScale + waveOffset).coerceIn(0.2f, 1.5f)
+
+                                    // Calculate animated height based on both data and the dynamicScale
+                                    val barHeight = (visualizerBars[i].dp.toPx() * dynamicScale).coerceAtMost(size.height)
+
+                                    val x = i * (barWidth + gap)
                                     val y = size.height - barHeight
 
                                     drawRoundRect(
@@ -601,13 +698,12 @@ fun NowPlayingScreen(
                     }
                 }
             }
-
-            // Seek Position timeline sliders
+// Seek Position timeline sliders
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val progressPct = if (duration > 0) progress.toFloat() / duration.toFloat() else 0f
                 val sliderInteractionSource = remember { MutableInteractionSource() }
@@ -615,46 +711,94 @@ fun NowPlayingScreen(
                 val isSliderPressed by sliderInteractionSource.collectIsPressedAsState()
                 val isSliderInteracting = isSliderDragged || isSliderPressed
 
+                // Dynamic track height animation on touch
+                val trackHeight by animateDpAsState(
+                    targetValue = if (isSliderInteracting) 6.dp else 4.dp,
+                    animationSpec = tween(durationMillis = 150),
+                    label = "trackHeight"
+                )
+
+                // Dynamic thumb scale animation on touch
                 val thumbScale by animateFloatAsState(
-                    targetValue = if (isSliderInteracting) 1.6f else 1.0f,
+                    targetValue = if (isSliderInteracting) 1f else 0f,
                     animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        dampingRatio = Spring.DampingRatioNoBouncy,
                         stiffness = Spring.StiffnessMedium
                     ),
                     label = "thumbScale"
                 )
 
-                Slider(
-                    value = progressPct,
-                    onValueChange = { sharedAudioViewModel.seekTo((it * duration).toLong()) },
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                    ),
-                    interactionSource = sliderInteractionSource,
-                    thumb = { _ ->
+            Slider(
+                value = progressPct,
+                onValueChange = { sharedAudioViewModel.seekTo((it * duration).toLong()) },
+                interactionSource = sliderInteractionSource,
+                // Custom continuous track — wrapped in a fixed-height box so its
+                // vertical center never shifts regardless of the animated thickness.
+                track = { _ ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp), // fixed reference height, shared with thumb below
+                        contentAlignment = Alignment.Center
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(14.dp)
+                                .fillMaxWidth()
+                                .height(trackHeight)
+                                .background(Color.White.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(fraction = progressPct)
+                                    .fillMaxHeight()
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            )
+                        }
+                    }
+                },
+                // Animated thumb — same fixed-height box as the track above, so its
+                // center always lands exactly on the track's center, not just its own box's center.
+                thumb = {
+                    Box(
+                        modifier = Modifier
+                            .height(24.dp) // must match track's outer box height
+                            .width(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
                                 .graphicsLayer {
                                     scaleX = thumbScale
                                     scaleY = thumbScale
                                 }
                                 .background(MaterialTheme.colorScheme.primary, CircleShape)
                         )
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+                // Static layout structure prevents any screen layout shifts
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = formattedProgress, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
-                    Text(text = formattedDuration, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
+                    Text(
+                        text = formattedProgress,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isSliderInteracting) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.5f)
+                    )
+                    Text(
+                        text = formattedDuration,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
                 }
             }
-
             // CONTROLS INTERACTIVE ROW (FR-74)
             // "All standard playback controls shall be accessible on the Now Playing screen"
             Row(
