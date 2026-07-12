@@ -191,7 +191,6 @@ fun AppMainHub(
 ) {
     var activeTab by remember { mutableStateOf(TAB_HOME) }
     var showNowPlayingOverlay by remember { mutableStateOf(false) }
-    var showMiniPlayer by remember { mutableStateOf(false) }
 
     val currentSong by sharedAudioViewModel.currentSong.collectAsState()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsState()
@@ -200,12 +199,6 @@ fun AppMainHub(
 
     val displayName by mainViewModel.userDisplayName.collectAsState()
     val avatarUrl by mainViewModel.userAvatar.collectAsState()
-
-    LaunchedEffect(currentSong?.id) {
-        if (currentSong != null) {
-            showMiniPlayer = true
-        }
-    }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -436,14 +429,95 @@ fun AppMainHub(
                         )
                     }
                 },
-                bottomBar = {} // Leave empty so Scaffold doesn't push content up
+                bottomBar = {
+                    if (!showNowPlayingOverlay) {
+                        val isKeyboardVisible = WindowInsets.isImeVisible
+                        val showNavigationBar = !isKeyboardVisible && !(activeTab == TAB_CHAT && activeChatUser != null)
+                        val activeSong = currentSong
+
+                        if (activeSong != null || showNavigationBar) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Transparent,
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+                                                MaterialTheme.colorScheme.background
+                                            )
+                                        )
+                                    )
+                                    .navigationBarsPadding()
+                                    .imePadding()
+                            ) {
+                                Spacer(modifier = Modifier.height(32.dp))
+
+                                if (activeSong != null) {
+                                    MiniPlayer(
+                                        currentSong = activeSong,
+                                        isPlaying = isPlaying,
+                                        progress = progress,
+                                        duration = duration,
+                                        onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
+                                        onPlayerBarClick = { showNowPlayingOverlay = true },
+                                        coverModifier = Modifier
+                                    )
+                                }
+
+                                if (showNavigationBar) {
+                                    // Custom Navbar to prevent 6-item M3 clipping
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(72.dp)
+                                            .padding(horizontal = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        bottomNavItems.forEach { item ->
+                                            val selected = (activeTab == item.tabKey)
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
+                                                    .clickable(
+                                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                                        indication = null,
+                                                        onClick = { activeTab = item.tabKey }
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(48.dp) // Safely fits inside screen bounds
+                                                        .height(32.dp)
+                                                        .clip(RoundedCornerShape(16.dp))
+                                                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = item.icon,
+                                                        contentDescription = locString(item.titleResId),
+                                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             ) { paddingValues ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = 0.dp, // Allows content to flow underneath the transparent nav bar
+                            bottom = paddingValues.calculateBottomPadding(),
                             start = paddingValues.calculateStartPadding(LocalLayoutDirection.current),
                             end = paddingValues.calculateEndPadding(LocalLayoutDirection.current)
                         )
@@ -563,92 +637,6 @@ fun AppMainHub(
                         }
                     }
 
-                    // Mini-player floats purely over the content.
-                    // Gradient overlay combining MiniPlayer and Custom NavBar
-                    if (!showNowPlayingOverlay) {
-                        val isKeyboardVisible = WindowInsets.isImeVisible
-                        val showNavigationBar = !isKeyboardVisible && !(activeTab == TAB_CHAT && activeChatUser != null)
-                        
-                        if (showNavigationBar || (currentSong != null && showMiniPlayer)) {
-                            Column(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.Transparent,
-                                                MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
-                                                MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
-                                                MaterialTheme.colorScheme.background
-                                            )
-                                        )
-                                    )
-                                    .navigationBarsPadding()
-                                    .imePadding()
-                            ) {
-                                Spacer(modifier = Modifier.height(32.dp)) // Extra space for smooth fade
-                                
-                                if (currentSong != null && showMiniPlayer) {
-                                    MiniPlayer(
-                                        currentSong = currentSong!!,
-                                        isPlaying = isPlaying,
-                                        progress = progress,
-                                        duration = duration,
-                                        onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
-                                        onPlayerBarClick = { showNowPlayingOverlay = true },
-                                        onDismiss = {
-                                            sharedAudioViewModel.stopPlayback()
-                                            showMiniPlayer = false
-                                        },
-                                        coverModifier = Modifier
-                                    )
-                                }
-                                
-                                if (showNavigationBar) {
-                                    // Custom Navbar to prevent 6-item M3 clipping
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(72.dp)
-                                            .padding(horizontal = 8.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        bottomNavItems.forEach { item ->
-                                            val selected = (activeTab == item.tabKey)
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .fillMaxHeight()
-                                                    .clickable(
-                                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                                        indication = null,
-                                                        onClick = { activeTab = item.tabKey }
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .width(48.dp) // Safely fits inside screen bounds
-                                                        .height(32.dp)
-                                                        .clip(RoundedCornerShape(16.dp))
-                                                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = item.icon,
-                                                        contentDescription = locString(item.titleResId),
-                                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             } // Closes Scaffold
         } // Closes Box
