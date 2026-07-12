@@ -25,6 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -53,17 +54,19 @@ class ChatRepositoryImpl(
     }
 
     override fun getRecentConversations(): Flow<List<String>> {
-        // Trigger sync in the background, but WAIT for the session to be fully valid first
-        repoScope.launch {
-            if (authRepository.hasValidSession()) { // This forces it to wait for initialization
-                syncRecentConversations()
-            }
-        }
         return chatMessageDao.getRecentConversations()
+            .onStart {
+                // ChatViewModel is created before login, so defer the remote sync until
+                // the conversations stream is actually collected by the authenticated UI.
+                repoScope.launch {
+                    if (authRepository.hasValidSession()) {
+                        syncRecentConversations()
+                    }
+                }
+            }
     }
 
     private suspend fun syncRecentConversations() {
-        // Since we checked hasValidSession() above, currentUserId() will now correctly return your UUID
         val myId = authRepository.currentUserId() ?: return
 
         try {
