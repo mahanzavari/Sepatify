@@ -37,9 +37,9 @@ fun ChatsScreen(
 ) {
     val searchUsersQuery by chatViewModel.searchQuery.collectAsState()
     val matchingUsers by chatViewModel.filteredUsers.collectAsState()
-    val followedUsers by chatViewModel.followedUsers.collectAsState()
+    val recentConversations by chatViewModel.recentConversations.collectAsState()
     var chatsFirstLoad by remember { mutableStateOf(true) }
-    LaunchedEffect(followedUsers) {
+    LaunchedEffect(recentConversations) {
         if (chatsFirstLoad) chatsFirstLoad = false
     }
 
@@ -142,11 +142,11 @@ fun ChatsScreen(
                     ) {
                         items(6) { ChatRowSkeleton() }
                     }
-                } else if (followedUsers.isEmpty()) {
+                } else if (recentConversations.isEmpty()) {
                     EmptyStateView(
                         icon = Icons.Default.ChatBubbleOutline,
                         title = locString(R.string.empty_conversations_title),
-                        subtitle = locString(R.string.empty_conversations_message),
+                        subtitle = "Search users above to start a live conversation.",
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
@@ -154,7 +154,7 @@ fun ChatsScreen(
                         verticalArrangement = Arrangement.spacedBy(dimens.spaceTen),
                         modifier = Modifier.fillMaxWidth().weight(1f)
                     ) {
-                        items(followedUsers) { user ->
+                        items(recentConversations) { user ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

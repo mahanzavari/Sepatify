@@ -25,6 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -50,6 +51,43 @@ class ChatRepositoryImpl(
 
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
+    }
+
+    override fun getRecentConversations(): Flow<List<String>> {
+        return chatMessageDao.getRecentConversations()
+            .onStart {
+                // ChatViewModel is created before login, so defer the remote sync until
+                // the conversations stream is actually collected by the authenticated UI.
+                repoScope.launch {
+                    if (authRepository.hasValidSession()) {
+                        syncRecentConversations()
+                    }
+                }
+            }
+    }
+
+    private suspend fun syncRecentConversations() {
+        val myId = authRepository.currentUserId() ?: return
+
+        try {
+            val remoteMessages = Supa.client.from("chat_messages")
+                .select(columns = Columns.ALL) {
+                    filter {
+                        or {
+                            eq("sender_id", myId)
+                            eq("receiver_id", myId)
+                        }
+                    }
+                    order("created_at", Order.DESCENDING)
+                    limit(60) // Only fetch the last 60 messages to populate the feed quickly
+                }
+                .decodeList<ChatMessageDto>()
+
+            remoteMessages.forEach { upsertRemoteMessage(it, myId) }
+        } catch (e: Exception) {
+            // Silently ignore network errors so it safely falls back to local SQLite cache
+            e.printStackTrace()
+        }
     }
 
     // ---------------------------------------------------------------------

@@ -4,14 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aistudio.sepatify.data.local.PreferencesManager
 import com.aistudio.sepatify.data.repository.AuthRepository
+import com.aistudio.sepatify.data.local.AppDatabase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainViewModel(
     private val preferencesManager: PreferencesManager,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val appDatabase: AppDatabase
 ) : ViewModel() {
 
     val currentTheme: StateFlow<String> = preferencesManager.themeFlow
@@ -90,6 +94,12 @@ class MainViewModel(
         viewModelScope.launch {
             runCatching { authRepository.signOut() }
             preferencesManager.clearSession()
+
+            withContext(Dispatchers.IO) {
+                appDatabase.chatMessageDao().clearAllMessages()
+                appDatabase.likedSongDao().clearAllLikedSongs()
+                appDatabase.recentlyPlayedDao().clearAllRecent()
+            }
         }
     }
 

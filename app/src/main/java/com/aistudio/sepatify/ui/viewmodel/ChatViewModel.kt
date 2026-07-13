@@ -25,6 +25,9 @@ class ChatViewModel(
     val followedUsers: StateFlow<List<String>> = chatRepository.getFollowedUsers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val recentConversations: StateFlow<List<String>> = chatRepository.getRecentConversations()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun isFollowing(username: String): Flow<Boolean> {
         return chatRepository.isFollowing(username)
     }

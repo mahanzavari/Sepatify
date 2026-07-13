@@ -35,6 +35,9 @@ interface LikedSongDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM liked_songs WHERE id = :id)")
     suspend fun isLiked(id: String): Boolean
+
+    @Query("DELETE FROM liked_songs")
+    suspend fun clearAllLikedSongs()
 }
 
 @Dao
@@ -44,6 +47,9 @@ interface RecentlyPlayedDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRecentSong(song: RecentlyPlayedEntity)
+
+    @Query("DELETE FROM recently_played")
+    suspend fun clearAllRecent()
 }
 
 @Dao
@@ -117,6 +123,19 @@ interface ChatMessageDao {
     """)
     fun getMessagesBetweenUsersPaged(user1: String, user2: String): PagingSource<Int, ChatMessageEntity>
 
+
+    @Query("""
+        SELECT contactName FROM (
+            SELECT CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END AS contactName,
+                   MAX(timestamp) AS lastMsgTime
+            FROM chat_messages
+            WHERE senderName = 'Me' OR receiverName = 'Me'
+            GROUP BY CASE WHEN senderName = 'Me' THEN receiverName ELSE senderName END
+        )
+        ORDER BY lastMsgTime DESC
+    """)
+    fun getRecentConversations(): Flow<List<String>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: ChatMessageEntity): Long
 
@@ -134,6 +153,9 @@ interface ChatMessageDao {
         WHERE receiverName = :me AND senderName = :otherUser AND status != 'Read'
     """)
     suspend fun markConversationRead(me: String, otherUser: String)
+
+    @Query("DELETE FROM chat_messages")
+    suspend fun clearAllMessages()
 }
 
 @Dao

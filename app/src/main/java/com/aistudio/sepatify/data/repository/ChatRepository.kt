@@ -6,6 +6,7 @@ import com.aistudio.sepatify.data.model.Song
 import kotlinx.coroutines.flow.Flow
 
 interface ChatRepository {
+    fun getRecentConversations(): Flow<List<String>>
     fun getMessages(otherUser: String): Flow<List<ChatMessageEntity>>
     fun getMessagesPaged(otherUser: String): Flow<PagingData<ChatMessageEntity>>
     fun getTypingState(otherUser: String): Flow<Boolean>
