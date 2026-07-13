@@ -553,7 +553,8 @@ fun AppMainHub(
                                 onPlaySharedSong = { song ->
                                     sharedAudioViewModel.playSong(song)
                                 },
-                                locString = locString
+                                locString = locString,
+                                isMiniPlayerVisible = currentSong != null
                             )
 
                             TAB_PROFILE -> ProfileScreen(
@@ -585,7 +586,7 @@ fun AppMainHub(
                                         )
                                     )
                                     .navigationBarsPadding()
-                                    .imePadding()
+                                    // Removed .imePadding() so the miniplayer stays at the bottom under the keyboard
                             ) {
                                 Spacer(modifier = Modifier.height(32.dp)) // Extra space for smooth fade
                                 
