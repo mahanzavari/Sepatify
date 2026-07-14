@@ -29,7 +29,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -55,6 +57,9 @@ class ChatRepositoryImpl(
     private val typingStates = mutableMapOf<String, MutableStateFlow<Boolean>>()
     private val typingChannelUsers = mutableSetOf<String>()
 
+    // --- ADDED: Profile Cache ---
+    private val profileCache = MutableStateFlow<Map<String, ProfileDto>>(emptyMap())
+
     // --- Presence System State ---
     private val _onlineUsers = MutableStateFlow<Set<String>>(emptySet())
     private var presenceChannel: io.github.jan.supabase.realtime.RealtimeChannel? = null
@@ -66,6 +71,15 @@ class ChatRepositoryImpl(
 
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
+    }
+
+    // --- ADDED: Expose Profile Stream ---
+    override fun getProfileFlow(username: String): Flow<ProfileDto?> {
+        return profileCache.map { it[username] }.onStart {
+            if (!profileCache.value.containsKey(username)) {
+                repoScope.launch { resolveId(username) } // Triggers fetch and cache if missing
+            }
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -186,6 +200,9 @@ class ChatRepositoryImpl(
     // ---------------------------------------------------------------------
 
     private suspend fun resolveId(username: String): String? {
+        // If we already have the profile cached, just return the ID instantly
+        profileCache.value[username]?.let { return it.id }
+
         usernameToId[username]?.let { return it }
         return try {
             val profile = Supa.client.from("profiles")
@@ -194,6 +211,11 @@ class ChatRepositoryImpl(
             profile?.let {
                 usernameToId[username] = it.id
                 idToUsername[it.id] = username
+
+                // --- ADDED: Cache the entire profile for the UI to use ---
+                profileCache.update { current -> current + (username to it) }
+                // ---------------------------------------------------------
+
                 it.id
             }
         } catch (e: Exception) {
@@ -210,6 +232,13 @@ class ChatRepositoryImpl(
             val name = profile?.username ?: id
             idToUsername[id] = name
             usernameToId[name] = id
+
+            // --- ADDED: Cache the entire profile for the UI to use ---
+            profile?.let { p ->
+                profileCache.update { current -> current + (name to p) }
+            }
+            // ---------------------------------------------------------
+
             name
         } catch (e: Exception) {
             id
