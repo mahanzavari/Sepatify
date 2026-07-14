@@ -17,4 +17,8 @@ interface ChatRepository {
     suspend fun toggleFollowUser(username: String)
     fun isFollowing(username: String): Flow<Boolean>
     fun searchUsers(query: String): Flow<List<String>>
+
+    fun getOnlineUsers(): Flow<Set<String>>
+    suspend fun trackPresence()
+    suspend fun untrackPresence()
 }

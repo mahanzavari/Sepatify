@@ -28,6 +28,21 @@ class ChatViewModel(
     val recentConversations: StateFlow<List<String>> = chatRepository.getRecentConversations()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val onlineUsers: StateFlow<Set<String>> = chatRepository.getOnlineUsers()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    fun trackPresence() {
+        viewModelScope.launch {
+            chatRepository.trackPresence()
+        }
+    }
+
+    fun untrackPresence() {
+        viewModelScope.launch {
+            chatRepository.untrackPresence()
+        }
+    }
+
     fun isFollowing(username: String): Flow<Boolean> {
         return chatRepository.isFollowing(username)
     }
