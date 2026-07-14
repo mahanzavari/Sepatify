@@ -204,6 +204,42 @@ fun ChatsScreen(
             val pagedMessages = chatViewModel.getMessagesPaged(user).collectAsLazyPagingItems()
             val otherIsTyping = remember(user) { chatViewModel.getTypingState(user) }.collectAsState(initial = false)
 
+            var isTypingSent by remember(user) { mutableStateOf(false) }
+
+            LaunchedEffect(chatInputText, user) {
+                if (chatInputText.isNotEmpty()) {
+                    if (!isTypingSent) {
+                        chatViewModel.setTyping(user, true)
+                        isTypingSent = true
+                    }
+                    // Wait 2.5s for inactivity before setting typing to false
+                    kotlinx.coroutines.delay(2500)
+                    chatViewModel.setTyping(user, false)
+                    isTypingSent = false
+                } else {
+                    // Instantly clear typing if the input is cleared manually
+                    if (isTypingSent) {
+                        chatViewModel.setTyping(user, false)
+                        isTypingSent = false
+                    }
+                }
+            }
+
+            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner, user) {
+                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                    if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                        chatViewModel.setTyping(user, false)
+                        isTypingSent = false
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                    chatViewModel.setTyping(user, false)
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
