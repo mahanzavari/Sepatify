@@ -40,6 +40,7 @@ fun ChatsScreen(
     val searchUsersQuery by chatViewModel.searchQuery.collectAsState()
     val matchingUsers by chatViewModel.filteredUsers.collectAsState()
     val recentConversations by chatViewModel.recentConversations.collectAsState()
+    val onlineUsers by chatViewModel.onlineUsers.collectAsState()
     var chatsFirstLoad by remember { mutableStateOf(true) }
     LaunchedEffect(recentConversations) {
         if (chatsFirstLoad) chatsFirstLoad = false
@@ -190,7 +191,13 @@ fun ChatsScreen(
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(text = user, style = MaterialTheme.typography.bodyLarge)
-                                    Text(text = locString(R.string.chat_thread_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+
+                                    val isOnline = onlineUsers.contains(user)
+                                    Text(
+                                        text = if (isOnline) locString(R.string.status_online) else locString(R.string.status_offline),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                    )
                                 }
                                 Icon(Icons.Default.Chat, contentDescription = locString(R.string.chat_icon_desc), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
                             }
@@ -253,7 +260,12 @@ fun ChatsScreen(
                     if (otherIsTyping.value) {
                         Text(text = locString(R.string.typing), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     } else {
-                        Text(text = locString(R.string.chat_active_status), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        val isOnline = onlineUsers.contains(user)
+                        Text(
+                            text = if (isOnline) locString(R.string.status_online) else locString(R.string.status_offline),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isOnline) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
                     }
                 }
             }

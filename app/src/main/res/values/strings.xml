@@ -189,4 +189,6 @@
     <string name="chat_icon_desc">Chat icon</string>
     <string name="send_desc">Send</string>
     <string name="back_desc">Back</string>
+    <string name="status_online">Online</string>
+    <string name="status_offline">Last seen recently</string>
 </resources>

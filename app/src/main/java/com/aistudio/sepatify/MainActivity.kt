@@ -210,6 +210,22 @@ fun AppMainHub(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
+                chatViewModel.trackPresence()
+            } else if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                chatViewModel.untrackPresence()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            chatViewModel.untrackPresence()
+        }
+    }
+
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showNotificationDialog by remember { mutableStateOf(false) }
     var showEqualizerDialog by remember { mutableStateOf(false) }

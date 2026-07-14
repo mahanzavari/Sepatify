@@ -188,4 +188,6 @@
     <string name="chat_icon_desc">آیکون چت</string>
     <string name="send_desc">ارسال</string>
     <string name="back_desc">بازگشت</string>
+    <string name="status_online">آنلاین</string>
+    <string name="status_offline">آخرین بازدید اخیرا</string>
 </resources>

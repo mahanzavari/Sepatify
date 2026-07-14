@@ -22,8 +22,12 @@ import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -32,9 +36,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonPrimitive
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.ConcurrentHashMap
 
 class ChatRepositoryImpl(
     private val chatMessageDao: ChatMessageDao,
@@ -49,49 +55,134 @@ class ChatRepositoryImpl(
     private val typingStates = mutableMapOf<String, MutableStateFlow<Boolean>>()
     private val typingChannelUsers = mutableSetOf<String>()
 
+    // --- Presence System State ---
+    private val _onlineUsers = MutableStateFlow<Set<String>>(emptySet())
+    private var presenceChannel: io.github.jan.supabase.realtime.RealtimeChannel? = null
+
+    // Heartbeat controls
+    private val activeUserTimestamps = ConcurrentHashMap<String, Long>()
+    private var presenceHeartbeatJob: Job? = null
+    private var presenceCleanupJob: Job? = null
+
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
     }
 
-    override fun getRecentConversations(): Flow<List<String>> {
-        return chatMessageDao.getRecentConversations()
-            .onStart {
-                // ChatViewModel is created before login, so defer the remote sync until
-                // the conversations stream is actually collected by the authenticated UI.
-                repoScope.launch {
-                    if (authRepository.hasValidSession()) {
-                        syncRecentConversations()
+    // ---------------------------------------------------------------------
+    // Presence System Implementation (Broadcast Heartbeat Strategy)
+    // ---------------------------------------------------------------------
+
+    override fun getOnlineUsers(): Flow<Set<String>> = _onlineUsers.asStateFlow()
+
+    override suspend fun trackPresence() {
+        val myId = authRepository.currentUserId() ?: return
+        val myUsername = resolveUsername(myId)
+
+        if (presenceChannel == null) {
+            presenceChannel = Supa.client.realtime.channel("presence-global")
+
+            // 1. Listen for Presence Broadcasts
+            repoScope.launch {
+                try {
+                    presenceChannel?.broadcastFlow<JsonObject>(event = "presence")?.collect { jsonObject ->
+                        val username = jsonObject["username"]?.jsonPrimitive?.content ?: return@collect
+                        val status = jsonObject["status"]?.jsonPrimitive?.content ?: return@collect
+
+                        if (status == "online") {
+                            activeUserTimestamps[username] = System.currentTimeMillis()
+                        } else if (status == "offline") {
+                            activeUserTimestamps.remove(username)
+                        }
+
+                        _onlineUsers.value = activeUserTimestamps.keys.toSet()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            try {
+                presenceChannel?.subscribe()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // 2. Loop to clean up stale users (force-closes or lost connections)
+            presenceCleanupJob = repoScope.launch {
+                while (isActive) {
+                    delay(5000)
+                    val now = System.currentTimeMillis()
+                    var changed = false
+                    val iterator = activeUserTimestamps.entries.iterator()
+                    while (iterator.hasNext()) {
+                        val entry = iterator.next()
+                        if (now - entry.value > 16000) { // Timeout after 16 seconds of no heartbeat
+                            iterator.remove()
+                            changed = true
+                        }
+                    }
+                    if (changed) {
+                        _onlineUsers.value = activeUserTimestamps.keys.toSet()
                     }
                 }
             }
+        }
+
+        // 3. Start broadcasting my own heartbeat every 10 seconds
+        presenceHeartbeatJob?.cancel()
+        presenceHeartbeatJob = repoScope.launch {
+            while (isActive) {
+                try {
+                    // Uses positional arguments instead of named arguments
+                    presenceChannel?.broadcast(
+                        "presence",
+                        buildJsonObject {
+                            put("username", JsonPrimitive(myUsername))
+                            put("status", JsonPrimitive("online"))
+                        }
+                    )
+                } catch (e: Exception) {
+                    // Ignore transient network errors during heartbeat
+                }
+                delay(10000)
+            }
+        }
+
+        // 4. Send an immediate "online" ping right now so UI updates instantly
+        try {
+            presenceChannel?.broadcast(
+                "presence",
+                buildJsonObject {
+                    put("username", JsonPrimitive(myUsername))
+                    put("status", JsonPrimitive("online"))
+                }
+            )
+        } catch (e: Exception) { }
     }
 
-    private suspend fun syncRecentConversations() {
+    override suspend fun untrackPresence() {
+        // Stop my heartbeat
+        presenceHeartbeatJob?.cancel()
+
         val myId = authRepository.currentUserId() ?: return
+        val myUsername = resolveUsername(myId)
 
+        // Send a final instant "offline" ping so other users' UIs update immediately
         try {
-            val remoteMessages = Supa.client.from("chat_messages")
-                .select(columns = Columns.ALL) {
-                    filter {
-                        or {
-                            eq("sender_id", myId)
-                            eq("receiver_id", myId)
-                        }
-                    }
-                    order("created_at", Order.DESCENDING)
-                    limit(60) // Only fetch the last 60 messages to populate the feed quickly
+            presenceChannel?.broadcast(
+                "presence",
+                buildJsonObject {
+                    put("username", JsonPrimitive(myUsername))
+                    put("status", JsonPrimitive("offline"))
                 }
-                .decodeList<ChatMessageDto>()
-
-            remoteMessages.forEach { upsertRemoteMessage(it, myId) }
+            )
         } catch (e: Exception) {
-            // Silently ignore network errors so it safely falls back to local SQLite cache
-            e.printStackTrace()
+            // best effort
         }
     }
 
     // ---------------------------------------------------------------------
-    // Username <-> Supabase user id resolution (with a small in-memory cache)
+    // Username <-> Supabase user id resolution
     // ---------------------------------------------------------------------
 
     private suspend fun resolveId(username: String): String? {
@@ -126,8 +217,41 @@ class ChatRepositoryImpl(
     }
 
     // ---------------------------------------------------------------------
-    // Messages (Room is the source of truth for the UI; Supabase Realtime keeps it in sync)
+    // Existing Chat / Feed functionality below
     // ---------------------------------------------------------------------
+
+    override fun getRecentConversations(): Flow<List<String>> {
+        return chatMessageDao.getRecentConversations()
+            .onStart {
+                repoScope.launch {
+                    if (authRepository.hasValidSession()) {
+                        syncRecentConversations()
+                    }
+                }
+            }
+    }
+
+    private suspend fun syncRecentConversations() {
+        val myId = authRepository.currentUserId() ?: return
+        try {
+            val remoteMessages = Supa.client.from("chat_messages")
+                .select(columns = Columns.ALL) {
+                    filter {
+                        or {
+                            eq("sender_id", myId)
+                            eq("receiver_id", myId)
+                        }
+                    }
+                    order("created_at", Order.DESCENDING)
+                    limit(60)
+                }
+                .decodeList<ChatMessageDto>()
+
+            remoteMessages.forEach { upsertRemoteMessage(it, myId) }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     override fun getMessages(otherUser: String): Flow<List<ChatMessageEntity>> {
         repoScope.launch { fetchConversationHistory(otherUser) }
@@ -165,9 +289,7 @@ class ChatRepositoryImpl(
                 }
                 .decodeList<ChatMessageDto>()
             remoteMessages.forEach { upsertRemoteMessage(it, myId) }
-        } catch (e: Exception) {
-            // Offline - Room keeps serving the last synced conversation.
-        }
+        } catch (e: Exception) { }
     }
 
     private suspend fun upsertRemoteMessage(dto: ChatMessageDto, myId: String) {
@@ -225,9 +347,7 @@ class ChatRepositoryImpl(
                     }
                 }
             }
-        } catch (e: Exception) {
-            // Realtime not reachable (offline/misconfigured project) - Room cache still works.
-        }
+        } catch (e: Exception) { }
     }
 
     private suspend fun markDelivered(remoteMessageId: Long) {
@@ -235,7 +355,7 @@ class ChatRepositoryImpl(
             Supa.client.from("chat_messages").update(mapOf("status" to "Delivered")) {
                 filter { eq("id", remoteMessageId) }
             }
-        } catch (e: Exception) { /* best effort */ }
+        } catch (e: Exception) { }
     }
 
     private suspend fun markConversationRead(otherUser: String) {
@@ -250,7 +370,7 @@ class ChatRepositoryImpl(
                 }
             }
             chatMessageDao.markConversationRead("Me", otherUser)
-        } catch (e: Exception) { /* best effort */ }
+        } catch (e: Exception) { }
     }
 
     override suspend fun sendMessage(otherUser: String, text: String, songShare: Song?) {
@@ -291,14 +411,8 @@ class ChatRepositoryImpl(
                 .decodeSingle<ChatMessageDto>()
 
             chatMessageDao.insertMessage(localEntity.copy(id = localId, remoteId = inserted.id, status = "Sent"))
-        } catch (e: Exception) {
-            // Stays "Sending" locally; will be retried the next time the conversation is opened.
-        }
+        } catch (e: Exception) { }
     }
-
-    // ---------------------------------------------------------------------
-    // Typing indicator via a Supabase Realtime broadcast channel (no DB writes)
-    // ---------------------------------------------------------------------
 
     private fun getOrCreateTypingFlow(otherUser: String): MutableStateFlow<Boolean> {
         return synchronized(typingStates) {
@@ -321,7 +435,6 @@ class ChatRepositoryImpl(
             channel.subscribe()
             repoScope.launch {
                 try {
-                    // Explicitly pass <JsonObject> as the type parameter to broadcastFlow
                     channel.broadcastFlow<JsonObject>(event = "typing").collect { jsonObject ->
                         val payload = runCatching {
                             jsonParser.decodeFromJsonElement<TypingPayload>(jsonObject)
@@ -330,7 +443,7 @@ class ChatRepositoryImpl(
                             getOrCreateTypingFlow(otherUser).value = payload.isTyping
                         }
                     }
-                } catch (e: Exception) { /* ignore */ }
+                } catch (e: Exception) { }
             }
         } catch (e: Exception) {
             typingChannelUsers.remove(otherUser)
@@ -353,12 +466,8 @@ class ChatRepositoryImpl(
                 put("is_typing", JsonPrimitive(isTyping))
             }
             channel.broadcast("typing", payload)
-        } catch (e: Exception) { /* best effort */ }
+        } catch (e: Exception) { }
     }
-
-    // ---------------------------------------------------------------------
-    // Social graph (follow / followers / discovery)
-    // ---------------------------------------------------------------------
 
     override fun getFollowedUsers(): Flow<List<String>> = flow {
         val myId = authRepository.currentUserId()
@@ -422,7 +531,7 @@ class ChatRepositoryImpl(
                     com.aistudio.sepatify.data.remote.dto.FollowDto(followerId = myId, followedId = otherId)
                 )
             }
-        } catch (e: Exception) { /* best effort, likely offline */ }
+        } catch (e: Exception) { }
     }
 
     override fun isFollowing(username: String): Flow<Boolean> = flow {
