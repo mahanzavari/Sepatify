@@ -400,45 +400,15 @@ fun MiniPlayer(
     duration: Long,
     onPlayPauseClick: () -> Unit,
     onPlayerBarClick: () -> Unit,
-    onDismiss: () -> Unit,
     coverModifier: Modifier = Modifier
 ) {
-    var dragOffsetX by remember { mutableFloatStateOf(0f) }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = dragOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "miniPlayerOffset"
-    )
-    val density = LocalDensity.current
-    val dismissThresholdPx = with(density) { 140.dp.toPx() }
-
-    LaunchedEffect(currentSong.id) {
-        dragOffsetX = 0f
-    }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
-            .offset(x = with(density) { animatedOffsetX.toDp() })
-            .pointerInput(currentSong.id) {
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { _, dragAmount ->
-                        dragOffsetX = (dragOffsetX + dragAmount).coerceIn(-500f, 500f)
-                    },
-                    onDragEnd = {
-                        if (kotlin.math.abs(dragOffsetX) > dismissThresholdPx) {
-                            onDismiss()
-                        } else {
-                            dragOffsetX = 0f
-                        }
-                    }
-                )
-            }
             .clickable {
-                if (kotlin.math.abs(dragOffsetX) < 8f) {
-                    onPlayerBarClick()
-                }
+                // Since there is no swipe, clicking anywhere opens the Now Playing screen
+                onPlayerBarClick()
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -490,13 +460,7 @@ fun MiniPlayer(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.dismiss_mini_player),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    // The Dismiss (Close) button has been completely removed to make it non-destroyable
                 }
             }
             // Linear progress line

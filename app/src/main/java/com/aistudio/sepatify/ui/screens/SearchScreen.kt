@@ -94,6 +94,7 @@ fun SearchScreen(
             SearchUiState.Idle -> {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal),
+                    contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll), // Added spacer padding
                     modifier = Modifier.fillMaxSize()
                 ) {
                     if (history.isNotEmpty()) {
@@ -283,7 +284,8 @@ fun SearchScreen(
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(dimens.spaceTen),
-                        modifier = Modifier.fillMaxWidth()
+                        contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll), // Added spacer padding
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         items(pagedItems.itemCount, key = pagedItems.itemKey { it.id }) { index ->
                             val song = pagedItems[index] ?: return@items

@@ -27,13 +27,15 @@ import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ChatsScreen(
     chatViewModel: ChatViewModel,
     activeChatUser: String?,
     onActiveChatUserChange: (String?) -> Unit,
     onPlaySharedSong: (Song) -> Unit,
-    locString: (Int) -> String
+    locString: (Int) -> String,
+    isMiniPlayerVisible: Boolean
 ) {
     val searchUsersQuery by chatViewModel.searchQuery.collectAsState()
     val matchingUsers by chatViewModel.filteredUsers.collectAsState()
@@ -47,11 +49,25 @@ fun ChatsScreen(
     val dimens = MaterialTheme.sepatifyDimens
     val shapes = MaterialTheme.sepatifyShapes
 
+    val isKeyboardVisible = WindowInsets.isImeVisible
+    val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    
+    val bottomPadding = if (isKeyboardVisible) {
+        dimens.spaceNormal
+    } else {
+        var padding = dimens.spaceNormal + navBarPadding
+        if (isMiniPlayerVisible) padding += 90.dp // MiniPlayer height + safe margin
+        if (activeChatUser == null) padding += 72.dp // App NavBar height
+        padding
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(dimens.spaceNormal)
+            .padding(start = dimens.spaceNormal, end = dimens.spaceNormal, top = dimens.spaceNormal)
+            .imePadding() // Pushes the chat components up alongside the keyboard
+            .padding(bottom = bottomPadding) // Ensures it doesn't hide behind the miniplayer when the keyboard is closed
     ) {
         if (activeChatUser == null) {
             // General Chats / Contacts Hub

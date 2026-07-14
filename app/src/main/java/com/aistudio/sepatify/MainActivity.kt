@@ -553,7 +553,8 @@ fun AppMainHub(
                                 onPlaySharedSong = { song ->
                                     sharedAudioViewModel.playSong(song)
                                 },
-                                locString = locString
+                                locString = locString,
+                                isMiniPlayerVisible = currentSong != null
                             )
 
                             TAB_PROFILE -> ProfileScreen(
@@ -585,11 +586,11 @@ fun AppMainHub(
                                         )
                                     )
                                     .navigationBarsPadding()
-                                    .imePadding()
+                                    // Removed .imePadding() so the miniplayer stays at the bottom under the keyboard
                             ) {
                                 Spacer(modifier = Modifier.height(32.dp)) // Extra space for smooth fade
                                 
-                                if (currentSong != null && showMiniPlayer) {
+                                if (currentSong != null) { // We can safely ignore showMiniPlayer since it's permanent now
                                     MiniPlayer(
                                         currentSong = currentSong!!,
                                         isPlaying = isPlaying,
@@ -597,10 +598,6 @@ fun AppMainHub(
                                         duration = duration,
                                         onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
                                         onPlayerBarClick = { showNowPlayingOverlay = true },
-                                        onDismiss = {
-                                            sharedAudioViewModel.stopPlayback()
-                                            showMiniPlayer = false
-                                        },
                                         coverModifier = Modifier
                                     )
                                 }
