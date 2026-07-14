@@ -112,6 +112,7 @@ fun DownloadsScreen(
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(bottom = 200.dp), // Added bottom padding to avoid player overlap
                 modifier = Modifier.fillMaxSize()
             ) {
                 // First show actively downloading items

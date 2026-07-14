@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.viewmodel.HomeUiState
 import com.aistudio.sepatify.ui.viewmodel.HomeViewModel
 
@@ -176,7 +177,7 @@ fun HomeScreen(
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Left element: Liked Songs Medium Tall Bento Card (col-span-1, row-span-2)
+                    // Left element: Liked Songs Medium Bento Card
                     BentoMediumCard(
                         title = locString(R.string.quick_liked),
                         subtitle = "Offline tracks",
@@ -213,7 +214,7 @@ fun HomeScreen(
                     }
                 }
 
-                // Full width wide Bento card (col-span-2, row-span-1)
+                // Full width wide Bento card
                 BentoWideCard(
                     title = locString(R.string.quick_artists),
                     subtitle = "Social Hub & Core Community",
@@ -230,7 +231,6 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // 3. HORIZONTAL SECTIONS
-                
                 HorizontalSongSection(
                     title = locString(R.string.exclusive_tracks),
                     songs = state.exclusiveSongs,
@@ -262,6 +262,9 @@ fun HomeScreen(
                 )
             }
         }
+
+        // Spacer to offset the floating mini-player and navigation bar at the bottom
+        Spacer(modifier = Modifier.height(MaterialTheme.sepatifyDimens.spaceBottomOverScroll))
     }
 }
 
