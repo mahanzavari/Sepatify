@@ -54,6 +54,12 @@ class ChatViewModel(
         return chatRepository.getTypingState(otherUser)
     }
 
+    fun setTyping(otherUser: String, isTyping: Boolean) {
+        viewModelScope.launch {
+            chatRepository.setTyping(otherUser, isTyping)
+        }
+    }
+
     fun sendMessage(otherUser: String, text: String, songShare: Song? = null) {
         viewModelScope.launch {
             chatRepository.sendMessage(otherUser, text, songShare)
