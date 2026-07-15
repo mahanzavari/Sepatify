@@ -1,14 +1,24 @@
 package com.aistudio.sepatify.ui.components
 
-import android.media.audiofx.Equalizer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.sepatify.R
+import com.aistudio.sepatify.ui.viewmodel.SharedAudioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,13 +33,30 @@ fun EqualizerDialog(
         onDismiss()
     }
 
-    val equalizer = remember {
-        try {
-            Equalizer(0, audioSessionId).apply { enabled = true }
-        } catch (e: Exception) {
-            null
-        }
+    val sharedViewModel = viewModel as? SharedAudioViewModel
+
+    if (sharedViewModel == null) {
+        AlertDialog(
+            onDismissRequest = dismissAction,
+            confirmButton = {
+                TextButton(onClick = dismissAction) {
+                    Text(text = stringResource(id = R.string.ok_label))
+                }
+            },
+            text = { Text("Audio session/viewmodel not available") }
+        )
+        return
     }
+
+    val eqEnabled by sharedViewModel.eqEnabled.collectAsState()
+    val eqBandLevels by sharedViewModel.eqBandLevels.collectAsState()
+    val eqFrequencies by sharedViewModel.eqFrequencies.collectAsState()
+    val eqBandRange by sharedViewModel.eqBandRange.collectAsState()
+    val bassBoostStrength by sharedViewModel.bassBoostStrength.collectAsState()
+    val virtualizerStrength by sharedViewModel.virtualizerStrength.collectAsState()
+    val reverbPreset by sharedViewModel.reverbPreset.collectAsState()
+    val crossfadeEnabled by sharedViewModel.crossfadeEnabled.collectAsState()
+    val crossfadeDurationSec by sharedViewModel.crossfadeDurationSec.collectAsState()
 
     AlertDialog(
         onDismissRequest = dismissAction,
@@ -39,51 +66,184 @@ fun EqualizerDialog(
             }
         },
         title = {
-            Text(text = stringResource(id = R.string.drawer_equalizer_audio))
+            Text(text = stringResource(id = R.string.drawer_equalizer_audio), fontWeight = FontWeight.Bold)
         },
         text = {
-            if (equalizer != null) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    val numBands = equalizer.numberOfBands.toInt()
-                    val minLevel = equalizer.bandLevelRange[0]
-                    val maxLevel = equalizer.bandLevelRange[1]
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // === Playback Crossfade ===
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "Playback Crossfade", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(text = "Smoothly blend track volume during transitions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = crossfadeEnabled,
+                            onCheckedChange = { sharedViewModel.setCrossfadeEnabled(it) }
+                        )
+                    }
 
-                    for (i in 0 until numBands) {
-                        val freq = equalizer.getCenterFreq(i.toShort()) / 1000
-                        var level by remember { mutableStateOf(equalizer.getBandLevel(i.toShort()).toFloat()) }
-
+                    if (crossfadeEnabled) {
                         Column {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = "$freq Hz")
-                                Text(text = "${(level / 100).toInt()} dB")
+                                Text(text = "Transition Duration", style = MaterialTheme.typography.bodyMedium)
+                                Text(text = "$crossfadeDurationSec seconds", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
                             Slider(
-                                value = level,
-                                onValueChange = { newValue ->
-                                    level = newValue
-                                    try {
-                                        equalizer.setBandLevel(i.toShort(), newValue.toInt().toShort())
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
-                                },
-                                valueRange = minLevel.toFloat()..maxLevel.toFloat()
+                                value = crossfadeDurationSec.toFloat(),
+                                onValueChange = { sharedViewModel.setCrossfadeDuration(it.toInt()) },
+                                valueRange = 1f..10f,
+                                steps = 8
                             )
                         }
                     }
                 }
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(100.dp),
-                    contentAlignment = Alignment.Center
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // === Hardware Tuning Switch ===
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
-                    Text(text = "Audio Session not active or hardware not supported")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "Equalizer & Effects", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(text = "Enable device-level hardware audio tuning", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = eqEnabled,
+                            onCheckedChange = { sharedViewModel.setEqualizerEnabled(it) }
+                        )
+                    }
+                }
+
+                if (eqEnabled) {
+                    // === Equalizer Bands ===
+                    if (eqFrequencies.isNotEmpty()) {
+                        Text(text = "Bands", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        val minLevel = eqBandRange.first
+                        val maxLevel = eqBandRange.second
+
+                        eqFrequencies.forEachIndexed { index, freq ->
+                            val levelMilliBels = eqBandLevels[index] ?: 0
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(text = "$freq Hz", style = MaterialTheme.typography.bodyMedium)
+                                    Text(text = "${levelMilliBels / 100} dB", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                }
+                                Slider(
+                                    value = levelMilliBels.toFloat(),
+                                    onValueChange = { newValue ->
+                                        sharedViewModel.setEqualizerBandLevel(index, newValue.toInt())
+                                    },
+                                    valueRange = minLevel.toFloat()..maxLevel.toFloat(),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // === Bass & Virtualizer ===
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(text = "Audio Enhancements", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+
+                        // Bass Boost
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "Bass Boost", style = MaterialTheme.typography.bodyMedium)
+                                Text(text = "${bassBoostStrength / 10}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Slider(
+                                value = bassBoostStrength.toFloat(),
+                                onValueChange = { sharedViewModel.setBassBoostStrength(it.toInt()) },
+                                valueRange = 0f..1000f
+                            )
+                        }
+
+                        // Virtualizer
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "3D Virtualizer", style = MaterialTheme.typography.bodyMedium)
+                                Text(text = "${virtualizerStrength / 10}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            }
+                            Slider(
+                                value = virtualizerStrength.toFloat(),
+                                onValueChange = { sharedViewModel.setVirtualizerStrength(it.toInt()) },
+                                valueRange = 0f..1000f
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // === Reverb Preset ===
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Reverb Preset", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        val presets = listOf("None", "Small Room", "Medium Room", "Large Room", "Medium Hall", "Large Hall", "Plate")
+                        
+                        var expanded by remember { mutableStateOf(false) }
+                        
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { expanded = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = presets.getOrElse(reverbPreset) { "None" })
+                                    Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
+                                }
+                            }
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier.fillMaxWidth(0.7f)
+                            ) {
+                                presets.forEachIndexed { idx, name ->
+                                    DropdownMenuItem(
+                                        text = { Text(name) },
+                                        onClick = {
+                                            sharedViewModel.setReverbPreset(idx)
+                                            expanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

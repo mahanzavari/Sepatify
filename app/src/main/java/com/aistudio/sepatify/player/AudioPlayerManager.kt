@@ -2,7 +2,6 @@ package com.aistudio.sepatify.player
 
 import android.content.ComponentName
 import android.content.Context
-import android.media.AudioManager
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
 import android.media.audiofx.PresetReverb
@@ -17,6 +16,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -24,6 +25,8 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -34,22 +37,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import android.media.audiofx.Visualizer
-import android.util.Log
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.audio.DefaultAudioSink
-import androidx.media3.common.audio.AudioProcessor
-import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.audio.AudioSink
-
-private const val BANDS_COUNT = 12
+import kotlin.math.abs
 
 @UnstableApi
 class AudioPlayerManager(private val context: Context) {
 
-    private val fftAudioProcessor = FftAudioProcessor { rawMagnitudes ->
-        processFftData(rawMagnitudes)
-    }
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // Smart caching (FR): streamed audio is cached on disk so seeking/replaying doesn't re-download.
@@ -67,26 +59,44 @@ class AudioPlayerManager(private val context: Context) {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
+    // === REAL-TIME AUDIO VISUALIZER FLOWS ===
+    private val _fftBands = MutableStateFlow(FloatArray(512) { 0f })
+    val fftBands: StateFlow<FloatArray> = _fftBands.asStateFlow()
 
-    // 1. Create a custom RenderersFactory to inject our FftAudioProcessor
-    val renderersFactory = object : DefaultRenderersFactory(context) {
+    private val _isBassDetected = MutableStateFlow(false)
+    val isBassDetected: StateFlow<Boolean> = _isBassDetected.asStateFlow()
+
+    private val fftAudioProcessor = FftAudioProcessor { magnitudes ->
+        _fftBands.value = magnitudes
+        // Detect sub-bass presence (averaging lower frequency spectrum bands)
+        var sum = 0f
+        val count = magnitudes.size.coerceAtMost(10)
+        for (i in 0 until count) {
+            sum += magnitudes[i]
+        }
+        val avg = if (count > 0) sum / count else 0f
+        _isBassDetected.value = avg > 0.25f
+    }
+
+    // Custom Renderers Factory to hook FftAudioProcessor into primary player's pipeline
+    private val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
         override fun buildAudioSink(
-            context: android.content.Context,
+            context: Context,
             enableFloatOutput: Boolean,
             enableAudioTrackPlaybackParams: Boolean
-        ): AudioSink {
+        ): AudioSink? {
             return DefaultAudioSink.Builder(context)
-                // Inject FftAudioProcessor straight into the default AudioSink
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                 .setAudioProcessors(arrayOf(fftAudioProcessor))
                 .build()
         }
     }
 
-    // 2. Build ExoPlayer with the custom RenderersFactory
-    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context, renderersFactory)
+    // === PRIMARY AUDIO PLAYER ===
+    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
+        .setRenderersFactory(renderersFactory)
         .setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory))
-        // Audio Focus (FR): ExoPlayer will automatically pause/duck when it loses audio focus
-        // (e.g. phone calls, other apps' voice notes) and resume once focus is regained.
         .setAudioAttributes(
             AudioAttributes.Builder()
                 .setUsage(C.USAGE_MEDIA)
@@ -96,14 +106,25 @@ class AudioPlayerManager(private val context: Context) {
         )
         .build()
 
+    // === SECONDARY OVERLAP CROSSFADER ===
+    private val secondaryPlayer: ExoPlayer = ExoPlayer.Builder(context)
+        .setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory))
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                .build(),
+            /* handleAudioFocus = */ false // primaryPlayer handles focus, secondary co-exists during overlap
+        )
+        .build()
 
+    // Audio Effects
+    private var equalizer: Equalizer? = null
+    private var bassBoost: BassBoost? = null
+    private var virtualizer: Virtualizer? = null
+    private var presetReverb: PresetReverb? = null
 
     // Players state flows
-    private val _fftBands = MutableStateFlow(FloatArray(12) { 0f })
-    val fftBands: StateFlow<FloatArray> = _fftBands.asStateFlow()
-
-    private val _isBassDetected = MutableStateFlow(false)
-    val isBassDetected: StateFlow<Boolean> = _isBassDetected.asStateFlow()
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
@@ -132,22 +153,22 @@ class AudioPlayerManager(private val context: Context) {
     private val _eqEnabled = MutableStateFlow(false)
     val eqEnabled: StateFlow<Boolean> = _eqEnabled.asStateFlow()
 
-    private val _eqBandLevels = MutableStateFlow<Map<Int, Int>>(emptyMap()) // Band index -> level (dB or milliBels)
+    private val _eqBandLevels = MutableStateFlow<Map<Int, Int>>(emptyMap())
     val eqBandLevels: StateFlow<Map<Int, Int>> = _eqBandLevels.asStateFlow()
 
-    private val _eqFrequencies = MutableStateFlow<List<Int>>(emptyList()) // List of center freqs in Hz
+    private val _eqFrequencies = MutableStateFlow<List<Int>>(emptyList())
     val eqFrequencies: StateFlow<List<Int>> = _eqFrequencies.asStateFlow()
 
-    private val _eqBandRange = MutableStateFlow(Pair(-1500, 1500)) // milliBels (usually -15dB to +15dB)
+    private val _eqBandRange = MutableStateFlow(Pair(-1500, 1500))
     val eqBandRange: StateFlow<Pair<Int, Int>> = _eqBandRange.asStateFlow()
 
-    private val _bassBoostStrength = MutableStateFlow(0) // 0 to 1000
+    private val _bassBoostStrength = MutableStateFlow(0)
     val bassBoostStrength: StateFlow<Int> = _bassBoostStrength.asStateFlow()
 
-    private val _virtualizerStrength = MutableStateFlow(0) // 0 to 1000
+    private val _virtualizerStrength = MutableStateFlow(0)
     val virtualizerStrength: StateFlow<Int> = _virtualizerStrength.asStateFlow()
 
-    private val _reverbPreset = MutableStateFlow(0) // 0: None, 1: SmallRoom, 2: MediumRoom, 3: LargeRoom, 4: MediumHall, 5: LargeHall, 6: Plate
+    private val _reverbPreset = MutableStateFlow(0)
     val reverbPreset: StateFlow<Int> = _reverbPreset.asStateFlow()
 
     private val _crossfadeEnabled = MutableStateFlow(true)
@@ -158,30 +179,18 @@ class AudioPlayerManager(private val context: Context) {
 
     private var progressJob: Job? = null
     private var crossfadeJob: Job? = null
-    private val handler = Handler(Looper.getMainLooper())
-
-    private val _visualizerData = MutableStateFlow<List<Float>>(emptyList())
-    val visualizerData: StateFlow<List<Float>> = _visualizerData.asStateFlow()
-
-    private var equalizer: Equalizer? = null
-    private var bassBoost: BassBoost? = null
-    private var virtualizer: Virtualizer? = null
-    private var presetReverb: PresetReverb? = null
-
-    private var visualizer: Visualizer? = null
-
+    private var isCrossfading = false
 
     init {
         // Connect to PlaybackService to ensure it's started and OS media controls (notification) are active.
         try {
             val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
             val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
-            
+
             controllerFuture.addListener(
-                { 
-                    // Controller connected. 
-                    // Keeping this connection alive binds the service and creates the system notification.
-                }, 
+                {
+                    // Controller connected.
+                },
                 ContextCompat.getMainExecutor(context)
             )
         } catch (e: Exception) {
@@ -198,8 +207,6 @@ class AudioPlayerManager(private val context: Context) {
                 }
             }
 
-
-
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 val songId = mediaItem?.mediaId
                 val matchedSong = _playlist.value.find { it.id == songId }
@@ -207,20 +214,19 @@ class AudioPlayerManager(private val context: Context) {
                 _progress.value = 0L
                 _duration.value = exoPlayer.duration.coerceAtLeast(0L)
 
-                // Start crossfade in (fade up from 0 to 1) when item transitions
-                if (_crossfadeEnabled.value) {
+                // Skip simple fade-in if we are currently handling an active dual-player crossfade
+                if (_crossfadeEnabled.value && !isCrossfading) {
                     triggerCrossfadeIn()
-                } else {
+                } else if (!isCrossfading) {
                     exoPlayer.volume = 1.0f
                 }
 
                 // --- FAST ON-DEMAND ARTWORK EXTRACTION ---
-                // FIX: Check that mediaItem is not null before accessing mediaMetadata
                 if (matchedSong != null && mediaItem != null && mediaItem.mediaMetadata.artworkData == null) {
-                    val isLocal = matchedSong.id.startsWith("local_") || 
-                                  matchedSong.audioUrl.startsWith("/") || 
-                                  matchedSong.audioUrl.startsWith("file://")
-                    
+                    val isLocal = matchedSong.id.startsWith("local_") ||
+                            matchedSong.audioUrl.startsWith("/") ||
+                            matchedSong.audioUrl.startsWith("file://")
+
                     if (isLocal) {
                         applicationScope.launch(Dispatchers.IO) {
                             try {
@@ -232,20 +238,18 @@ class AudioPlayerManager(private val context: Context) {
 
                                 if (artworkData != null) {
                                     withContext(Dispatchers.Main) {
-                                        // Ensure the player is still playing this exact track
                                         val currentIndex = exoPlayer.currentMediaItemIndex
                                         val currentItem = exoPlayer.currentMediaItem
-                                        
+
                                         if (currentItem != null && currentItem.mediaId == songId) {
                                             val newMetadata = currentItem.mediaMetadata.buildUpon()
                                                 .setArtworkData(artworkData, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
                                                 .build()
-                                                
+
                                             val newItem = currentItem.buildUpon()
                                                 .setMediaMetadata(newMetadata)
                                                 .build()
-                                                
-                                            // Seamlessly updates the item; OS catches this instantly for the notification
+
                                             exoPlayer.replaceMediaItem(currentIndex, newItem)
                                         }
                                     }
@@ -311,9 +315,14 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun playSong(song: Song, customQueue: List<Song> = emptyList()) {
+        cancelCrossfade()
+        performPlaySongLogic(song, customQueue)
+    }
+
+    private fun performPlaySongLogic(song: Song, customQueue: List<Song>) {
         if (customQueue.isNotEmpty() && customQueue != _playlist.value) {
             setPlaylist(customQueue)
-        } else if (_playlist.value.isEmpty()) {
+        } else if (_playlist.value.isEmpty() || !_playlist.value.any { it.id == song.id }) {
             setPlaylist(listOf(song))
         }
 
@@ -339,9 +348,15 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun stopPlayback() {
+        cancelCrossfade()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
         exoPlayer.playWhenReady = false
+
+        secondaryPlayer.stop()
+        secondaryPlayer.clearMediaItems()
+        secondaryPlayer.playWhenReady = false
+
         _currentSong.value = null
         _isPlaying.value = false
         _progress.value = 0L
@@ -351,6 +366,7 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun playNext() {
+        cancelCrossfade()
         if (exoPlayer.hasNextMediaItem()) {
             exoPlayer.seekToNextMediaItem()
             exoPlayer.play()
@@ -361,6 +377,7 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun playPrevious() {
+        cancelCrossfade()
         if (exoPlayer.hasPreviousMediaItem()) {
             exoPlayer.seekToPreviousMediaItem()
             exoPlayer.play()
@@ -370,6 +387,7 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun seekTo(positionMs: Long) {
+        cancelCrossfade()
         exoPlayer.seekTo(positionMs)
         _progress.value = positionMs
     }
@@ -391,41 +409,17 @@ class AudioPlayerManager(private val context: Context) {
         exoPlayer.playbackParameters = PlaybackParameters(speed)
     }
 
-
-    private fun processFftData(rawMagnitudes: FloatArray) {
-        val n = rawMagnitudes.size
-        if (n <= 0) return
-
-        val magnitudes = FloatArray(BANDS_COUNT)
-
-        // 1. Group frequencies logarithmically into 12 bands (Spotify Style)
-        for (band in 0 until BANDS_COUNT) {
-            val startPercent = Math.pow(band.toDouble() / BANDS_COUNT, 1.5)
-            val endPercent = Math.pow((band + 1).toDouble() / BANDS_COUNT, 1.5)
-
-            val startIndex = (startPercent * n).toInt().coerceIn(0, n - 1)
-            val endIndex = (endPercent * n).toInt().coerceIn(startIndex + 1, n)
-
-            var sum = 0f
-            for (i in startIndex until endIndex) {
-                sum += rawMagnitudes[i]
-            }
-
-            val count = endIndex - startIndex
-            val average = if (count > 0) sum / count else 0f
-
-            // Boost and scale to 0.0 - 100.0 range
-            magnitudes[band] = (average * 150f).coerceIn(0f, 100f)
+    private fun cancelCrossfade() {
+        if (isCrossfading) {
+            crossfadeJob?.cancel()
+            secondaryPlayer.stop()
+            secondaryPlayer.clearMediaItems()
+            exoPlayer.volume = 1.0f
+            isCrossfading = false
         }
-
-        // 2. Bass Detection
-        val bassValue = magnitudes[0] * 0.7f + magnitudes[1] * 0.3f
-        val isBass = bassValue > 45f
-
-        // 3. Update the state flows so UI collects them immediately
-        _fftBands.value = magnitudes
-        _isBassDetected.value = isBass
     }
+
+    // --- Audio Effects (EQ, Bass Boost, Virtualizer, Reverb) ---
 
     private fun initializeAudioEffects(audioSessionId: Int) {
         if (audioSessionId == 0) return
@@ -438,7 +432,7 @@ class AudioPlayerManager(private val context: Context) {
                 val initialLevels = mutableMapOf<Int, Int>()
 
                 for (i in 0 until bandsCount) {
-                    freqs.add(eq.getCenterFreq(i.toShort()) / 1000) // Convert milliHertz to Hertz
+                    freqs.add(eq.getCenterFreq(i.toShort()) / 1000)
                     initialLevels[i] = eq.getBandLevel(i.toShort()).toInt()
                 }
 
@@ -470,74 +464,7 @@ class AudioPlayerManager(private val context: Context) {
                 reverb.enabled = _eqEnabled.value
                 applyReverbPresetDirectly(reverb, _reverbPreset.value)
                 presetReverb = reverb
-                visualizer?.release()
 
-                visualizer = Visualizer(audioSessionId).apply {
-
-                    captureSize = Visualizer.getCaptureSizeRange()[1]
-
-                    scalingMode = Visualizer.SCALING_MODE_NORMALIZED
-
-                    setDataCaptureListener(
-
-                        object : Visualizer.OnDataCaptureListener {
-
-                            override fun onWaveFormDataCapture(
-                                visualizer: Visualizer?,
-                                waveform: ByteArray?,
-                                samplingRate: Int
-                            ) {
-                                // فعلاً استفاده نمی‌کنیم
-                            }
-
-                            override fun onFftDataCapture(
-                                visualizer: Visualizer?,
-                                fft: ByteArray?,
-                                samplingRate: Int
-                            ) {
-
-                                if (fft == null) return
-
-                                val bars = MutableList(12) { 0f }
-
-                                val fftBins = fft.size / 2
-                                val binsPerBar = fftBins / bars.size
-
-                                for (bar in bars.indices) {
-
-                                    var sum = 0f
-
-                                    val start = bar * binsPerBar
-                                    val end = start + binsPerBar
-
-                                    for (i in start until end) {
-
-                                        val real = fft[i * 2].toFloat()
-                                        val imag = fft[i * 2 + 1].toFloat()
-
-                                        val magnitude =
-                                            kotlin.math.sqrt(real * real + imag * imag)
-
-                                        sum += magnitude
-                                    }
-
-                                    bars[bar] = sum / binsPerBar
-                                }
-
-                                _visualizerData.value = bars
-                                android.util.Log.d("FFT", bars.joinToString())
-                            }
-
-                        },
-
-                        Visualizer.getMaxCaptureRate() / 2,
-                        false,
-                        true
-
-                    )
-
-                    enabled = true
-                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -609,11 +536,12 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
-    // --- Crossfade / Gapless Simulation ---
+    // --- Dual-Player Overlapping Crossfade Implementation ---
 
     fun setCrossfadeEnabled(enabled: Boolean) {
         _crossfadeEnabled.value = enabled
         if (!enabled) {
+            cancelCrossfade()
             exoPlayer.volume = 1.0f
         }
     }
@@ -638,15 +566,122 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
-    private fun checkAndTriggerCrossfadeOut(currentPos: Long, totalDuration: Long) {
-        if (totalDuration <= 0) return
+    private fun checkAndTriggerRealCrossfade(currentPos: Long, totalDuration: Long) {
+        val hasNext = exoPlayer.hasNextMediaItem() || _isRepeat.value
+        if (!hasNext) return
+
         val crossfadeDurationMs = _crossfadeDurationSec.value * 1000L
+        val triggerOffsetMs = crossfadeDurationMs + 3000L // 3 seconds buffer prep
         val remainingMs = totalDuration - currentPos
 
-        if (remainingMs in 1..crossfadeDurationMs) {
-            // Smoothly decrease volume towards the end
-            val ratio = remainingMs.toFloat() / crossfadeDurationMs
-            exoPlayer.volume = ratio.coerceIn(0.0f, 1.0f)
+        if (remainingMs in 1..triggerOffsetMs && !isCrossfading) {
+            triggerAutoCrossfade()
+        }
+    }
+
+    private fun triggerAutoCrossfade() {
+        isCrossfading = true
+
+        crossfadeJob?.cancel()
+
+        crossfadeJob = applicationScope.launch {
+            try {
+                // 1. Determine NEXT song
+                val hasNext = exoPlayer.hasNextMediaItem()
+                val nextIndex = if (hasNext) exoPlayer.currentMediaItemIndex + 1 else 0
+                val nextSongId = exoPlayer.getMediaItemAt(nextIndex).mediaId
+                val nextSong = _playlist.value.find { it.id == nextSongId } ?: return@launch
+
+                // 2. Prepare secondaryPlayer with the NEXT song
+                val mediaItem = MediaItem.Builder()
+                    .setMediaId(nextSong.id)
+                    .setUri(Uri.parse(nextSong.audioUrl))
+                    .build()
+
+                secondaryPlayer.playbackParameters = exoPlayer.playbackParameters
+                secondaryPlayer.setMediaItem(mediaItem)
+                secondaryPlayer.prepare()
+                secondaryPlayer.playWhenReady = false
+                secondaryPlayer.seekTo(0)
+
+                var prepWait = 0
+                while (secondaryPlayer.playbackState != Player.STATE_READY && prepWait < 2500 && isActive) {
+                    delay(50)
+                    prepWait += 50
+                }
+
+                val crossfadeDurationMs = _crossfadeDurationSec.value * 1000L
+
+                // 3. Wait until exactly crossfadeDurationMs remaining on OLD song (primary)
+                while (isActive) {
+                    val rem = exoPlayer.duration - exoPlayer.currentPosition
+                    if (rem <= crossfadeDurationMs || rem <= 0) break
+                    delay(20)
+                }
+
+                // 4. Start the True Crossfade mix
+                secondaryPlayer.volume = 0f
+                secondaryPlayer.playWhenReady = true
+                secondaryPlayer.play()
+
+                val steps = 25
+                val interval = crossfadeDurationMs / steps
+
+                for (i in 0..steps) {
+                    if (!isActive) break
+
+                    // Handle user pausing gracefully mid-crossfade
+                    while (!exoPlayer.isPlaying && isActive) {
+                        if (secondaryPlayer.isPlaying) secondaryPlayer.pause()
+                        delay(50)
+                    }
+                    if (exoPlayer.isPlaying && !secondaryPlayer.isPlaying) {
+                        secondaryPlayer.play()
+                    }
+
+                    // If exoPlayer natively advances its track early, mute it immediately
+                    if (exoPlayer.currentMediaItemIndex == nextIndex) {
+                        exoPlayer.volume = 0f
+                        secondaryPlayer.volume = 1f
+                        break
+                    }
+
+                    val ratio = (i.toFloat() / steps).coerceIn(0f, 1f)
+                    secondaryPlayer.volume = ratio         // Fade IN New Song
+                    exoPlayer.volume = 1f - ratio          // Fade OUT Old Song
+                    delay(interval)
+                }
+
+                // 5. Seamless Handover: Bring exoPlayer up to secondaryPlayer's position
+                exoPlayer.volume = 0f
+                if (exoPlayer.currentMediaItemIndex != nextIndex) {
+                    if (hasNext) exoPlayer.seekToNextMediaItem() else exoPlayer.seekTo(0, 0L)
+                }
+
+                val syncPos = secondaryPlayer.currentPosition
+                exoPlayer.seekTo(syncPos)
+                exoPlayer.playWhenReady = true
+                if (!exoPlayer.isPlaying) exoPlayer.play()
+
+                // Wait for exoPlayer to buffer the seek
+                var syncWait = 0
+                while (exoPlayer.playbackState != Player.STATE_READY && syncWait < 3000 && isActive) {
+                    delay(20) // Let secondary fill the gap
+                    syncWait += 20
+                }
+
+                // Instantly Swap audio outputs
+                exoPlayer.volume = 1f
+                secondaryPlayer.volume = 0.0f
+                delay(100)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                exoPlayer.volume = 1.0f
+            } finally {
+                secondaryPlayer.stop()
+                secondaryPlayer.clearMediaItems()
+                isCrossfading = false
+            }
         }
     }
 
@@ -661,8 +696,8 @@ class AudioPlayerManager(private val context: Context) {
                 _progress.value = currentPos
                 _duration.value = totalDur
 
-                if (_crossfadeEnabled.value) {
-                    checkAndTriggerCrossfadeOut(currentPos, totalDur)
+                if (_crossfadeEnabled.value && !isCrossfading) {
+                    checkAndTriggerRealCrossfade(currentPos, totalDur)
                 }
 
                 delay(200)
@@ -678,17 +713,14 @@ class AudioPlayerManager(private val context: Context) {
         applicationScope.cancel()
         try {
             exoPlayer.release()
+            secondaryPlayer.release()
             equalizer?.release()
             bassBoost?.release()
             virtualizer?.release()
             presetReverb?.release()
-            visualizer?.release()
             downloadCache.release()
-
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 }
-
-
