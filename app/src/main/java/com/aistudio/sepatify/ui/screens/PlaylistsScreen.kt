@@ -46,6 +46,7 @@ import com.aistudio.sepatify.ui.viewmodel.PlaylistViewModel
 fun PlaylistsScreen(
     playlistViewModel: PlaylistViewModel,
     onSongSelect: (Song, List<Song>) -> Unit,
+    onShareClick: (Any) -> Unit = {},
     locString: (Int) -> String
 ) {
     val playlists by playlistViewModel.userPlaylists.collectAsState()
@@ -285,6 +286,14 @@ fun PlaylistsScreen(
                             Text(text = plist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                         }
 
+                        IconButton(onClick = { onShareClick(plist) }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share Playlist",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
                         if (plist.isUserCreated) {
                             IconButton(onClick = {
                                 playlistViewModel.deletePlaylist(plist.id)
@@ -377,6 +386,14 @@ fun PlaylistsScreen(
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(text = s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
                                                 Text(text = s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                                            }
+
+                                            IconButton(onClick = { onShareClick(s) }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Share,
+                                                    contentDescription = "Share Song",
+                                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                                )
                                             }
 
                                             if (plist.isUserCreated) {

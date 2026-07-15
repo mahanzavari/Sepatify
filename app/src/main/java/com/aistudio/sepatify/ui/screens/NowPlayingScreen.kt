@@ -60,6 +60,7 @@ fun NowPlayingScreen(
     downloadViewModel: DownloadViewModel,
     isPremium: Boolean,
     onBackClick: () -> Unit,
+    onShareClick: () -> Unit = {},
     locString: (Int) -> String,
     coverModifier: Modifier = Modifier
 ) {
@@ -599,6 +600,15 @@ fun NowPlayingScreen(
                                     contentDescription = "Like Song",
                                     tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.White,
                                     modifier = Modifier.size(28.dp)
+                                )
+                            }
+
+                            IconButton(onClick = onShareClick) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
 

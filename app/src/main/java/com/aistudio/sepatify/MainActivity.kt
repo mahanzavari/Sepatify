@@ -39,7 +39,9 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.components.ShareBottomSheet
 import com.aistudio.sepatify.ui.theme.SepatifyTheme
 import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
@@ -192,6 +194,7 @@ fun AppMainHub(
     var activeTab by remember { mutableStateOf(TAB_HOME) }
     var showNowPlayingOverlay by remember { mutableStateOf(false) }
     var showMiniPlayer by remember { mutableStateOf(false) }
+    var itemToShare by remember { mutableStateOf<Any?>(null) }
 
     val currentSong by sharedAudioViewModel.currentSong.collectAsState()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsState()
@@ -274,6 +277,16 @@ fun AppMainHub(
 
     if (showEqualizerDialog) {
         EqualizerDialog(viewModel = sharedAudioViewModel, onDismiss = { showEqualizerDialog = false })
+    }
+
+    itemToShare?.let { shareTarget ->
+        ShareBottomSheet(
+            song = shareTarget as? Song,
+            playlist = shareTarget as? PlaylistEntity,
+            chatViewModel = chatViewModel,
+            onDismiss = { itemToShare = null },
+            locString = locString
+        )
     }
 
     ModalNavigationDrawer(
@@ -521,6 +534,7 @@ fun AppMainHub(
                                 onSongSelect = { song, queue ->
                                     sharedAudioViewModel.playSong(song, queue)
                                 },
+                                onShareClick = { itemToShare = it },
                                 locString = locString
                             )
 
@@ -614,6 +628,7 @@ fun AppMainHub(
                                         duration = duration,
                                         onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
                                         onPlayerBarClick = { showNowPlayingOverlay = true },
+                                        onShareClick = { itemToShare = currentSong },
                                         coverModifier = Modifier
                                     )
                                 }
@@ -691,6 +706,7 @@ fun AppMainHub(
                     downloadViewModel = downloadViewModel,
                     isPremium = isPremium,
                     onBackClick = { showNowPlayingOverlay = false },
+                    onShareClick = { itemToShare = currentSong },
                     locString = locString,
                     coverModifier = Modifier.sharedElement(
                         state = rememberSharedContentState(key = "album_cover"),

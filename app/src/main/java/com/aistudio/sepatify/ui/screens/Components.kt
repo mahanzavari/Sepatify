@@ -400,6 +400,7 @@ fun MiniPlayer(
     duration: Long,
     onPlayPauseClick: () -> Unit,
     onPlayerBarClick: () -> Unit,
+    onShareClick: () -> Unit = {},
     coverModifier: Modifier = Modifier
 ) {
     Card(
@@ -453,6 +454,13 @@ fun MiniPlayer(
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onShareClick) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     IconButton(onClick = onPlayPauseClick) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
