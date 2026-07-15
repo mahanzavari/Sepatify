@@ -511,24 +511,6 @@ class ChatRepositoryImpl(
         }
     }
 
-    override fun getFollowers(): Flow<List<String>> = flow {
-        val myId = authRepository.currentUserId()
-        if (myId == null) {
-            emit(emptyList())
-            return@flow
-        }
-        try {
-            val rows = Supa.client.from("follows")
-                .select(columns = Columns.raw("follower_id, profiles!follows_follower_id_fkey(username)")) {
-                    filter { eq("followed_id", myId) }
-                }
-                .decodeList<Map<String, kotlinx.serialization.json.JsonElement>>()
-            emit(rows.mapNotNull { row -> (row["profiles"] as? Map<*, *>)?.get("username") as? String })
-        } catch (e: Exception) {
-            emit(emptyList())
-        }
-    }
-
     override suspend fun toggleFollowUser(username: String) {
         val myId = authRepository.currentUserId() ?: return
         val otherId = resolveId(username) ?: return
