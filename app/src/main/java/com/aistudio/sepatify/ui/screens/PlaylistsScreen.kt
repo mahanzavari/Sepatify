@@ -20,8 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -345,7 +343,7 @@ fun PlaylistsScreen(
 
                         if (pagedSongs.itemCount == 0) {
                             Box(
-                                modifier = Modifier.fillMaxSize().padding(vertical = dimens.spaceHuge),
+                                modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = dimens.spaceHuge),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
@@ -357,7 +355,7 @@ fun PlaylistsScreen(
                         } else {
                             val listState = rememberLazyListState()
 
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                                 LazyColumn(
                                     state = listState,
                                     contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll),
@@ -452,22 +450,31 @@ fun PlaylistsScreen(
                                             modifier = Modifier
                                                 .align(Alignment.CenterEnd)
                                                 .fillMaxHeight()
-                                                .padding(bottom = dimens.spaceBottomOverScroll) // Keeps the scrollbar above the mini-player
+                                                .padding(bottom = dimens.spaceBottomOverScroll)
                                                 .width(dimens.sizeScrollbarTrack)
                                         ) {
                                             val trackHeightPx = constraints.maxHeight.toFloat()
                                             val thumbHeightPx = trackHeightPx * thumbHeightRatio
                                             val scrollableTrackPx = trackHeightPx - thumbHeightPx
 
-                                            val thumbOffsetYPx = if (totalItemsCount - visibleItemsCount > 0) {
-                                                (firstVisibleItemIndex.toFloat() / (totalItemsCount - visibleItemsCount)) * scrollableTrackPx
-                                            } else 0f
+                                            val maxFirstVisible = (totalItemsCount - visibleItemsCount).coerceAtLeast(1)
+                                            val clampedFirstVisible = firstVisibleItemIndex.coerceIn(0, maxFirstVisible)
+                                            val listThumbOffsetYPx = (clampedFirstVisible.toFloat() / maxFirstVisible) * scrollableTrackPx
 
+                                            val currentListThumbOffsetY by rememberUpdatedState(listThumbOffsetYPx)
+                                            var isDragging by remember { mutableStateOf(false) }
                                             var accumulatedDrag by remember { mutableFloatStateOf(0f) }
+
+                                            // Follow finger strictly while dragging, snap to list scroll only when idle
+                                            val activeThumbOffsetY = if (isDragging) {
+                                                accumulatedDrag.coerceIn(0f, scrollableTrackPx)
+                                            } else {
+                                                listThumbOffsetYPx
+                                            }
 
                                             Box(
                                                 modifier = Modifier
-                                                    .offset { androidx.compose.ui.unit.IntOffset(0, thumbOffsetYPx.toInt()) }
+                                                    .offset { androidx.compose.ui.unit.IntOffset(0, activeThumbOffsetY.toInt()) }
                                                     .height(with(androidx.compose.ui.platform.LocalDensity.current) { thumbHeightPx.toDp() })
                                                     .width(dimens.sizeScrollbarThumb)
                                                     .clip(RoundedCornerShape(dimens.spaceThree))
@@ -475,13 +482,20 @@ fun PlaylistsScreen(
                                                     .align(Alignment.TopEnd)
                                                     .pointerInput(Unit) {
                                                         detectVerticalDragGestures(
-                                                            onDragStart = { accumulatedDrag = thumbOffsetYPx },
+                                                            onDragStart = { 
+                                                                isDragging = true
+                                                                accumulatedDrag = currentListThumbOffsetY 
+                                                            },
+                                                            onDragEnd = { isDragging = false },
+                                                            onDragCancel = { isDragging = false },
                                                             onVerticalDrag = { change, dragAmount ->
                                                                 change.consume()
                                                                 accumulatedDrag += dragAmount
                                                                 if (scrollableTrackPx > 0) {
                                                                     val dragProportion = (accumulatedDrag / scrollableTrackPx).coerceIn(0f, 1f)
-                                                                    val targetIndex = (dragProportion * (totalItemsCount - visibleItemsCount)).toInt()
+                                                                    // Multiply by `totalItemsCount` ensuring a 100% drag targets the absolute 
+                                                                    // last item, pushing it up past the nav bar & miniplayer into view.
+                                                                    val targetIndex = (dragProportion * totalItemsCount).toInt().coerceIn(0, totalItemsCount - 1)
                                                                     coroutineScope.launch {
                                                                         listState.scrollToItem(targetIndex)
                                                                     }

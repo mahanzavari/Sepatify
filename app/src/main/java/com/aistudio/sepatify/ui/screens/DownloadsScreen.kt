@@ -53,7 +53,7 @@ fun DownloadsScreen(
 
         if (isFirstLoad) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(6) { SongRowSkeleton() }
@@ -63,7 +63,7 @@ fun DownloadsScreen(
                 icon = Icons.Default.CloudDownload,
                 title = locString(R.string.downloads_empty_title),
                 subtitle = locString(R.string.downloads_empty_subtitle),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.weight(1f).fillMaxWidth()
             )
         } else {
             // Sort Dropdown implementation
@@ -113,7 +113,7 @@ fun DownloadsScreen(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(bottom = 200.dp), // Added bottom padding to avoid player overlap
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 // First show actively downloading items
                 items(activeDownloads.toList()) { (songId, progress) ->

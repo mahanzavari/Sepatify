@@ -94,8 +94,8 @@ fun SearchScreen(
             SearchUiState.Idle -> {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal),
-                    contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll), // Added spacer padding
-                    modifier = Modifier.fillMaxSize()
+                    contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll),
+                    modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
                     if (history.isNotEmpty()) {
                         item {
@@ -266,7 +266,7 @@ fun SearchScreen(
             }
             SearchUiState.Loading -> {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(dimens.spaceFour)
                 ) {
                     items(8) { SongRowSkeleton() }
@@ -279,13 +279,13 @@ fun SearchScreen(
                         icon = Icons.Default.SearchOff,
                         title = locString(R.string.no_results),
                         subtitle = locString(R.string.empty_search_subtitle),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.weight(1f).fillMaxWidth()
                     )
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(dimens.spaceTen),
-                        contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll), // Added spacer padding
-                        modifier = Modifier.fillMaxSize()
+                        contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll),
+                        modifier = Modifier.weight(1f).fillMaxWidth()
                     ) {
                         items(pagedItems.itemCount, key = pagedItems.itemKey { it.id }) { index ->
                             val song = pagedItems[index] ?: return@items
