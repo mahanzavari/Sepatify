@@ -480,8 +480,32 @@ class ChatRepositoryImpl(
                 .select(columns = Columns.raw("followed_id, profiles!follows_followed_id_fkey(username)")) {
                     filter { eq("follower_id", myId) }
                 }
-                .decodeList<Map<String, kotlinx.serialization.json.JsonElement>>()
-            emit(rows.mapNotNull { row -> (row["profiles"] as? Map<*, *>)?.get("username") as? String })
+                .decodeList<JsonObject>()
+            
+            emit(rows.mapNotNull { row -> 
+                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content 
+            })
+        } catch (e: Exception) {
+            emit(emptyList())
+        }
+    }
+
+    override fun getFollowers(): Flow<List<String>> = flow {
+        val myId = authRepository.currentUserId()
+        if (myId == null) {
+            emit(emptyList())
+            return@flow
+        }
+        try {
+            val rows = Supa.client.from("follows")
+                .select(columns = Columns.raw("follower_id, profiles!follows_follower_id_fkey(username)")) {
+                    filter { eq("followed_id", myId) }
+                }
+                .decodeList<JsonObject>()
+                
+            emit(rows.mapNotNull { row -> 
+                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content 
+            })
         } catch (e: Exception) {
             emit(emptyList())
         }
