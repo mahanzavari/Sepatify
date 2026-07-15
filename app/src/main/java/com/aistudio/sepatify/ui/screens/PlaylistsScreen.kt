@@ -452,6 +452,7 @@ fun PlaylistsScreen(
                                             modifier = Modifier
                                                 .align(Alignment.CenterEnd)
                                                 .fillMaxHeight()
+                                                .padding(bottom = dimens.spaceBottomOverScroll) // Keeps the scrollbar above the mini-player
                                                 .width(dimens.sizeScrollbarTrack)
                                         ) {
                                             val trackHeightPx = constraints.maxHeight.toFloat()
