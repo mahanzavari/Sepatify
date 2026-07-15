@@ -628,7 +628,6 @@ fun AppMainHub(
                                         duration = duration,
                                         onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
                                         onPlayerBarClick = { showNowPlayingOverlay = true },
-                                        onShareClick = { itemToShare = currentSong },
                                         coverModifier = Modifier
                                     )
                                 }
