@@ -6,10 +6,13 @@ import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.data.repository.DownloadRepository
 import com.aistudio.sepatify.data.repository.SongRepository
 import com.aistudio.sepatify.player.AudioPlayerManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.random.Random
 
 class SharedAudioViewModel(
@@ -67,17 +70,36 @@ class SharedAudioViewModel(
 
     fun playSong(song: Song, queue: List<Song> = emptyList()) {
         // Smart routing (FR): if this track was downloaded, stream it from disk instead of the network.
-        viewModelScope.launch {
-            val resolvedSong = resolveForPlayback(song)
-            val resolvedQueue = queue.map { resolveForPlayback(it) }
-            songRepository.addRecentSong(resolvedSong)
-            audioPlayerManager.playSong(resolvedSong, resolvedQueue)
-        }
-    }
+        // We run this in the IO dispatcher to prevent UI freezing on huge queues.
+        viewModelScope.launch(Dispatchers.IO) {
+            
+            // Bulk fetch to prevent O(N) database queries for large queues
+            val downloadedList = downloadRepository.getDownloadedSongs().first()
+            val downloadedMap = downloadedList.associateBy { it.id }
 
-    private suspend fun resolveForPlayback(song: Song): Song {
-        val localPath = downloadRepository.getLocalPlaybackUri(song) ?: return song
-        return song.copy(audioUrl = "file://$localPath")
+            fun resolveInstant(s: Song): Song {
+                // Fast-path: It's already a local device file, skip database and file checks entirely
+                if (s.id.startsWith("local_") || s.audioUrl.startsWith("/") || s.audioUrl.startsWith("file://")) {
+                    return s
+                }
+                // Check if it's in the downloaded DB cache (O(1) in-memory lookup)
+                val downloadedEntity = downloadedMap[s.id]
+                if (downloadedEntity != null && File(downloadedEntity.localFilePath).exists()) {
+                    return s.copy(audioUrl = "file://${downloadedEntity.localFilePath}")
+                }
+                return s
+            }
+
+            val resolvedSong = resolveInstant(song)
+            val resolvedQueue = queue.map { resolveInstant(it) }
+
+            songRepository.addRecentSong(resolvedSong)
+            
+            // Switch back to the Main thread to immediately push it to ExoPlayer
+            withContext(Dispatchers.Main) {
+                audioPlayerManager.playSong(resolvedSong, resolvedQueue)
+            }
+        }
     }
 
     fun togglePlayPause() {
