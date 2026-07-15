@@ -388,12 +388,44 @@ fun PlaylistsScreen(
                                                 Text(text = s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                                             }
 
-                                            IconButton(onClick = { onShareClick(s) }) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Share,
-                                                    contentDescription = "Share Song",
-                                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                                                )
+                                            Box {
+                                                var moreMenuExpanded by remember { mutableStateOf(false) }
+                                                IconButton(onClick = { moreMenuExpanded = true }) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.MoreVert,
+                                                        contentDescription = "More Options",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                DropdownMenu(
+                                                    expanded = moreMenuExpanded,
+                                                    onDismissRequest = { moreMenuExpanded = false }
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(locString(R.string.share)) },
+                                                        onClick = {
+                                                            moreMenuExpanded = false
+                                                            onShareClick(s)
+                                                        },
+                                                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text("Add to queue") },
+                                                        onClick = {
+                                                            moreMenuExpanded = false
+                                                            android.widget.Toast.makeText(context, "Added to queue (Mock)", android.widget.Toast.LENGTH_SHORT).show()
+                                                        },
+                                                        leadingIcon = { Icon(Icons.Default.QueueMusic, contentDescription = null) }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text("Add to playlist") },
+                                                        onClick = {
+                                                            moreMenuExpanded = false
+                                                            android.widget.Toast.makeText(context, "Added to playlist (Mock)", android.widget.Toast.LENGTH_SHORT).show()
+                                                        },
+                                                        leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null) }
+                                                    )
+                                                }
                                             }
 
                                             if (plist.isUserCreated) {
