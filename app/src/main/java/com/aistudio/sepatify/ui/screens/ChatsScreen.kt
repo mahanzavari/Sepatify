@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -52,7 +53,7 @@ fun ChatsScreen(
 
     val isKeyboardVisible = WindowInsets.isImeVisible
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    
+
     val bottomPadding = if (isKeyboardVisible) {
         dimens.spaceNormal
     } else {
@@ -105,6 +106,12 @@ fun ChatsScreen(
                 ) {
                     items(matchingUsers) { usr ->
                         val isFollowingFlow = chatViewModel.isFollowing(usr).collectAsState(initial = false)
+
+                        // --- ADDED: Collect Profile ---
+                        val profile by chatViewModel.getProfile(usr).collectAsState(initial = null)
+                        val displayName = profile?.displayName ?: usr
+                        // ------------------------------
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -124,9 +131,20 @@ fun ChatsScreen(
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(text = usr.take(1).uppercase(), color = MaterialTheme.colorScheme.primary)
+                                    // --- UPDATED: Load Avatar Image ---
+                                    if (!profile?.avatarUrl.isNullOrEmpty()) {
+                                        AsyncImage(
+                                            model = profile!!.avatarUrl,
+                                            contentDescription = displayName,
+                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Text(text = displayName.take(1).uppercase(), color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    // ----------------------------------
                                 }
-                                Text(text = usr, style = MaterialTheme.typography.bodyLarge)
+                                Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
                             }
 
                             Button(
@@ -172,6 +190,11 @@ fun ChatsScreen(
                         modifier = Modifier.fillMaxWidth().weight(1f)
                     ) {
                         items(recentConversations) { user ->
+                            // --- ADDED: Collect Profile ---
+                            val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
+                            val displayName = profile?.displayName ?: user
+                            // ------------------------------
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -187,10 +210,21 @@ fun ChatsScreen(
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(text = user.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                    // --- UPDATED: Load Avatar Image ---
+                                    if (!profile?.avatarUrl.isNullOrEmpty()) {
+                                        AsyncImage(
+                                            model = profile!!.avatarUrl,
+                                            contentDescription = displayName,
+                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Text(text = displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    // ----------------------------------
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = user, style = MaterialTheme.typography.bodyLarge)
+                                    Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
 
                                     val isOnline = onlineUsers.contains(user)
                                     Text(
@@ -211,6 +245,11 @@ fun ChatsScreen(
             val pagedMessages = chatViewModel.getMessagesPaged(user).collectAsLazyPagingItems()
             val otherIsTyping = remember(user) { chatViewModel.getTypingState(user) }.collectAsState(initial = false)
 
+            // --- ADDED: Collect Profile ---
+            val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
+            val displayName = profile?.displayName ?: user
+            // ------------------------------
+
             var isTypingSent by remember(user) { mutableStateOf(false) }
 
             LaunchedEffect(chatInputText, user) {
@@ -219,12 +258,10 @@ fun ChatsScreen(
                         chatViewModel.setTyping(user, true)
                         isTypingSent = true
                     }
-                    // Wait 2.5s for inactivity before setting typing to false
                     kotlinx.coroutines.delay(2500)
                     chatViewModel.setTyping(user, false)
                     isTypingSent = false
                 } else {
-                    // Instantly clear typing if the input is cleared manually
                     if (isTypingSent) {
                         chatViewModel.setTyping(user, false)
                         isTypingSent = false
@@ -255,8 +292,35 @@ fun ChatsScreen(
                     Icon(Icons.Default.ArrowBack, contentDescription = locString(R.string.back_desc))
                 }
                 Spacer(modifier = Modifier.width(dimens.spaceEight))
+
+                // --- ADDED: Avatar in Chat Header ---
+                Box(
+                    modifier = Modifier
+                        .size(dimens.sizeAvatarNormal)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!profile?.avatarUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = profile!!.avatarUrl,
+                            contentDescription = displayName,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = displayName.take(1).uppercase(),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(dimens.spaceTwelve))
+                // ------------------------------------
+
                 Column {
-                    Text(text = user, style = MaterialTheme.typography.titleMedium)
+                    Text(text = displayName, style = MaterialTheme.typography.titleMedium)
                     if (otherIsTyping.value) {
                         Text(text = locString(R.string.typing), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     } else {

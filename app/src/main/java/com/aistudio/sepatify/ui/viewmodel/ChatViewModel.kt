@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.aistudio.sepatify.data.local.ChatMessageEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.data.remote.dto.ProfileDto
 import com.aistudio.sepatify.data.repository.ChatRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -42,6 +43,12 @@ class ChatViewModel(
             chatRepository.untrackPresence()
         }
     }
+
+    // --- ADDED: Fetch profile stream ---
+    fun getProfile(username: String): Flow<ProfileDto?> {
+        return chatRepository.getProfileFlow(username)
+    }
+    // -----------------------------------
 
     fun isFollowing(username: String): Flow<Boolean> {
         return chatRepository.isFollowing(username)

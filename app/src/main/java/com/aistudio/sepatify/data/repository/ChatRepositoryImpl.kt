@@ -29,7 +29,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -55,7 +57,10 @@ class ChatRepositoryImpl(
     private val typingStates = mutableMapOf<String, MutableStateFlow<Boolean>>()
     private val typingChannelUsers = mutableSetOf<String>()
 
-    // --- Presence System State ---
+    // Profile Cache
+    private val profileCache = MutableStateFlow<Map<String, ProfileDto>>(emptyMap())
+
+    // Presence System State
     private val _onlineUsers = MutableStateFlow<Set<String>>(emptySet())
     private var presenceChannel: io.github.jan.supabase.realtime.RealtimeChannel? = null
 
@@ -66,6 +71,61 @@ class ChatRepositoryImpl(
 
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
+
+        // --- ADDED: Start listening to Realtime Profile Updates ---
+        repoScope.launch { subscribeToRealtimeProfiles() }
+        // ---------------------------------------------------------
+    }
+
+    // --- ADDED: Realtime Profile Invalidation Listener ---
+    private suspend fun subscribeToRealtimeProfiles() {
+        try {
+            val channel = Supa.client.realtime.channel("public-profiles-updates")
+            val changes = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "profiles"
+            }
+            channel.subscribe()
+            changes.collect { action ->
+                if (action is PostgresAction.Update) {
+                    val record = action.record
+                    val id = record["id"]?.jsonPrimitive?.content ?: return@collect
+
+                    val usernameToUpdate = idToUsername[id]
+                    // Only re-fetch if this profile is actively cached/viewed by the UI right now
+                    if (usernameToUpdate != null && profileCache.value.containsKey(usernameToUpdate)) {
+                        try {
+                            val freshProfile = Supa.client.from("profiles")
+                                .select(columns = Columns.ALL) { filter { eq("id", id) } }
+                                .decodeSingleOrNull<ProfileDto>()
+
+                            if (freshProfile != null) {
+                                profileCache.update { current ->
+                                    val newMap = current.toMutableMap()
+                                    newMap.remove(usernameToUpdate)
+                                    newMap[freshProfile.username] = freshProfile
+                                    newMap
+                                }
+                                idToUsername[id] = freshProfile.username
+                                usernameToId[freshProfile.username] = id
+                            }
+                        } catch (e: Exception) {
+                            // Ignore network fetch errors during realtime sync
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Realtime not reachable
+        }
+    }
+    // -----------------------------------------------------
+
+    override fun getProfileFlow(username: String): Flow<ProfileDto?> {
+        return profileCache.map { it[username] }.onStart {
+            if (!profileCache.value.containsKey(username)) {
+                repoScope.launch { resolveId(username) } // Triggers fetch and cache if missing
+            }
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -81,7 +141,6 @@ class ChatRepositoryImpl(
         if (presenceChannel == null) {
             presenceChannel = Supa.client.realtime.channel("presence-global")
 
-            // 1. Listen for Presence Broadcasts
             repoScope.launch {
                 try {
                     presenceChannel?.broadcastFlow<JsonObject>(event = "presence")?.collect { jsonObject ->
@@ -107,7 +166,6 @@ class ChatRepositoryImpl(
                 e.printStackTrace()
             }
 
-            // 2. Loop to clean up stale users (force-closes or lost connections)
             presenceCleanupJob = repoScope.launch {
                 while (isActive) {
                     delay(5000)
@@ -116,7 +174,7 @@ class ChatRepositoryImpl(
                     val iterator = activeUserTimestamps.entries.iterator()
                     while (iterator.hasNext()) {
                         val entry = iterator.next()
-                        if (now - entry.value > 16000) { // Timeout after 16 seconds of no heartbeat
+                        if (now - entry.value > 16000) {
                             iterator.remove()
                             changed = true
                         }
@@ -128,12 +186,10 @@ class ChatRepositoryImpl(
             }
         }
 
-        // 3. Start broadcasting my own heartbeat every 10 seconds
         presenceHeartbeatJob?.cancel()
         presenceHeartbeatJob = repoScope.launch {
             while (isActive) {
                 try {
-                    // Uses positional arguments instead of named arguments
                     presenceChannel?.broadcast(
                         "presence",
                         buildJsonObject {
@@ -141,14 +197,11 @@ class ChatRepositoryImpl(
                             put("status", JsonPrimitive("online"))
                         }
                     )
-                } catch (e: Exception) {
-                    // Ignore transient network errors during heartbeat
-                }
+                } catch (e: Exception) { }
                 delay(10000)
             }
         }
 
-        // 4. Send an immediate "online" ping right now so UI updates instantly
         try {
             presenceChannel?.broadcast(
                 "presence",
@@ -161,13 +214,11 @@ class ChatRepositoryImpl(
     }
 
     override suspend fun untrackPresence() {
-        // Stop my heartbeat
         presenceHeartbeatJob?.cancel()
 
         val myId = authRepository.currentUserId() ?: return
         val myUsername = resolveUsername(myId)
 
-        // Send a final instant "offline" ping so other users' UIs update immediately
         try {
             presenceChannel?.broadcast(
                 "presence",
@@ -176,9 +227,7 @@ class ChatRepositoryImpl(
                     put("status", JsonPrimitive("offline"))
                 }
             )
-        } catch (e: Exception) {
-            // best effort
-        }
+        } catch (e: Exception) { }
     }
 
     // ---------------------------------------------------------------------
@@ -186,6 +235,8 @@ class ChatRepositoryImpl(
     // ---------------------------------------------------------------------
 
     private suspend fun resolveId(username: String): String? {
+        profileCache.value[username]?.let { return it.id }
+
         usernameToId[username]?.let { return it }
         return try {
             val profile = Supa.client.from("profiles")
@@ -194,6 +245,9 @@ class ChatRepositoryImpl(
             profile?.let {
                 usernameToId[username] = it.id
                 idToUsername[it.id] = username
+
+                profileCache.update { current -> current + (username to it) }
+
                 it.id
             }
         } catch (e: Exception) {
@@ -210,6 +264,11 @@ class ChatRepositoryImpl(
             val name = profile?.username ?: id
             idToUsername[id] = name
             usernameToId[name] = id
+
+            profile?.let { p ->
+                profileCache.update { current -> current + (name to p) }
+            }
+
             name
         } catch (e: Exception) {
             id

@@ -8,7 +8,6 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.flow.Flow
@@ -45,7 +44,6 @@ class AuthRepositoryImpl : AuthRepository {
                     put("username", JsonPrimitive(displayName.lowercase().replace(" ", "_")))
                 }
             }
-            // Some Supabase projects require e-mail confirmation before a session exists.
             if (auth.currentUserOrNull() == null) {
                 return Result.failure(Exception("Account created! Please confirm your e-mail, then sign in."))
             }
@@ -138,8 +136,14 @@ class AuthRepositoryImpl : AuthRepository {
                 upsert = true
             }
             val publicUrl = Supa.client.storage.from("avatars").publicUrl(path)
-            updateAvatarUrl(publicUrl)
-            Result.success(publicUrl)
+
+            // --- UPDATED: Cache-busting URL ---
+            // Forces image loaders (Coil) to immediately fetch the new image instead of using the old disk cache
+            val cacheBustedUrl = "$publicUrl?t=${System.currentTimeMillis()}"
+            updateAvatarUrl(cacheBustedUrl)
+            Result.success(cacheBustedUrl)
+            // ----------------------------------
+
         } catch (e: Exception) {
             Result.failure(e)
         }
