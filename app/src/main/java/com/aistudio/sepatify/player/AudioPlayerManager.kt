@@ -567,105 +567,113 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     private fun checkAndTriggerRealCrossfade(currentPos: Long, totalDuration: Long) {
-        // 1. Only crossfade if we have a valid prepared track with a realistic duration (> 10 seconds)
-        if (totalDuration < 10000L) return
-
-        // 2. Only crossfade if the player is actively ready and playing
-        if (exoPlayer.playbackState != Player.STATE_READY) return
-        if (!exoPlayer.playWhenReady) return
-
-        // 3. Only crossfade if there actually is a next song to transition to
-        if (!exoPlayer.hasNextMediaItem() && !_isRepeat.value) return
+        val hasNext = exoPlayer.hasNextMediaItem() || _isRepeat.value
+        if (!hasNext) return
 
         val crossfadeDurationMs = _crossfadeDurationSec.value * 1000L
-        // Trigger 2.5 seconds early to give the primary player time to buffer the next song
-        val triggerOffsetMs = (crossfadeDurationMs + 2500L).coerceAtMost(totalDuration - 1000L)
+        val triggerOffsetMs = crossfadeDurationMs + 3000L // 3 seconds buffer prep
         val remainingMs = totalDuration - currentPos
 
-        if (remainingMs in 1..triggerOffsetMs) {
-            triggerOverlapCrossfade {
-                if (exoPlayer.hasNextMediaItem()) {
-                    exoPlayer.seekToNextMediaItem()
-                } else if (_isRepeat.value) {
-                    exoPlayer.seekTo(0, 0L)
-                }
-            }
+        if (remainingMs in 1..triggerOffsetMs && !isCrossfading) {
+            triggerAutoCrossfade()
         }
     }
 
-    private fun triggerOverlapCrossfade(skipAction: () -> Unit) {
-        val currentSongVal = _currentSong.value ?: return
+    private fun triggerAutoCrossfade() {
         isCrossfading = true
 
         crossfadeJob?.cancel()
+
         crossfadeJob = applicationScope.launch {
             try {
-                // 1. Prepare secondary player in background with the CURRENT song
+                // 1. Determine NEXT song
+                val hasNext = exoPlayer.hasNextMediaItem()
+                val nextIndex = if (hasNext) exoPlayer.currentMediaItemIndex + 1 else 0
+                val nextSongId = exoPlayer.getMediaItemAt(nextIndex).mediaId
+                val nextSong = _playlist.value.find { it.id == nextSongId } ?: return@launch
+
+                // 2. Prepare secondaryPlayer with the NEXT song
                 val mediaItem = MediaItem.Builder()
-                    .setMediaId(currentSongVal.id)
-                    .setUri(Uri.parse(currentSongVal.audioUrl))
+                    .setMediaId(nextSong.id)
+                    .setUri(Uri.parse(nextSong.audioUrl))
                     .build()
 
+                secondaryPlayer.playbackParameters = exoPlayer.playbackParameters
                 secondaryPlayer.setMediaItem(mediaItem)
                 secondaryPlayer.prepare()
+                secondaryPlayer.playWhenReady = false
+                secondaryPlayer.seekTo(0)
 
-                // Wait for secondary player to be ready (up to 1.5 seconds max)
-                var waitTime = 0
-                while (secondaryPlayer.playbackState != Player.STATE_READY && waitTime < 1500) {
+                var prepWait = 0
+                while (secondaryPlayer.playbackState != Player.STATE_READY && prepWait < 2500 && isActive) {
                     delay(50)
-                    waitTime += 50
-                }
-
-                // Seamlessly take over playback of the OLD song
-                val exactPos = exoPlayer.currentPosition
-                secondaryPlayer.seekTo(exactPos)
-                secondaryPlayer.volume = 1.0f
-                secondaryPlayer.playWhenReady = true
-                secondaryPlayer.play()
-
-                delay(50) // Tiny delay to ensure the secondary player's audio pipeline starts
-
-                // 2. Instantly transition primary player to the NEW track
-                exoPlayer.volume = 0.0f
-                skipAction()
-                exoPlayer.playWhenReady = true
-                exoPlayer.play()
-
-                // Wait for the primary player (new song) to actually be READY
-                var primaryWait = 0
-                while (exoPlayer.playbackState != Player.STATE_READY && primaryWait < 3000) {
-                    delay(50)
-                    primaryWait += 50
+                    prepWait += 50
                 }
 
                 val crossfadeDurationMs = _crossfadeDurationSec.value * 1000L
 
-                // Wait until we are EXACTLY at the crossfade boundary
+                // 3. Wait until exactly crossfadeDurationMs remaining on OLD song (primary)
                 while (isActive) {
-                    val secPos = secondaryPlayer.currentPosition
-                    val secDur = secondaryPlayer.duration.coerceAtLeast(0L)
-                    val remaining = secDur - secPos
-                    if (remaining <= crossfadeDurationMs || remaining <= 0) break
-                    delay(50)
+                    val rem = exoPlayer.duration - exoPlayer.currentPosition
+                    if (rem <= crossfadeDurationMs || rem <= 0) break
+                    delay(20)
                 }
 
-                // 3. Smooth mix volumes of both active players (Crossfade)
-                val steps = 25
+                // 4. Start the True Crossfade mix
+                secondaryPlayer.volume = 0f
+                secondaryPlayer.playWhenReady = true
+                secondaryPlayer.play()
 
-                // Calculate actual remaining time in case we are late
-                val actualCrossfadeTime = (secondaryPlayer.duration - secondaryPlayer.currentPosition).coerceIn(1000L, crossfadeDurationMs)
-                val interval = actualCrossfadeTime / steps
+                val steps = 25
+                val interval = crossfadeDurationMs / steps
 
                 for (i in 0..steps) {
                     if (!isActive) break
-                    val ratio = i.toFloat() / steps
-                    exoPlayer.volume = ratio // Fade in new song
-                    secondaryPlayer.volume = 1.0f - ratio // Fade out old song
+
+                    // Handle user pausing gracefully mid-crossfade
+                    while (!exoPlayer.isPlaying && isActive) {
+                        if (secondaryPlayer.isPlaying) secondaryPlayer.pause()
+                        delay(50)
+                    }
+                    if (exoPlayer.isPlaying && !secondaryPlayer.isPlaying) {
+                        secondaryPlayer.play()
+                    }
+
+                    // If exoPlayer natively advances its track early, mute it immediately
+                    if (exoPlayer.currentMediaItemIndex == nextIndex) {
+                        exoPlayer.volume = 0f
+                        secondaryPlayer.volume = 1f
+                        break
+                    }
+
+                    val ratio = (i.toFloat() / steps).coerceIn(0f, 1f)
+                    secondaryPlayer.volume = ratio         // Fade IN New Song
+                    exoPlayer.volume = 1f - ratio          // Fade OUT Old Song
                     delay(interval)
                 }
 
-                exoPlayer.volume = 1.0f
+                // 5. Seamless Handover: Bring exoPlayer up to secondaryPlayer's position
+                exoPlayer.volume = 0f
+                if (exoPlayer.currentMediaItemIndex != nextIndex) {
+                    if (hasNext) exoPlayer.seekToNextMediaItem() else exoPlayer.seekTo(0, 0L)
+                }
+
+                val syncPos = secondaryPlayer.currentPosition
+                exoPlayer.seekTo(syncPos)
+                exoPlayer.playWhenReady = true
+                if (!exoPlayer.isPlaying) exoPlayer.play()
+
+                // Wait for exoPlayer to buffer the seek
+                var syncWait = 0
+                while (exoPlayer.playbackState != Player.STATE_READY && syncWait < 3000 && isActive) {
+                    delay(20) // Let secondary fill the gap
+                    syncWait += 20
+                }
+
+                // Instantly Swap audio outputs
+                exoPlayer.volume = 1f
                 secondaryPlayer.volume = 0.0f
+                delay(100)
             } catch (e: Exception) {
                 e.printStackTrace()
                 exoPlayer.volume = 1.0f
