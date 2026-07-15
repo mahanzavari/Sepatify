@@ -2,6 +2,7 @@ package com.aistudio.sepatify.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.media.AudioManager
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
 import android.media.audiofx.PresetReverb
@@ -33,9 +34,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import android.media.audiofx.Visualizer
+import android.util.Log
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.audio.AudioSink
 
+private const val BANDS_COUNT = 12
+
+@UnstableApi
 class AudioPlayerManager(private val context: Context) {
 
+    private val fftAudioProcessor = FftAudioProcessor { rawMagnitudes ->
+        processFftData(rawMagnitudes)
+    }
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // Smart caching (FR): streamed audio is cached on disk so seeking/replaying doesn't re-download.
@@ -53,7 +67,23 @@ class AudioPlayerManager(private val context: Context) {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
-    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
+
+    // 1. Create a custom RenderersFactory to inject our FftAudioProcessor
+    val renderersFactory = object : DefaultRenderersFactory(context) {
+        override fun buildAudioSink(
+            context: android.content.Context,
+            enableFloatOutput: Boolean,
+            enableAudioTrackPlaybackParams: Boolean
+        ): AudioSink {
+            return DefaultAudioSink.Builder(context)
+                // Inject FftAudioProcessor straight into the default AudioSink
+                .setAudioProcessors(arrayOf(fftAudioProcessor))
+                .build()
+        }
+    }
+
+    // 2. Build ExoPlayer with the custom RenderersFactory
+    val exoPlayer: ExoPlayer = ExoPlayer.Builder(context, renderersFactory)
         .setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory))
         // Audio Focus (FR): ExoPlayer will automatically pause/duck when it loses audio focus
         // (e.g. phone calls, other apps' voice notes) and resume once focus is regained.
@@ -66,13 +96,14 @@ class AudioPlayerManager(private val context: Context) {
         )
         .build()
 
-    // Audio Effects
-    private var equalizer: Equalizer? = null
-    private var bassBoost: BassBoost? = null
-    private var virtualizer: Virtualizer? = null
-    private var presetReverb: PresetReverb? = null
+
 
     // Players state flows
+    private val _fftBands = MutableStateFlow(FloatArray(12) { 0f })
+    val fftBands: StateFlow<FloatArray> = _fftBands.asStateFlow()
+
+    private val _isBassDetected = MutableStateFlow(false)
+    val isBassDetected: StateFlow<Boolean> = _isBassDetected.asStateFlow()
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
@@ -129,6 +160,17 @@ class AudioPlayerManager(private val context: Context) {
     private var crossfadeJob: Job? = null
     private val handler = Handler(Looper.getMainLooper())
 
+    private val _visualizerData = MutableStateFlow<List<Float>>(emptyList())
+    val visualizerData: StateFlow<List<Float>> = _visualizerData.asStateFlow()
+
+    private var equalizer: Equalizer? = null
+    private var bassBoost: BassBoost? = null
+    private var virtualizer: Virtualizer? = null
+    private var presetReverb: PresetReverb? = null
+
+    private var visualizer: Visualizer? = null
+
+
     init {
         // Connect to PlaybackService to ensure it's started and OS media controls (notification) are active.
         try {
@@ -155,6 +197,8 @@ class AudioPlayerManager(private val context: Context) {
                     stopProgressTracker()
                 }
             }
+
+
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 val songId = mediaItem?.mediaId
@@ -347,7 +391,41 @@ class AudioPlayerManager(private val context: Context) {
         exoPlayer.playbackParameters = PlaybackParameters(speed)
     }
 
-    // --- Audio Effects (EQ, Bass Boost, Virtualizer, Reverb) ---
+
+    private fun processFftData(rawMagnitudes: FloatArray) {
+        val n = rawMagnitudes.size
+        if (n <= 0) return
+
+        val magnitudes = FloatArray(BANDS_COUNT)
+
+        // 1. Group frequencies logarithmically into 12 bands (Spotify Style)
+        for (band in 0 until BANDS_COUNT) {
+            val startPercent = Math.pow(band.toDouble() / BANDS_COUNT, 1.5)
+            val endPercent = Math.pow((band + 1).toDouble() / BANDS_COUNT, 1.5)
+
+            val startIndex = (startPercent * n).toInt().coerceIn(0, n - 1)
+            val endIndex = (endPercent * n).toInt().coerceIn(startIndex + 1, n)
+
+            var sum = 0f
+            for (i in startIndex until endIndex) {
+                sum += rawMagnitudes[i]
+            }
+
+            val count = endIndex - startIndex
+            val average = if (count > 0) sum / count else 0f
+
+            // Boost and scale to 0.0 - 100.0 range
+            magnitudes[band] = (average * 150f).coerceIn(0f, 100f)
+        }
+
+        // 2. Bass Detection
+        val bassValue = magnitudes[0] * 0.7f + magnitudes[1] * 0.3f
+        val isBass = bassValue > 45f
+
+        // 3. Update the state flows so UI collects them immediately
+        _fftBands.value = magnitudes
+        _isBassDetected.value = isBass
+    }
 
     private fun initializeAudioEffects(audioSessionId: Int) {
         if (audioSessionId == 0) return
@@ -392,7 +470,74 @@ class AudioPlayerManager(private val context: Context) {
                 reverb.enabled = _eqEnabled.value
                 applyReverbPresetDirectly(reverb, _reverbPreset.value)
                 presetReverb = reverb
+                visualizer?.release()
 
+                visualizer = Visualizer(audioSessionId).apply {
+
+                    captureSize = Visualizer.getCaptureSizeRange()[1]
+
+                    scalingMode = Visualizer.SCALING_MODE_NORMALIZED
+
+                    setDataCaptureListener(
+
+                        object : Visualizer.OnDataCaptureListener {
+
+                            override fun onWaveFormDataCapture(
+                                visualizer: Visualizer?,
+                                waveform: ByteArray?,
+                                samplingRate: Int
+                            ) {
+                                // فعلاً استفاده نمی‌کنیم
+                            }
+
+                            override fun onFftDataCapture(
+                                visualizer: Visualizer?,
+                                fft: ByteArray?,
+                                samplingRate: Int
+                            ) {
+
+                                if (fft == null) return
+
+                                val bars = MutableList(12) { 0f }
+
+                                val fftBins = fft.size / 2
+                                val binsPerBar = fftBins / bars.size
+
+                                for (bar in bars.indices) {
+
+                                    var sum = 0f
+
+                                    val start = bar * binsPerBar
+                                    val end = start + binsPerBar
+
+                                    for (i in start until end) {
+
+                                        val real = fft[i * 2].toFloat()
+                                        val imag = fft[i * 2 + 1].toFloat()
+
+                                        val magnitude =
+                                            kotlin.math.sqrt(real * real + imag * imag)
+
+                                        sum += magnitude
+                                    }
+
+                                    bars[bar] = sum / binsPerBar
+                                }
+
+                                _visualizerData.value = bars
+                                android.util.Log.d("FFT", bars.joinToString())
+                            }
+
+                        },
+
+                        Visualizer.getMaxCaptureRate() / 2,
+                        false,
+                        true
+
+                    )
+
+                    enabled = true
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -537,9 +682,13 @@ class AudioPlayerManager(private val context: Context) {
             bassBoost?.release()
             virtualizer?.release()
             presetReverb?.release()
+            visualizer?.release()
             downloadCache.release()
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 }
+
+
