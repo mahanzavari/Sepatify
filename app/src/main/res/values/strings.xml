@@ -191,4 +191,12 @@
     <string name="back_desc">Back</string>
     <string name="status_online">Online</string>
     <string name="status_offline">Last seen recently</string>
+
+    <!-- share button -->
+    <string name="share">Share</string>
+    <string name="share_song_text">Check out this song: %1$s by %2$s</string>
+    <string name="share_playlist_text">Check out this playlist: %1$s</string>
+    <string name="share_via_apps">Share via other apps</string>
+    <string name="send_to_friends">Send to friends</string>
+    <string name="sent_success">Sent to %1$s successfully!</string>
 </resources>

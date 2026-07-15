@@ -162,7 +162,7 @@
     <string name="chat_active_status">فعال</string>
     <string name="exclusive_tracks">آهنگ‌های ویژه و اختصاصی</string>
     
-<!-- Search Screen -->
+    <!-- Search Screen -->
     <string name="search_top_genres">ژانرهای برتر شما</string>
     <string name="search_browse_all">مرور همه</string>
     <string name="genre_pop">پاپ</string>
@@ -190,4 +190,12 @@
     <string name="back_desc">بازگشت</string>
     <string name="status_online">آنلاین</string>
     <string name="status_offline">آخرین بازدید اخیرا</string>
+
+    <!-- SHare button -->
+    <string name="share">اشتراک‌گذاری</string>
+    <string name="share_song_text">به این آهنگ گوش کنید: %1$s اثر %2$s</string>
+    <string name="share_playlist_text">این لیست‌پخش را بشنوید: %1$s</string>
+    <string name="share_via_apps">ارسال با برنامه‌های دیگر</string>
+    <string name="send_to_friends">ارسال به دوستان</string>
+    <string name="sent_success">با موفقیت به %1$s ارسال شد!</string>
 </resources>
