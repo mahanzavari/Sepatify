@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,6 +53,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URL
+import androidx.compose.ui.util.lerp
+import kotlin.math.abs
+import kotlin.math.pow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -653,58 +657,11 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.85f) // Reduces the width to 85% of the screen width
-                                .height(60.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val primaryColor = MaterialTheme.colorScheme.primary
-
-                            // Create an infinite transition for a continuous fluid animation
-                            val infiniteTransition = rememberInfiniteTransition(label = "EqualizerTransition")
-
-                            // Animate a scale factor between 0.4f and 1.2f to add rhythmic bounce
-                            val animationScale by infiniteTransition.animateFloat(
-                                initialValue = 0.4f,
-                                targetValue = 1.2f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(durationMillis = 450, easing = LinearEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "EqualizerScale"
-                            )
-
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                val totalBars = visualizerBars.size
-                                if (totalBars == 0) return@Canvas
-
-                                val gapFraction = 0.50f
-                                val availableWidth = size.width
-
-                                val barWidth = (availableWidth * (1f - gapFraction)) / totalBars
-                                val gap = (availableWidth * gapFraction) / (totalBars - 1).coerceAtLeast(1)
-
-                                for (i in 0 until totalBars) {
-                                    // Apply a unique wave offset per bar using sinus function so they don't bounce all at once
-                                    val waveOffset = kotlin.math.sin(i.toFloat() * 0.5f) * 0.3f
-                                    val dynamicScale = (animationScale + waveOffset).coerceIn(0.2f, 1.5f)
-
-                                    // Calculate animated height based on both data and the dynamicScale
-                                    val barHeight = (visualizerBars[i].dp.toPx() * dynamicScale).coerceAtMost(size.height)
-
-                                    val x = i * (barWidth + gap)
-                                    val y = size.height - barHeight
-
-                                    drawRoundRect(
-                                        color = primaryColor,
-                                        topLeft = Offset(x, y),
-                                        size = Size(barWidth, barHeight),
-                                        cornerRadius = CornerRadius(barWidth / 2, barWidth / 2)
-                                    )
-                                }
-                            }
-                        }
+                        AudioVisualizerComponent(
+                            sharedAudioViewModel = sharedAudioViewModel,
+                            progress = progress,
+                            duration = duration
+                        )
                     }
                 }
             }
@@ -1068,5 +1025,131 @@ fun getLyricsForSong(songId: String, songTitle: String): List<LyricLine> {
             LyricLine(45000, "Enjoy this serene soundscape...")
         )
         else -> emptyList()
+    }
+}
+
+@Composable
+fun AudioVisualizerComponent(
+    sharedAudioViewModel: SharedAudioViewModel,
+    progress: Long,
+    duration: Long
+) {
+    // 1. Collect the raw real-time FFT bands from our permission-free audio processor
+    val rawVisualizerBars by sharedAudioViewModel.fftBands.collectAsState()
+    val isBassDetected by sharedAudioViewModel.isBassDetected.collectAsState()
+
+    val totalBarsCount = 12
+    val density = LocalDensity.current
+
+    // 2. Local smoothing state to prevent jittery movements
+    var smoothedBars by remember { mutableStateOf(FloatArray(totalBarsCount) { 0f }) }
+
+    // Gradually decay the bars' heights on each frame for a fluid transition
+    LaunchedEffect(rawVisualizerBars) {
+        val nextBars = FloatArray(totalBarsCount)
+        for (i in 0 until totalBarsCount) {
+            val target = if (i < rawVisualizerBars.size) rawVisualizerBars[i] else 0f
+            val current = smoothedBars[i]
+            // Standard decay algorithm: 30% current + 70% target (creates a highly responsive elastic look)
+            nextBars[i] = current + 0.7f * (target - current)
+        }
+        smoothedBars = nextBars
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(0.85f)
+            .height(60.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        val primaryColor = MaterialTheme.colorScheme.primary
+
+        // Calculate a natural Exponential Decay factor for crossfades
+        val crossfadeVolumeFactor = remember(progress, duration) {
+            val currentMs = progress
+            val totalMs = duration
+            val crossfadeDurationMs = 4000L // 4-second crossfade window
+
+            when {
+                totalMs <= 0 -> 1f
+                // Fade-in phase
+                currentMs < crossfadeDurationMs -> {
+                    val ratio = (currentMs.toFloat() / crossfadeDurationMs).coerceIn(0f, 1f)
+                    ratio * ratio
+                }
+                // Fade-out phase
+                currentMs > (totalMs - crossfadeDurationMs) -> {
+                    val remainingMs = totalMs - currentMs
+                    val ratio = (remainingMs.toFloat() / crossfadeDurationMs).coerceIn(0f, 1f)
+                    ratio * ratio
+                }
+                else -> 1f
+            }
+        }
+
+        // Track a dynamic sub-bass signal with the new decay factor applied
+        val rawSubBass = remember(smoothedBars, crossfadeVolumeFactor) {
+            if (smoothedBars.isEmpty()) 0f else {
+                val sampleCount = smoothedBars.size.coerceAtMost(2)
+                var sum = 0f
+                for (i in 0 until sampleCount) {
+                    sum += smoothedBars[i]
+                }
+                // If the song is fading out, suppress the bass triggers
+                ((sum / sampleCount) * 1.8f) * crossfadeVolumeFactor
+            }
+        }
+
+        // Smoothly animate the sub-bass jump (Perfect for bass-beats in UI scaling)
+        val animatedSubBassScale by animateFloatAsState(
+            targetValue = (rawSubBass / 10f).coerceIn(0f, 2.5f),
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            ),
+            label = "SubBassScale"
+        )
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val totalBars = smoothedBars.size
+            if (totalBars == 0) return@Canvas
+
+            val gapFraction = 0.50f
+            val availableWidth = size.width
+
+            val barWidth = (availableWidth * (1f - gapFraction)) / totalBars
+            val gap = (availableWidth * gapFraction) / (totalBars - 1).coerceAtLeast(1)
+
+            for (i in 0 until totalBars) {
+                val rawBarValue = smoothedBars[i]
+                val positionFactor = i.toFloat() / totalBars
+
+                // Dynamic scaling based on frequency bands (Bass vs. Mids vs. Highs)
+                val personalScale = if (positionFactor < 0.35f) {
+                    animatedSubBassScale * 1.1f
+                } else if (positionFactor < 0.75f) {
+                    1.2f * crossfadeVolumeFactor
+                } else {
+                    1.4f * crossfadeVolumeFactor
+                }
+
+                // Multiply the height by our exponential volume factor
+                val rawHeight = (rawBarValue.dp.toPx() * personalScale) * crossfadeVolumeFactor
+
+                // Gradually collapse the minimum baseline to 0f as we reach the absolute end
+                val minHeight = (2.dp.toPx() * crossfadeVolumeFactor).coerceAtLeast(0f)
+                val barHeight = rawHeight.coerceIn(minHeight, size.height)
+
+                val x = i * (barWidth + gap)
+                val y = size.height - barHeight
+
+                drawRoundRect(
+                    color = primaryColor,
+                    topLeft = Offset(x, y),
+                    size = Size(barWidth, barHeight),
+                    cornerRadius = CornerRadius(barWidth / 2, barWidth / 2)
+                )
+            }
+        }
     }
 }

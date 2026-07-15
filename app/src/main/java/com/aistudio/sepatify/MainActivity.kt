@@ -47,6 +47,13 @@ import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
+import android.Manifest
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+
 
 private const val TAB_HOME = "home"
 private const val TAB_SEARCH = "search"
@@ -68,6 +75,7 @@ private data class BottomNavItem(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         setContent {
             // Main ViewModels from Koin
@@ -707,16 +715,8 @@ fun AppMainHub(
                     onBackClick = { showNowPlayingOverlay = false },
                     onShareClick = { itemToShare = currentSong },
                     locString = locString,
-                    coverModifier = Modifier.sharedElement(
-                        state = rememberSharedContentState(key = "album_cover"),
-                        animatedVisibilityScope = this@AnimatedVisibility,
-                        boundsTransform = { _, _ ->
-                            spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        }
-                    )
+                    // برای جلوگیری از کرش، افکت انیمیشن اشتراکی را موقتاً حذف و به یک مودیفایر ساده تبدیل کردیم
+                    coverModifier = Modifier
                 )
             }
         }

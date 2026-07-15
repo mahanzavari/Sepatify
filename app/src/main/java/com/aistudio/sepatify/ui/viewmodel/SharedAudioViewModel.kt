@@ -38,6 +38,8 @@ class SharedAudioViewModel(
     val reverbPreset: StateFlow<Int> = audioPlayerManager.reverbPreset
     val crossfadeEnabled: StateFlow<Boolean> = audioPlayerManager.crossfadeEnabled
     val crossfadeDurationSec: StateFlow<Int> = audioPlayerManager.crossfadeDurationSec
+    val fftBands: StateFlow<FloatArray> = audioPlayerManager.fftBands
+    val isBassDetected: StateFlow<Boolean> = audioPlayerManager.isBassDetected
 
     // Keeps local sleep timer flow
     private val _sleepTimerMinutes = MutableStateFlow<Int?>(null)
