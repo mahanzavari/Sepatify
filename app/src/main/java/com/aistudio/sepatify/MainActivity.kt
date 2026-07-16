@@ -9,51 +9,41 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.aistudio.sepatify.ui.components.EqualizerDialog
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.CircleShape
-import coil.compose.AsyncImage
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
+import coil.compose.AsyncImage
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.components.EqualizerDialog
 import com.aistudio.sepatify.ui.components.ShareBottomSheet
 import com.aistudio.sepatify.ui.theme.SepatifyTheme
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
-import android.Manifest
-import android.content.pm.PackageManager
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
-
+import kotlinx.coroutines.launch
 
 private const val TAB_HOME = "home"
 private const val TAB_SEARCH = "search"
@@ -105,7 +95,7 @@ class MainActivity : ComponentActivity() {
             val localizedContext = context.createConfigurationContext(config)
             val layoutDirection = if (currentLanguage == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr
 
-            // Find original ActivityResultRegistryOwner from original context because localizedContext does not implement it
+            // Find original ActivityResultRegistryOwner from original context
             var activityOwner: androidx.activity.result.ActivityResultRegistryOwner =
                 context as androidx.activity.result.ActivityResultRegistryOwner
             var currentContext = context
@@ -128,8 +118,9 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
+                    val dimens = MaterialTheme.sepatifyDimens
 
-                    // Wait for the session verification to complete before rendering logic
+                    // Wait for session verification
                     if (isCheckingSession) {
                         Box(
                             modifier = Modifier
@@ -139,30 +130,26 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(80.dp)
+                                    .size(dimens.sizeEmptyStateCircle)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.MusicNote,
                                     contentDescription = "Loading...",
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(dimens.sizeEmptyStateIcon)
                                 )
                             }
                         }
                     } else if (userEmail.isNullOrBlank()) {
-                        // User not logged in, show Auth Screen backed by Supabase
                         LoginScreen(
                             authViewModel = authViewModel,
-                            onAuthSuccess = { email, name ->
-                                // Auth success callback is monitored inside LoginScreen
-                            },
+                            onAuthSuccess = { _, _ -> },
                             locString = locString
                         )
                     } else {
-                        // App Main Hub with navigation
                         AppMainHub(
                             mainViewModel = mainViewModel,
                             homeViewModel = homeViewModel,
@@ -220,6 +207,10 @@ fun AppMainHub(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    val dimens = MaterialTheme.sepatifyDimens
+    val shapes = MaterialTheme.sepatifyShapes
+    val colors = MaterialTheme.sepatifyColors
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -301,25 +292,24 @@ fun AppMainHub(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                modifier = Modifier.width(300.dp),
+                modifier = Modifier.width(dimens.widthDrawer),
                 drawerContainerColor = MaterialTheme.colorScheme.surface,
                 drawerContentColor = MaterialTheme.colorScheme.onSurface
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
-                // App Logo or Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                        .padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceTwelve),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                 ) {
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(dimens.sizeIconExtraLarge)
                     )
                     Text(
                         text = locString(R.string.app_name),
@@ -330,30 +320,29 @@ fun AppMainHub(
                 }
 
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    modifier = Modifier.padding(vertical = dimens.spaceEight),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaShimmerHighlight)
                 )
 
-                // ACCOUNT SECTION WITH PROFILE PIC
                 Text(
                     text = locString(R.string.drawer_account_section),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceEight)
                 )
 
                 NavigationDrawerItem(
                     label = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(dimens.sizeAvatarNormal)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (avatarUrl.isNotEmpty()) {
@@ -392,24 +381,23 @@ fun AppMainHub(
                         scope.launch { drawerState.close() }
                         activeTab = TAB_PROFILE
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve),
                     colors = NavigationDrawerItemDefaults.colors(
                         unselectedContainerColor = Color.Transparent,
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = dimens.alphaMuted)
                     )
                 )
 
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    modifier = Modifier.padding(vertical = dimens.spaceTwelve),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaShimmerHighlight)
                 )
 
-                // SETTINGS SECTION
                 Text(
                     text = locString(R.string.drawer_settings_section),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceEight)
                 )
 
                 NavigationDrawerItem(
@@ -420,7 +408,7 @@ fun AppMainHub(
                         scope.launch { drawerState.close() }
                         activeTab = TAB_PROFILE
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
                 )
 
                 NavigationDrawerItem(
@@ -431,7 +419,7 @@ fun AppMainHub(
                         scope.launch { drawerState.close() }
                         showPrivacyDialog = true
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
                 )
 
                 NavigationDrawerItem(
@@ -442,7 +430,7 @@ fun AppMainHub(
                         scope.launch { drawerState.close() }
                         showNotificationDialog = true
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
                 )
 
                 NavigationDrawerItem(
@@ -453,7 +441,7 @@ fun AppMainHub(
                         scope.launch { drawerState.close() }
                         showEqualizerDialog = true
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
                 )
             }
         }
@@ -473,14 +461,14 @@ fun AppMainHub(
                         )
                     }
                 },
-                bottomBar = {} // Leave empty so Scaffold doesn't push content up
+                bottomBar = {}
             ) { paddingValues ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = 0.dp, // Allows content to flow underneath the transparent nav bar
+                            bottom = dimens.zero,
                             start = paddingValues.calculateStartPadding(LocalLayoutDirection.current),
                             end = paddingValues.calculateEndPadding(LocalLayoutDirection.current)
                         )
@@ -602,8 +590,6 @@ fun AppMainHub(
                         }
                     }
 
-                    // Mini-player floats purely over the content.
-                    // Gradient overlay combining MiniPlayer and Custom NavBar
                     if (!showNowPlayingOverlay) {
                         val isKeyboardVisible = WindowInsets.isImeVisible
                         val showNavigationBar = !isKeyboardVisible && !(activeTab == TAB_CHAT && activeChatUser != null)
@@ -617,18 +603,17 @@ fun AppMainHub(
                                         Brush.verticalGradient(
                                             colors = listOf(
                                                 Color.Transparent,
-                                                MaterialTheme.colorScheme.background.copy(alpha = 0.6f),
+                                                MaterialTheme.colorScheme.background.copy(alpha = dimens.alphaSemiMuted),
                                                 MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
                                                 MaterialTheme.colorScheme.background
                                             )
                                         )
                                     )
                                     .navigationBarsPadding()
-                                    // Removed .imePadding() so the miniplayer stays at the bottom under the keyboard
                             ) {
-                                Spacer(modifier = Modifier.height(32.dp)) // Extra space for smooth fade
+                                Spacer(modifier = Modifier.height(dimens.spaceHuge))
                                 
-                                if (currentSong != null) { // We can safely ignore showMiniPlayer since it's permanent now
+                                if (currentSong != null) {
                                     MiniPlayer(
                                         currentSong = currentSong!!,
                                         isPlaying = isPlaying,
@@ -641,12 +626,11 @@ fun AppMainHub(
                                 }
                                 
                                 if (showNavigationBar) {
-                                    // Custom Navbar to prevent 6-item M3 clipping
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(72.dp)
-                                            .padding(horizontal = 8.dp),
+                                            .height(dimens.heightBottomNavBar)
+                                            .padding(horizontal = dimens.spaceEight),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -665,16 +649,16 @@ fun AppMainHub(
                                             ) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .width(48.dp) // Safely fits inside screen bounds
-                                                        .height(32.dp)
-                                                        .clip(RoundedCornerShape(16.dp))
-                                                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent),
+                                                        .width(dimens.widthBottomNavTab)
+                                                        .height(dimens.heightBottomNavTabContainer)
+                                                        .clip(shapes.button)
+                                                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight) else Color.Transparent),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Icon(
                                                         imageVector = item.icon,
                                                         contentDescription = locString(item.titleResId),
-                                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = dimens.alphaStandard)
                                                     )
                                                 }
                                             }
@@ -685,13 +669,11 @@ fun AppMainHub(
                         }
                     }
                 }
-            } // Closes Scaffold
-        } // Closes Box
-    } // Closes ModalNavigationDrawer
+            }
+        }
+    }
 
-    // Shared element transition: album cover scales from mini-player up to full-screen player
     SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
-        // Full-screen NowPlaying overlay (target state)
         AnimatedVisibility(
             visible = showNowPlayingOverlay,
             enter = slideInVertically(
@@ -715,7 +697,6 @@ fun AppMainHub(
                     onBackClick = { showNowPlayingOverlay = false },
                     onShareClick = { itemToShare = currentSong },
                     locString = locString,
-                    // برای جلوگیری از کرش، افکت انیمیشن اشتراکی را موقتاً حذف و به یک مودیفایر ساده تبدیل کردیم
                     coverModifier = Modifier
                 )
             }
@@ -728,6 +709,7 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
     var shareHistory by remember { mutableStateOf(true) }
     var privateSession by remember { mutableStateOf(false) }
     var profileVisibility by remember { mutableStateOf(true) }
+    val dimens = MaterialTheme.sepatifyDimens
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -739,15 +721,15 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.fillMaxWidth().padding(vertical = dimens.spaceEight),
+                verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
                             locString(R.string.privacy_share_activity),
                             style = MaterialTheme.typography.bodyMedium,
@@ -767,7 +749,7 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
                             locString(R.string.privacy_private_session),
                             style = MaterialTheme.typography.bodyMedium,
@@ -787,7 +769,7 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
                             locString(R.string.privacy_profile_search),
                             style = MaterialTheme.typography.bodyMedium,
@@ -816,21 +798,22 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
     var newMusic by remember { mutableStateOf(true) }
     var socialAlerts by remember { mutableStateOf(true) }
     var systemUpdates by remember { mutableStateOf(false) }
+    val dimens = MaterialTheme.sepatifyDimens
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(locString(R.string.notification_settings_title), style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.fillMaxWidth().padding(vertical = dimens.spaceEight),
+                verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
                             locString(R.string.notification_new_music),
                             style = MaterialTheme.typography.bodyMedium,
@@ -850,7 +833,7 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
                             locString(R.string.notification_social),
                             style = MaterialTheme.typography.bodyMedium,
@@ -870,7 +853,7 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
                             locString(R.string.notification_promo),
                             style = MaterialTheme.typography.bodyMedium,

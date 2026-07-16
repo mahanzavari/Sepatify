@@ -58,8 +58,8 @@ fun ChatsScreen(
         dimens.spaceNormal
     } else {
         var padding = dimens.spaceNormal + navBarPadding
-        if (isMiniPlayerVisible) padding += 90.dp // MiniPlayer height + safe margin
-        if (activeChatUser == null) padding += 72.dp // App NavBar height
+        if (isMiniPlayerVisible) padding += dimens.marginKeyboardMiniplayer // MiniPlayer height + safe margin
+        if (activeChatUser == null) padding += dimens.heightBottomNavBar // App NavBar height
         padding
     }
 
