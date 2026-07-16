@@ -199,6 +199,7 @@
     <string name="share_via_apps">Share via other apps</string>
     <string name="send_to_friends">Send to friends</string>
     <string name="sent_success">Sent to %1$s successfully!</string>
+    <string name="no_friends">You have not yet added any frineds.</string>
 
     <!-- Equalizer Dialog -->
     <string name="eq_title">Equalizer & Audio Effects</string>

@@ -198,6 +198,7 @@
     <string name="share_via_apps">ارسال با برنامه‌های دیگر</string>
     <string name="send_to_friends">ارسال به دوستان</string>
     <string name="sent_success">با موفقیت به %1$s ارسال شد!</string>
+    <string name="no_friends">هنوز دوستی اضافه نکردید.</string>    
 
     <!-- Equalizer Dialog -->
     <string name="eq_title">اکولایزر و افکت‌های صوتی</string>
