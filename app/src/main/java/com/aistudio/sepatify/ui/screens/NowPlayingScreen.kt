@@ -10,13 +10,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,10 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -47,18 +43,15 @@ import androidx.palette.graphics.Palette
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.DownloadViewModel
 import com.aistudio.sepatify.ui.viewmodel.SharedAudioViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URL
-import androidx.compose.ui.util.lerp
-import kotlin.math.abs
-import kotlin.math.pow
-import com.aistudio.sepatify.ui.theme.sepatifyColors
-import com.aistudio.sepatify.ui.theme.sepatifyDimens
-import com.aistudio.sepatify.ui.theme.sepatifyShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,20 +72,18 @@ fun NowPlayingScreen(
     val isRepeat by sharedAudioViewModel.isRepeat.collectAsState()
     val speed by sharedAudioViewModel.playbackSpeed.collectAsState()
     val sleepTimerMins by sharedAudioViewModel.sleepTimerMinutes.collectAsState()
-    val visualizerBars by sharedAudioViewModel.visualizerHeights.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
-    // for colors.kr
+
     val colors = MaterialTheme.sepatifyColors
+    val dimens = MaterialTheme.sepatifyDimens
+    val shapes = MaterialTheme.sepatifyShapes
 
     var dominantColor by remember { mutableStateOf(colors.playerBgFallback) }
 
-
-    // =======================================================
-    // 1. DYNAMIC VINYL ROTATION ANGLE LINKED TO PLAYBACK SPEED
-    // =======================================================
+    // DYNAMIC VINYL ROTATION ANGLE LINKED TO PLAYBACK SPEED
     var finalAngle by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(isPlaying, speed) {
@@ -114,9 +105,8 @@ fun NowPlayingScreen(
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "coverScale"
     )
-    // =======================================================
 
-    // 1. EXTRACT COLOR USING PALETTE API (FR-72)
+    // EXTRACT COLOR USING PALETTE API
     LaunchedEffect(currentSong) {
         currentSong?.let { song ->
             coroutineScope.launch(Dispatchers.IO) {
@@ -160,9 +150,7 @@ fun NowPlayingScreen(
         }
     }
 
-    // Rest of your UI code goes here...
-    // 2. ALBUM COVER ROTATION VALUE (FR-71)
-    // "The album artwork shall rotate continuously while playing and stop when paused"
+    // ALBUM COVER ROTATION VALUE
     val infiniteTransition = rememberInfiniteTransition(label = "rotation")
     val rotationAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -173,7 +161,6 @@ fun NowPlayingScreen(
         ),
         label = "angle"
     )
-
 
     val playPauseScale by animateFloatAsState(
         targetValue = if (isPlaying) 1.08f else 1.0f,
@@ -245,14 +232,14 @@ fun NowPlayingScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        dominantColor.copy(alpha = 0.85f),
+                        dominantColor.copy(alpha = dimens.alphaOverlayAmbient),
                         MaterialTheme.colorScheme.background
                     )
                 )
             )
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(24.dp)
+            .padding(dimens.spaceLarge)
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onVerticalDrag = { _, dragAmount ->
@@ -279,7 +266,7 @@ fun NowPlayingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header row contains back and sleep timer state
+            // Header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -298,7 +285,7 @@ fun NowPlayingScreen(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val lyricsAvailable = !parsedLyrics.isNullOrEmpty()
-                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val context = LocalContext.current
                     IconButton(
                         onClick = {
                             if (lyricsAvailable) {
@@ -311,7 +298,7 @@ fun NowPlayingScreen(
                         Icon(
                             imageVector = if (showLyrics) Icons.Filled.Lyrics else Icons.Outlined.Lyrics,
                             contentDescription = "Lyrics",
-                            tint = if (!lyricsAvailable) Color.White.copy(alpha = 0.38f)
+                            tint = if (!lyricsAvailable) Color.White.copy(alpha = dimens.alphaDisabled)
                                    else if (showLyrics) MaterialTheme.colorScheme.primary
                                    else Color.White
                         )
@@ -332,7 +319,7 @@ fun NowPlayingScreen(
                     fadeIn(animationSpec = tween(350)) togetherWith fadeOut(animationSpec = tween(350))
                 },
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(dimens.aspectRatioSquare)
                     .fillMaxWidth(),
                 label = "lyrics_and_art_switcher"
             ) { targetShowLyrics ->
@@ -340,19 +327,19 @@ fun NowPlayingScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = dimens.spaceFour),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                .padding(horizontal = dimens.spaceEight, vertical = dimens.spaceFour),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                         ) {
                             Card(
-                                modifier = Modifier.size(44.dp),
-                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier.size(dimens.sizeAvatarMedium),
+                                shape = RoundedCornerShape(dimens.spaceSix),
                                 colors = CardDefaults.cardColors(containerColor = Color.Black)
                             ) {
                                 val art = rememberSongArt(song)
@@ -363,7 +350,7 @@ fun NowPlayingScreen(
                                     contentScale = ContentScale.Crop
                                 )
                             }
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(dimens.aspectRatioSquare)) {
                                 Text(
                                     text = song.title,
                                     style = MaterialTheme.typography.bodyLarge,
@@ -374,7 +361,7 @@ fun NowPlayingScreen(
                                 Text(
                                     text = song.artistName,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.6f),
+                                    color = Color.White.copy(alpha = dimens.alphaSemiMuted),
                                     maxLines = 1
                                 )
                             }
@@ -383,21 +370,21 @@ fun NowPlayingScreen(
                                     imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = "Like Song",
                                     tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.White,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(dimens.sizeIconLarge)
                                 )
                             }
                         }
 
                         Card(
                             modifier = Modifier
-                                .weight(1f)
+                                .weight(dimens.aspectRatioSquare)
                                 .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            shape = RoundedCornerShape(24.dp),
+                                .padding(top = dimens.spaceTwelve),
+                            shape = shapes.card,
                             colors = CardDefaults.cardColors(
-                                containerColor = Color.White.copy(alpha = 0.08f)
+                                containerColor = Color.White.copy(alpha = dimens.alphaShimmerBase)
                             ),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+                            border = BorderStroke(dimens.borderThin, Color.White.copy(alpha = dimens.alphaShimmerHighlight))
                         ) {
                             val listState = rememberLazyListState()
                             val rawLyrics = parsedLyrics ?: emptyList()
@@ -432,9 +419,9 @@ fun NowPlayingScreen(
                                 state = listState,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(horizontal = 16.dp),
-                                contentPadding = PaddingValues(vertical = 120.dp),
-                                verticalArrangement = Arrangement.spacedBy(22.dp),
+                                    .padding(horizontal = dimens.spaceNormal),
+                                contentPadding = PaddingValues(vertical = dimens.lyricsPaddingVertical),
+                                verticalArrangement = Arrangement.spacedBy(dimens.spaceTwenty),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 itemsIndexed(lyrics) { index, line ->
@@ -473,7 +460,7 @@ fun NowPlayingScreen(
                                             .clickable {
                                                 sharedAudioViewModel.seekTo(line.timestampMs)
                                             }
-                                            .padding(horizontal = 12.dp)
+                                            .padding(horizontal = dimens.spaceTwelve)
                                     )
                                 }
                             }
@@ -491,10 +478,8 @@ fun NowPlayingScreen(
                                 .fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Animated disk size based on playback state (e.g., isPlaying)
-                            // If you don't have isPlaying variable, replace it with your playback state or use a fixed size like 230.dp
                             val targetDiskSize by animateDpAsState(
-                                targetValue = if (isPlaying) 230.dp else 220.dp,
+                                targetValue = if (isPlaying) dimens.sizeVinylDiskActive else dimens.sizeVinylDiskNormal,
                                 animationSpec = spring(stiffness = Spring.StiffnessMedium),
                                 label = "diskSize"
                             )
@@ -503,11 +488,11 @@ fun NowPlayingScreen(
                             Box(
                                 modifier = Modifier
                                     .size(targetDiskSize)
-                                    .aspectRatio(1f)
+                                    .aspectRatio(dimens.aspectRatioSquare)
                                     .graphicsLayer {
                                         scaleX = coverScale
                                         scaleY = coverScale
-                                        shadowElevation = 10.dp.toPx()
+                                        shadowElevation = dimens.sizeVinylDiskShadow.toPx()
                                         shape = CircleShape
                                         clip = true
                                     }
@@ -523,29 +508,29 @@ fun NowPlayingScreen(
                                     val maxRadiusInt = maxRadius.toInt()
                                     val minRadiusInt = (maxRadius * 0.45f).toInt()
 
-                                    for (r in maxRadiusInt downTo minRadiusInt step 12) {
+                                    for (r in maxRadiusInt downTo minRadiusInt step dimens.spaceTwelve.value.toInt()) {
                                         drawCircle(
-                                            color = Color.White.copy(alpha = 0.04f),
+                                            color = Color.White.copy(alpha = dimens.alphaGrooves),
                                             radius = r.toFloat(),
                                             center = center,
-                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = dimens.borderThin.toPx())
                                         )
                                     }
 
                                     // Outer rim shine
                                     drawCircle(
-                                        color = Color.White.copy(alpha = 0.08f),
-                                        radius = maxRadius - 4.dp.toPx(),
+                                        color = Color.White.copy(alpha = dimens.alphaRimShine),
+                                        radius = maxRadius - dimens.sizeVinylDiskRimShine.toPx(),
                                         center = center,
-                                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = dimens.borderHeavy.toPx())
                                     )
                                 }
 
-                                // Center album art sticker - strictly circular
+                                // Center album art sticker
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxSize(0.42f)
-                                        .aspectRatio(1f)
+                                        .fillMaxSize(dimens.scaleSticker)
+                                        .aspectRatio(dimens.aspectRatioSquare)
                                         .clip(CircleShape)
                                         .background(Color.DarkGray),
                                     contentAlignment = Alignment.Center
@@ -562,8 +547,8 @@ fun NowPlayingScreen(
                                 // Center spindle hole
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxSize(0.04f)
-                                        .aspectRatio(1f)
+                                        .fillMaxSize(dimens.scaleSpindleHole)
+                                        .aspectRatio(dimens.aspectRatioSquare)
                                         .background(colors.playerSpindleHole, CircleShape)
                                 )
                             }
@@ -572,12 +557,12 @@ fun NowPlayingScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                                .padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceTwelve),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(dimens.aspectRatioSquare),
                                 horizontalAlignment = Alignment.Start
                             ) {
                                 Text(
@@ -590,7 +575,7 @@ fun NowPlayingScreen(
                                 Text(
                                     text = song.artistName,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White.copy(alpha = 0.7f),
+                                    color = Color.White.copy(alpha = dimens.alphaStandard),
                                     maxLines = 1
                                 )
                             }
@@ -610,7 +595,7 @@ fun NowPlayingScreen(
                                     imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = "Like Song",
                                     tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.White,
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(dimens.sizeIconPlayPauseCircle)
                                 )
                             }
 
@@ -619,11 +604,10 @@ fun NowPlayingScreen(
                                     imageVector = Icons.Default.Share,
                                     contentDescription = "Share",
                                     tint = Color.White,
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(dimens.sizeIconControl)
                                 )
                             }
 
-                            // Offline download (Premium-only business rule).
                             IconButton(
                                 onClick = {
                                     if (!isPremium) {
@@ -636,16 +620,16 @@ fun NowPlayingScreen(
                                 if (downloadProgress != null) {
                                     CircularProgressIndicator(
                                         progress = { downloadProgress ?: 0f },
-                                        modifier = Modifier.size(22.dp),
+                                        modifier = Modifier.size(dimens.sizeIconNormal),
                                         color = Color.White,
-                                        strokeWidth = 2.dp
+                                        strokeWidth = dimens.borderThick
                                     )
                                 } else {
                                     Icon(
                                         imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
                                         contentDescription = locString(R.string.download_song),
                                         tint = if (isDownloaded) MaterialTheme.colorScheme.primary else Color.White,
-                                        modifier = Modifier.size(26.dp)
+                                        modifier = Modifier.size(dimens.sizeIconControl)
                                     )
                                 }
                             }
@@ -672,12 +656,13 @@ fun NowPlayingScreen(
                     }
                 }
             }
-// Seek Position timeline sliders
+
+            // Seek Position timeline sliders
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(vertical = dimens.spaceTwelve),
+                verticalArrangement = Arrangement.spacedBy(dimens.spaceSix)
             ) {
                 val progressPct = if (duration > 0) progress.toFloat() / duration.toFloat() else 0f
                 val sliderInteractionSource = remember { MutableInteractionSource() }
@@ -685,14 +670,12 @@ fun NowPlayingScreen(
                 val isSliderPressed by sliderInteractionSource.collectIsPressedAsState()
                 val isSliderInteracting = isSliderDragged || isSliderPressed
 
-                // Dynamic track height animation on touch
                 val trackHeight by animateDpAsState(
-                    targetValue = if (isSliderInteracting) 6.dp else 4.dp,
+                    targetValue = if (isSliderInteracting) dimens.heightSliderTrackExpanded else dimens.heightSliderTrackDefault,
                     animationSpec = tween(durationMillis = 150),
                     label = "trackHeight"
                 )
 
-                // Dynamic thumb scale animation on touch
                 val thumbScale by animateFloatAsState(
                     targetValue = if (isSliderInteracting) 1f else 0f,
                     animationSpec = spring(
@@ -702,87 +685,81 @@ fun NowPlayingScreen(
                     label = "thumbScale"
                 )
 
-            Slider(
-                value = progressPct,
-                onValueChange = { sharedAudioViewModel.seekTo((it * duration).toLong()) },
-                interactionSource = sliderInteractionSource,
-                // Custom continuous track — wrapped in a fixed-height box so its
-                // vertical center never shifts regardless of the animated thickness.
-                track = { _ ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(24.dp), // fixed reference height, shared with thumb below
-                        contentAlignment = Alignment.Center
-                    ) {
+                Slider(
+                    value = progressPct,
+                    onValueChange = { sharedAudioViewModel.seekTo((it * duration).toLong()) },
+                    interactionSource = sliderInteractionSource,
+                    track = { _ ->
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(trackHeight)
-                                .background(Color.White.copy(alpha = 0.15f), CircleShape),
-                            contentAlignment = Alignment.CenterStart
+                                .height(dimens.heightSliderTrackWrapper),
+                            contentAlignment = Alignment.Center
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(fraction = progressPct)
-                                    .fillMaxHeight()
+                                    .fillMaxWidth()
+                                    .height(trackHeight)
+                                    .background(Color.White.copy(alpha = dimens.alphaShimmerHighlight), CircleShape),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(fraction = progressPct)
+                                        .fillMaxHeight()
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                )
+                            }
+                        }
+                    },
+                    thumb = {
+                        Box(
+                            modifier = Modifier
+                                .height(dimens.heightSliderTrackWrapper)
+                                .width(dimens.heightSliderTrackWrapper),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(dimens.sizeSliderThumb)
+                                    .graphicsLayer {
+                                        scaleX = thumbScale
+                                        scaleY = thumbScale
+                                    }
                                     .background(MaterialTheme.colorScheme.primary, CircleShape)
                             )
                         }
-                    }
-                },
-                // Animated thumb — same fixed-height box as the track above, so its
-                // center always lands exactly on the track's center, not just its own box's center.
-                thumb = {
-                    Box(
-                        modifier = Modifier
-                            .height(24.dp) // must match track's outer box height
-                            .width(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .graphicsLayer {
-                                    scaleX = thumbScale
-                                    scaleY = thumbScale
-                                }
-                                .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                // Static layout structure prevents any screen layout shifts
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 2.dp),
+                        .padding(horizontal = dimens.spaceTwo),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = formattedProgress,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (isSliderInteracting) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.5f)
+                        color = if (isSliderInteracting) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = dimens.alphaMuted)
                     )
                     Text(
                         text = formattedDuration,
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = Color.White.copy(alpha = dimens.alphaMuted)
                     )
                 }
             }
-            // CONTROLS INTERACTIVE ROW (FR-74)
-            // "All standard playback controls shall be accessible on the Now Playing screen"
+
+            // CONTROLS INTERACTIVE ROW
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = dimens.spaceNormal),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Shuffle action
                 IconButton(
                     onClick = { sharedAudioViewModel.toggleShuffle() },
                     modifier = Modifier.graphicsLayer {
@@ -797,21 +774,19 @@ fun NowPlayingScreen(
                     )
                 }
 
-                // Previous action
                 IconButton(onClick = { sharedAudioViewModel.playPrevious() }) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
                         contentDescription = "Previous",
                         tint = Color.White,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(dimens.sizeIconSkip)
                     )
                 }
 
-                // Play / Pause Circle
                 IconButton(
                     onClick = { sharedAudioViewModel.togglePlayPause() },
                     modifier = Modifier
-                        .size(68.dp)
+                        .size(dimens.sizePlayPauseContainer)
                         .graphicsLayer {
                             scaleX = playPauseScale
                             scaleY = playPauseScale
@@ -822,21 +797,19 @@ fun NowPlayingScreen(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "Play/Pause",
                         tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(dimens.sizeIconPlayPause)
                     )
                 }
 
-                // Next action
                 IconButton(onClick = { sharedAudioViewModel.playNext() }) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
                         tint = Color.White,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(dimens.sizeIconSkip)
                     )
                 }
 
-                // Repeat action
                 IconButton(
                     onClick = { sharedAudioViewModel.toggleRepeat() },
                     modifier = Modifier.graphicsLayer {
@@ -852,12 +825,11 @@ fun NowPlayingScreen(
                 }
             }
 
-            // PLAYBACK SPEED ADJUSTMENT FOOTER (FR-67)
-            // "Playback speed shall be adjustable to 1x, 1.5x, and 2x"
+            // PLAYBACK SPEED ADJUSTMENT FOOTER
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = dimens.spaceTwelve),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -894,17 +866,17 @@ fun NowPlayingScreen(
                         containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                         contentColor = MaterialTheme.colorScheme.primary
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                    shape = shapes.small,
+                    border = BorderStroke(dimens.borderThin, MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaMuted))
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(dimens.spaceSix)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Speed,
                             contentDescription = "Speed",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(dimens.sizeIconSpeed)
                         )
                         AnimatedContent(
                             targetState = speedText,
@@ -930,7 +902,7 @@ fun NowPlayingScreen(
                 onDismissRequest = { showSleepTimerDialog = false },
                 title = { Text(locString(R.string.sleep_timer)) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(dimens.spaceTen)) {
                         Text(text = locString(R.string.sleep_timer_inactive))
                         listOf(5, 15, 30, 45, 60).forEach { mins ->
                             Button(
@@ -1041,23 +1013,21 @@ fun AudioVisualizerComponent(
     progress: Long,
     duration: Long
 ) {
-    // 1. Collect the raw real-time FFT bands from our permission-free audio processor
     val rawVisualizerBars by sharedAudioViewModel.fftBands.collectAsState()
     val isBassDetected by sharedAudioViewModel.isBassDetected.collectAsState()
 
     val totalBarsCount = 12
     val density = LocalDensity.current
+    val dimens = MaterialTheme.sepatifyDimens
 
-    // 2. Local smoothing state to prevent jittery movements
+    // Local smoothing state to prevent jittery movements
     var smoothedBars by remember { mutableStateOf(FloatArray(totalBarsCount) { 0f }) }
 
-    // Gradually decay the bars' heights on each frame for a fluid transition
     LaunchedEffect(rawVisualizerBars) {
         val nextBars = FloatArray(totalBarsCount)
         for (i in 0 until totalBarsCount) {
             val target = if (i < rawVisualizerBars.size) rawVisualizerBars[i] else 0f
             val current = smoothedBars[i]
-            // Standard decay algorithm: 30% current + 70% target (creates a highly responsive elastic look)
             nextBars[i] = current + 0.7f * (target - current)
         }
         smoothedBars = nextBars
@@ -1065,26 +1035,23 @@ fun AudioVisualizerComponent(
 
     Box(
         modifier = Modifier
-            .fillMaxWidth(0.85f)
-            .height(60.dp),
+            .fillMaxWidth(dimens.alphaOverlayAmbient)
+            .height(dimens.heightVisualizerContainer),
         contentAlignment = Alignment.Center
     ) {
         val primaryColor = MaterialTheme.colorScheme.primary
 
-        // Calculate a natural Exponential Decay factor for crossfades
         val crossfadeVolumeFactor = remember(progress, duration) {
             val currentMs = progress
             val totalMs = duration
-            val crossfadeDurationMs = 4000L // 4-second crossfade window
+            val crossfadeDurationMs = 4000L
 
             when {
                 totalMs <= 0 -> 1f
-                // Fade-in phase
                 currentMs < crossfadeDurationMs -> {
                     val ratio = (currentMs.toFloat() / crossfadeDurationMs).coerceIn(0f, 1f)
                     ratio * ratio
                 }
-                // Fade-out phase
                 currentMs > (totalMs - crossfadeDurationMs) -> {
                     val remainingMs = totalMs - currentMs
                     val ratio = (remainingMs.toFloat() / crossfadeDurationMs).coerceIn(0f, 1f)
@@ -1094,7 +1061,6 @@ fun AudioVisualizerComponent(
             }
         }
 
-        // Track a dynamic sub-bass signal with the new decay factor applied
         val rawSubBass = remember(smoothedBars, crossfadeVolumeFactor) {
             if (smoothedBars.isEmpty()) 0f else {
                 val sampleCount = smoothedBars.size.coerceAtMost(2)
@@ -1102,12 +1068,10 @@ fun AudioVisualizerComponent(
                 for (i in 0 until sampleCount) {
                     sum += smoothedBars[i]
                 }
-                // If the song is fading out, suppress the bass triggers
                 ((sum / sampleCount) * 1.8f) * crossfadeVolumeFactor
             }
         }
 
-        // Smoothly animate the sub-bass jump (Perfect for bass-beats in UI scaling)
         val animatedSubBassScale by animateFloatAsState(
             targetValue = (rawSubBass / 10f).coerceIn(0f, 2.5f),
             animationSpec = spring(
@@ -1121,7 +1085,7 @@ fun AudioVisualizerComponent(
             val totalBars = smoothedBars.size
             if (totalBars == 0) return@Canvas
 
-            val gapFraction = 0.50f
+            val gapFraction = dimens.alphaMuted
             val availableWidth = size.width
 
             val barWidth = (availableWidth * (1f - gapFraction)) / totalBars
@@ -1131,7 +1095,6 @@ fun AudioVisualizerComponent(
                 val rawBarValue = smoothedBars[i]
                 val positionFactor = i.toFloat() / totalBars
 
-                // Dynamic scaling based on frequency bands (Bass vs. Mids vs. Highs)
                 val personalScale = if (positionFactor < 0.35f) {
                     animatedSubBassScale * 1.1f
                 } else if (positionFactor < 0.75f) {
@@ -1140,11 +1103,8 @@ fun AudioVisualizerComponent(
                     1.4f * crossfadeVolumeFactor
                 }
 
-                // Multiply the height by our exponential volume factor
                 val rawHeight = (rawBarValue.dp.toPx() * personalScale) * crossfadeVolumeFactor
-
-                // Gradually collapse the minimum baseline to 0f as we reach the absolute end
-                val minHeight = (2.dp.toPx() * crossfadeVolumeFactor).coerceAtLeast(0f)
+                val minHeight = (dimens.visualizerMinHeight.toPx() * crossfadeVolumeFactor).coerceAtLeast(0f)
                 val barHeight = rawHeight.coerceIn(minHeight, size.height)
 
                 val x = i * (barWidth + gap)
