@@ -198,4 +198,73 @@
     <string name="share_via_apps">ارسال با برنامه‌های دیگر</string>
     <string name="send_to_friends">ارسال به دوستان</string>
     <string name="sent_success">با موفقیت به %1$s ارسال شد!</string>
+
+    <!-- Equalizer Dialog -->
+    <string name="eq_title">اکولایزر و افکت‌های صوتی</string>
+    <string name="playback_crossfade">کروس‌فید پخش</string>
+    <string name="playback_crossfade_desc">به‌صورت نرم حجم آهنگ را در طول انتقال ترکیب کنید</string>
+    <string name="transition_duration">مدت انتقال</string>
+    <string name="seconds_value">%1$d ثانیه</string>
+    <string name="equalizer_effects">اکولایزر و افکت‌ها</string>
+    <string name="equalizer_effects_desc">فعال کردن تنظیم صلب‌های صوتی سطح دستگاه</string>
+    <string name="bands">باندها</string>
+    <string name="frequency_hz">%1$d هرتز</string>
+    <string name="db_value">%1$d دی‌بی</string>
+    <string name="audio_enhancements">تقویت‌های صوتی</string>
+    <string name="bass_boost">تقویت باس</string>
+    <string name="percent_value">%1$d٪</string>
+    <string name="virtualizer_3d">مجازی‌ساز ۳ بعدی</string>
+    <string name="reverb_preset">پیش‌تنظیم رورب</string>
+    <string name="reverb_none">بدون</string>
+    <string name="reverb_small_room">اتاق کوچک</string>
+    <string name="reverb_medium_room">اتاق متوسط</string>
+    <string name="reverb_large_room">اتاق بزرگ</string>
+    <string name="reverb_medium_hall">تالار متوسط</string>
+    <string name="reverb_large_hall">تالار بزرگ</string>
+    <string name="reverb_plate">صفحه</string>
+
+    <!-- Downloads Screen -->
+    <string name="tracks_count">%1$d قطعه</string>
+    <string name="sort">مرتب‌سازی</string>
+
+    <!-- Share Bottom Sheet -->
+    <string name="no_friends_to_share">دوستی برای اشتراک‌گذاری یافت نشد.</string>
+
+    <!-- Enhanced Library Screens -->
+    <string name="songs_count">%1$d آهنگ</string>
+    <string name="shuffle_all">همه را شافل کن</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_loading">در حال بارگذاری...</string>
+    <string name="cd_send">ارسال</string>
+    <string name="cd_logo">لوگو</string>
+    <string name="cd_toggle_password">نمایش/مخفی کردن رمز</string>
+    <string name="cd_settings">تنظیمات</string>
+    <string name="cd_notifications">اعلان‌ها</string>
+    <string name="cd_avatar">آواتار</string>
+    <string name="cd_premium">پریمیوم</string>
+    <string name="cd_album_cover"> جلد آلبوم</string>
+    <string name="cd_back">بازگشت</string>
+    <string name="cd_play">پخش</string>
+    <string name="cd_unlike">لغو لایک</string>
+    <string name="cd_liked">لایک شده</string>
+    <string name="cd_minimize_player">کوچک کردن پخش‌کننده</string>
+    <string name="cd_lyrics">متن آهنگ</string>
+    <string name="cd_sleep_timer">تایمر خواب</string>
+    <string name="cd_like_song">لایک آهنگ</string>
+    <string name="cd_share">اشتراک‌گذاری</string>
+    <string name="cd_shuffle">شافل</string>
+    <string name="cd_previous">قبلی</string>
+    <string name="cd_play_pause">پخش/مکث</string>
+    <string name="cd_next">بعدی</string>
+    <string name="cd_repeat">تکرار</string>
+    <string name="cd_speed">سرعت</string>
+    <string name="cd_sort">مرتب‌سازی</string>
+    <string name="cd_delete">حذف</string>
+    <string name="cd_downloaded">دانلود شده</string>
+    <string name="cd_share_playlist">اشتراک‌گذاری لیست پخش</string>
+    <string name="cd_more_options">گزینه‌های بیشتر</string>
+
+    <!-- Preferences -->
+    <string name="guest_user_default">کاربر مهمان</string>
 </resources>
