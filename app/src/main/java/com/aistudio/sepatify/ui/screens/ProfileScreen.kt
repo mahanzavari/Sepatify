@@ -186,7 +186,7 @@ fun ProfileScreen(
                             .size(dimens.sizeAvatarBig)
                             .align(Alignment.Center)
                             .clip(CircleShape)
-                            .background(if (isPremium) Color(0xFFFFF3C4) else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (isPremium) colors.premiumGoldFrameBg else MaterialTheme.colorScheme.surfaceVariant)
                             .border(width = if (isPremium) dimens.borderHeavy else dimens.zero, color = if (isPremium) colors.premiumGoldAccent else Color.Transparent, shape = CircleShape)
                             .clickable {
                                 photoPickerLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -209,7 +209,7 @@ fun ProfileScreen(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = displayName,
                                 modifier = Modifier.size(dimens.sizeAvatarMedium),
-                                tint = if (isPremium) Color(0xFF8D6E00) else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (isPremium) colors.premiumGoldTextDark else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

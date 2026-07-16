@@ -67,40 +67,176 @@ private fun TextStyle.scale(factor: Float): TextStyle {
 }
 
 data class SepatifyColors(
-    val surfaceElevated: Color = SurfaceElevated,
-    val surfaceMuted: Color = SurfaceMuted,
-    val surfaceHighlight: Color = SurfaceHighlight,
+    val surfaceElevated: Color,
+    val surfaceMuted: Color,
+    val surfaceHighlight: Color,
     
-    val playlistAccentBlue: Color = PlaylistAccentBlue,
-    val playlistAccentPurple: Color = PlaylistAccentPurple,
-    val playlistAccentRose: Color = PlaylistAccentRose,
-    val playlistAccentMint: Color = PlaylistAccentMint,
+    // Dynamic Bento Home Accents
+    val bentoLikedBg: Color,
+    val bentoLikedTxt: Color,
+    val bentoLikedIconBg: Color,
     
-    val playlistAccentBlueLight: Color = PlaylistAccentBlueLight,
-    val playlistAccentPurpleLight: Color = PlaylistAccentPurpleLight,
-    val playlistAccentRoseLight: Color = PlaylistAccentRoseLight,
-    val playlistAccentMintLight: Color = PlaylistAccentMintLight,
+    val bentoRecentBg: Color,
+    val bentoRecentTxt: Color,
+    val bentoRecentIconBg: Color,
     
-    val playlistTextBlueDark: Color = Color(0xFF001D35),
-    val playlistTextPurpleDark: Color = Color(0xFF21005D),
-    val playlistTextRoseDark: Color = Color(0xFF410002),
-    val playlistTextMintDark: Color = Color(0xFF003916),
+    val bentoPlaylistsBg: Color,
+    val bentoPlaylistsTxt: Color,
+    val bentoPlaylistsIconBg: Color,
+    
+    val bentoArtistsBg: Color,
+    val bentoArtistsTxt: Color,
+    val bentoArtistsIconBg: Color,
+    
+    // Playlists Hub Accents
+    val playlistAccentBlue: Color,
+    val playlistAccentPurple: Color,
+    val playlistAccentRose: Color,
+    val playlistAccentMint: Color,
+    val playlistAccentBlueLight: Color,
+    val playlistAccentPurpleLight: Color,
+    val playlistAccentRoseLight: Color,
+    val playlistAccentMintLight: Color,
+    val playlistTextBlueDark: Color,
+    val playlistTextPurpleDark: Color,
+    val playlistTextRoseDark: Color,
+    val playlistTextMintDark: Color,
 
-    val genrePop: Color = Color(0xFF27856A),
-    val genreIndie: Color = Color(0xFF477C2B),
-    val genreRock: Color = Color(0xFFE8115B),
-    val genreRandB: Color = Color(0xFFD84080),
-    val genrePodcasts: Color = Color(0xFF2296F3),
-    val genreMadeForYou: Color = Color(0xFF1E3264),
-    val genreCharts: Color = Color(0xFF8D67AB),
-    val genreNewReleases: Color = Color(0xFFE1306C),
+    // Dynamic Genre Cards
+    val genrePop: Color,
+    val genreIndie: Color,
+    val genreRock: Color,
+    val genreRandB: Color,
+    val genrePodcasts: Color,
+    val genreMadeForYou: Color,
+    val genreCharts: Color,
+    val genreNewReleases: Color,
 
-    val premiumGoldAccent: Color = Color(0xFFFFD54F),
-    val premiumGoldTextDark: Color = Color(0xFF7A4F00),
-    val premiumGoldLight: Color = Color(0xFFFDE16D),
-    val premiumGoldDark: Color = Color(0xFFD4AC0D),
+    // Dynamic Premium Badges and Accents
+    val premiumGoldAccent: Color,
+    val premiumGoldTextDark: Color,
+    val premiumGoldLight: Color,
+    val premiumGoldDark: Color,
+    val premiumGoldFrameBg: Color,
+
+    // Player Components Fallbacks
+    val playerBgFallback: Color,
+    val playerDefaultDominant: Color,
+    val playerSpindleHole: Color,
     
-    val neutralGrey: Color = Color(0x1B79747E)
+    val neutralGrey: Color
+)
+
+val LightSepatifyColors = SepatifyColors(
+    surfaceElevated = SurfaceElevated,
+    surfaceMuted = SurfaceMuted,
+    surfaceHighlight = SurfaceHighlight,
+
+    bentoLikedBg = Color(0xFFD0E4FF),
+    bentoLikedTxt = Color(0xFF001D35),
+    bentoLikedIconBg = Color(0xFFAAC7FF),
+
+    bentoRecentBg = Color(0xFFFFFFFF),
+    bentoRecentTxt = Color(0xFF1C1B1F),
+    bentoRecentIconBg = Color(0xFFF3EDF7),
+
+    bentoPlaylistsBg = Color(0xFFFFDAD6),
+    bentoPlaylistsTxt = Color(0xFF410002),
+    bentoPlaylistsIconBg = Color(0xFFFFB4AB),
+
+    bentoArtistsBg = Color(0xFFF3E8FF),
+    bentoArtistsTxt = Color(0xFF21005D),
+    bentoArtistsIconBg = Color(0xFFEADDFF),
+
+    playlistAccentBlue = PlaylistAccentBlue,
+    playlistAccentPurple = PlaylistAccentPurple,
+    playlistAccentRose = PlaylistAccentRose,
+    playlistAccentMint = PlaylistAccentMint,
+    playlistAccentBlueLight = PlaylistAccentBlueLight,
+    playlistAccentPurpleLight = PlaylistAccentPurpleLight,
+    playlistAccentRoseLight = PlaylistAccentRoseLight,
+    playlistAccentMintLight = PlaylistAccentMintLight,
+    playlistTextBlueDark = Color(0xFF001D35),
+    playlistTextPurpleDark = Color(0xFF21005D),
+    playlistTextRoseDark = Color(0xFF410002),
+    playlistTextMintDark = Color(0xFF003916),
+
+    genrePop = Color(0xFF27856A),
+    genreIndie = Color(0xFF477C2B),
+    genreRock = Color(0xFFE8115B),
+    genreRandB = Color(0xFFD84080),
+    genrePodcasts = Color(0xFF2296F3),
+    genreMadeForYou = Color(0xFF1E3264),
+    genreCharts = Color(0xFF8D67AB),
+    genreNewReleases = Color(0xFFE1306C),
+
+    premiumGoldAccent = Color(0xFFFFD54F),
+    premiumGoldTextDark = Color(0xFF7A4F00),
+    premiumGoldLight = Color(0xFFFDE16D),
+    premiumGoldDark = Color(0xFFD4AC0D),
+    premiumGoldFrameBg = Color(0xFFFFF3C4),
+
+    playerBgFallback = Color(0xFFF5FAF6),
+    playerDefaultDominant = Color(0xFF1E3524),
+    playerSpindleHole = Color(0xFF1A1A1A),
+
+    neutralGrey = Color(0x1B79747E)
+)
+
+val DarkSepatifyColors = SepatifyColors(
+    surfaceElevated = SurfaceElevated,
+    surfaceMuted = SurfaceMuted,
+    surfaceHighlight = SurfaceHighlight,
+
+    bentoLikedBg = Color(0xFF003354),
+    bentoLikedTxt = Color(0xFFD0E4FF),
+    bentoLikedIconBg = Color(0xFF001D35),
+
+    bentoRecentBg = Color(0xFF1E1E1E),
+    bentoRecentTxt = Color(0xFFEADDFF),
+    bentoRecentIconBg = Color(0xFF21005D),
+
+    bentoPlaylistsBg = Color(0xFF3B080B),
+    bentoPlaylistsTxt = Color(0xFFFFDAD6),
+    bentoPlaylistsIconBg = Color(0xFF680003),
+
+    bentoArtistsBg = Color(0xFF2D164B),
+    bentoArtistsTxt = Color(0xFFEADDFF),
+    bentoArtistsIconBg = Color(0xFF21005D),
+
+    playlistAccentBlue = PlaylistAccentBlue,
+    playlistAccentPurple = PlaylistAccentPurple,
+    playlistAccentRose = PlaylistAccentRose,
+    playlistAccentMint = PlaylistAccentMint,
+    playlistAccentBlueLight = PlaylistAccentBlueLight,
+    playlistAccentPurpleLight = PlaylistAccentPurpleLight,
+    playlistAccentRoseLight = PlaylistAccentRoseLight,
+    playlistAccentMintLight = PlaylistAccentMintLight,
+    playlistTextBlueDark = Color(0xFF001D35),
+    playlistTextPurpleDark = Color(0xFF21005D),
+    playlistTextRoseDark = Color(0xFF410002),
+    playlistTextMintDark = Color(0xFF003916),
+
+    genrePop = Color(0xFF27856A),
+    genreIndie = Color(0xFF477C2B),
+    genreRock = Color(0xFFE8115B),
+    genreRandB = Color(0xFFD84080),
+    genrePodcasts = Color(0xFF2296F3),
+    genreMadeForYou = Color(0xFF1E3264),
+    genreCharts = Color(0xFF8D67AB),
+    genreNewReleases = Color(0xFFE1306C),
+
+    premiumGoldAccent = Color(0xFFFFD54F),
+    premiumGoldTextDark = Color(0xFF7A4F00),
+    premiumGoldLight = Color(0xFFFDE16D),
+    premiumGoldDark = Color(0xFFD4AC0D),
+    premiumGoldFrameBg = Color(0xFF121212),
+
+    playerBgFallback = Color(0xFF121212),
+    playerDefaultDominant = Color(0xFF1E3524),
+    playerSpindleHole = Color(0xFF1A1A1A),
+
+    neutralGrey = Color(0x1B79747E)
 )
 
 data class SepatifyDimens(
@@ -129,7 +265,7 @@ data class SepatifyDimens(
     val spaceMega: Dp = 48.dp,
     val spaceGiga: Dp = 54.dp,
     val spaceGiant: Dp = 64.dp,
-    val spaceTera: Dp = 64.dp, // Defined as 64.dp
+    val spaceTera: Dp = 64.dp,
     val spacePeta: Dp = 68.dp,
     val spaceExa: Dp = 80.dp,
     val spaceZetta: Dp = 100.dp,
@@ -175,7 +311,7 @@ data class SepatifyShapes(
     val chatBubbleOther: RoundedCornerShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 0.dp)
 )
 
-val LocalSepatifyColors = staticCompositionLocalOf { SepatifyColors() }
+val LocalSepatifyColors = staticCompositionLocalOf { LightSepatifyColors }
 val LocalSepatifyDimens = staticCompositionLocalOf { SepatifyDimens() }
 val LocalSepatifyShapes = staticCompositionLocalOf { SepatifyShapes() }
 
@@ -201,7 +337,7 @@ fun SepatifyTheme(
     }
 
     val colorScheme = if (darkTheme) CosmicDarkColorScheme else ElegantLightColorScheme
-    val sepatifyColors = SepatifyColors()
+    val sepatifyColors = if (darkTheme) DarkSepatifyColors else LightSepatifyColors
     val sepatifyDimens = SepatifyDimens()
     val sepatifyShapes = SepatifyShapes()
 
