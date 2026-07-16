@@ -85,16 +85,21 @@ data class NewPlaylistDto(
 )
 
 @Serializable
+data class PlaylistCategoryUpdateDto(
+    @SerialName("category") val category: String
+)
+
+@Serializable
 data class PlaylistSongDto(
     @SerialName("playlist_id") val playlistId: Long,
     @SerialName("song_id") val songId: String,
-    @SerialName("position") val position: Int = 0
+    @SerialName("position") val position: Int 
 )
 
 @Serializable
 data class PlaylistSongJoinDto(
-    @SerialName("playlist_id") val playlistId: Long,
-    @SerialName("song_id") val songId: String,
+    @SerialName("playlist_id") val playlistId: Long = 0L,
+    @SerialName("song_id") val songId: String = "",
     @SerialName("songs") val songs: SongDto
 )
 
@@ -123,9 +128,4 @@ data class FollowDto(
 data class TypingPayload(
     @SerialName("user_id") val userId: String,
     @SerialName("is_typing") val isTyping: Boolean
-)
-
-@Serializable
-data class PlaylistCategoryUpdateDto(
-    val category: String
 )

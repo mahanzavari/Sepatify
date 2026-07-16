@@ -14,43 +14,41 @@ class PlaylistViewModel(
     private val songRepository: SongRepository
 ) : ViewModel() {
 
-    // Trigger used to instantly refresh the playlist fetch after creating a new one or a folder
-    private val refreshTrigger = MutableStateFlow(0)
+    val userPlaylists: StateFlow<List<PlaylistEntity>> = songRepository.getUserPlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val userPlaylists: StateFlow<List<PlaylistEntity>> = refreshTrigger.flatMapLatest {
-        songRepository.getUserPlaylists()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun refreshPlaylists() {
-        refreshTrigger.value += 1
-    }
-
-    fun createNewPlaylistWithSongs(title: String, description: String, songIds: List<String>) {
+    // Ensure the onResult signature is exactly: (Boolean, String?) -> Unit
+    fun createNewPlaylistWithSongs(title: String, description: String, songIds: List<String>, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
             val pid = songRepository.createPlaylist(title, description, "User")
             if (pid != -1L) {
-                songIds.forEach { songId ->
-                    songRepository.addSongToPlaylist(pid, songId)
+                val result = songRepository.addSongsToPlaylist(pid, songIds)
+                if (result.isFailure) {
+                    // Rollback playlist creation if songs failed to add
+                    songRepository.deletePlaylist(pid)
+                    onResult(false, result.exceptionOrNull()?.message)
+                } else {
+                    onResult(true, null)
                 }
-                refreshPlaylists()
+            } else {
+                onResult(false, "Failed to create playlist record")
             }
         }
     }
 
-    fun groupPlaylistsIntoFolder(folderName: String, playlistIds: List<Long>) {
+    fun groupPlaylistsIntoFolder(folderName: String, playlistIds: List<Long>, onComplete: () -> Unit) {
         viewModelScope.launch {
             val categoryName = "folder:$folderName"
             playlistIds.forEach { pid ->
                 songRepository.updatePlaylistCategory(pid, categoryName)
             }
-            refreshPlaylists()
+            onComplete()
         }
     }
 
     fun deletePlaylist(playlistId: Long) {
         viewModelScope.launch {
             songRepository.deletePlaylist(playlistId)
-            refreshPlaylists()
         }
     }
 

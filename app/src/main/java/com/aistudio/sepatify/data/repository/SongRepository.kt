@@ -37,6 +37,7 @@ interface SongRepository {
     suspend fun createPlaylist(title: String, description: String, category: String): Long
     suspend fun deletePlaylist(playlistId: Long)
     suspend fun addSongToPlaylist(playlistId: Long, songId: String)
+    suspend fun addSongsToPlaylist(playlistId: Long, songIds: List<String>): Result<Unit>
     suspend fun removeSongFromPlaylist(playlistId: Long, songId: String)
     fun getSongsForPlaylist(playlistId: Long, category: String): Flow<List<Song>>
     fun getSongsForPlaylistPaged(playlistId: Long, category: String): Flow<PagingData<Song>>

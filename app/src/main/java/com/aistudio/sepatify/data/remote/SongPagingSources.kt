@@ -71,7 +71,7 @@ class PlaylistSongsPagingSource(private val playlistId: Long) : PagingSource<Int
         val to = from + PAGE_SIZE - 1
         return try {
             val results = Supa.client.from("playlist_songs")
-                .select(columns = Columns.raw("song_id, songs(*)")) {
+                .select(columns = Columns.raw("playlist_id, song_id, songs(*)")) {
                     filter { eq("playlist_id", playlistId) }
                     order("position", Order.ASCENDING)
                     range(from.toLong(), to.toLong())

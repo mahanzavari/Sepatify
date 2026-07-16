@@ -356,6 +356,8 @@ fun CreatePlaylistView(
     var desc by remember { mutableStateOf("") }
     var tabIndex by remember { mutableStateOf(0) }
     val selectedSongs = remember { mutableStateListOf<String>() }
+    var isCreating by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val likedSongs by playlistViewModel.getSongsForPlaylist(-3L, "Liked").collectAsState(initial = emptyList())
     val recentSongs by playlistViewModel.getRecentlyPlayedSongs().collectAsState(initial = emptyList())
@@ -368,14 +370,25 @@ fun CreatePlaylistView(
             Text("New Playlist", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Button(
                 onClick = {
-                    if (title.isNotBlank()) {
-                        playlistViewModel.createNewPlaylistWithSongs(title, desc, selectedSongs)
-                        onBack()
+                    if (title.isNotBlank() && selectedSongs.isNotEmpty()) {
+                        isCreating = true
+                        playlistViewModel.createNewPlaylistWithSongs(title, desc, selectedSongs) { success, errorMsg ->
+                            isCreating = false
+                            if (success) {
+                                onBack()
+                            } else {
+                                android.widget.Toast.makeText(context, errorMsg ?: "Failed to create playlist", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }
                     }
                 },
-                enabled = title.isNotBlank() && selectedSongs.isNotEmpty()
+                enabled = title.isNotBlank() && selectedSongs.isNotEmpty() && !isCreating
             ) {
-                Text("Create")
+                if (isCreating) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                } else {
+                    Text("Create")
+                }
             }
         }
 
@@ -420,11 +433,11 @@ fun CreatePlaylistView(
             )
         }
 
-        val list = if (tabIndex == 0) likedSongs else recentSongs
+        val list = (if (tabIndex == 0) likedSongs else recentSongs).filter { !it.id.startsWith("local_") && !it.audioUrl.startsWith("file://") && !it.audioUrl.startsWith("/") }
         
         if (list.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("No songs found in this category.", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                Text("No cloud songs found in this category.", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
             }
         } else {
             LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(top = dimens.spaceNormal, bottom = dimens.spaceBottomOverScroll)) {
@@ -464,6 +477,7 @@ fun CreateFolderView(
 ) {
     var folderName by remember { mutableStateOf("") }
     val selectedPlaylists = remember { mutableStateListOf<Long>() }
+    var isGrouping by remember { mutableStateOf(false) }
     val dimens = MaterialTheme.sepatifyDimens
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -473,13 +487,20 @@ fun CreateFolderView(
             Button(
                 onClick = {
                     if (folderName.isNotBlank() && selectedPlaylists.isNotEmpty()) {
-                        playlistViewModel.groupPlaylistsIntoFolder(folderName, selectedPlaylists)
-                        onBack()
+                        isGrouping = true
+                        playlistViewModel.groupPlaylistsIntoFolder(folderName, selectedPlaylists) {
+                            isGrouping = false
+                            onBack()
+                        }
                     }
                 },
-                enabled = folderName.isNotBlank() && selectedPlaylists.isNotEmpty()
+                enabled = folderName.isNotBlank() && selectedPlaylists.isNotEmpty() && !isGrouping
             ) {
-                Text("Group")
+                if (isGrouping) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                } else {
+                    Text("Group")
+                }
             }
         }
 
@@ -566,31 +587,40 @@ fun PlaylistDetailView(
             }
         } else {
             val pagedSongs = remember(playlist.id, playlist.category) { playlistViewModel.getSongsForPlaylistPaged(playlist.id, playlist.category) }.collectAsLazyPagingItems()
-            if (pagedSongs.itemCount == 0) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = dimens.spaceHuge), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
-                        Icon(Icons.Default.QueueMusic, contentDescription = null, modifier = Modifier.size(dimens.spaceTera), tint = MaterialTheme.colorScheme.primary)
-                        Text(locString(R.string.no_results), style = MaterialTheme.typography.titleMedium)
-                        Text(locString(R.string.playlist_empty_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), textAlign = TextAlign.Center)
+            when (pagedSongs.loadState.refresh) {
+                is androidx.paging.LoadState.Loading -> {
+                    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)) {
+                        items(6) { SongRowSkeleton() }
                     }
                 }
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)) {
-                    items(pagedSongs.itemCount) { index ->
-                        val s = pagedSongs[index] ?: return@items
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items) }.padding(vertical = dimens.spaceSix),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(model = s.coverImageUrl, contentDescription = s.title, modifier = Modifier.size(dimens.sizeSongThumbnailMedium).clip(MaterialTheme.shapes.extraSmall))
-                            Spacer(modifier = Modifier.width(dimens.spaceTwelve))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                                Text(s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                else -> {
+                    if (pagedSongs.itemCount == 0) {
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = dimens.spaceHuge), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
+                                Icon(Icons.Default.QueueMusic, contentDescription = null, modifier = Modifier.size(dimens.spaceTera), tint = MaterialTheme.colorScheme.primary)
+                                Text(locString(R.string.no_results), style = MaterialTheme.typography.titleMedium)
+                                Text(locString(R.string.playlist_empty_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f), textAlign = TextAlign.Center)
                             }
-                            if (playlist.isUserCreated) {
-                                IconButton(onClick = { onRemoveSong(s.id) }) {
-                                    Icon(Icons.Default.RemoveCircle, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)) {
+                            items(pagedSongs.itemCount) { index ->
+                                val s = pagedSongs[index] ?: return@items
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items.filterNotNull()) }.padding(vertical = dimens.spaceSix),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(model = s.coverImageUrl, contentDescription = s.title, modifier = Modifier.size(dimens.sizeSongThumbnailMedium).clip(MaterialTheme.shapes.extraSmall))
+                                    Spacer(modifier = Modifier.width(dimens.spaceTwelve))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                                        Text(s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                                    }
+                                    if (playlist.isUserCreated) {
+                                        IconButton(onClick = { onRemoveSong(s.id); pagedSongs.refresh() }) {
+                                            Icon(Icons.Default.RemoveCircle, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                                        }
+                                    }
                                 }
                             }
                         }

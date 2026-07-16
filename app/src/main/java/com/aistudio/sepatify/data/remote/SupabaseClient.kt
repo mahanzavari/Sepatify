@@ -115,7 +115,7 @@ data class NewPlaylistDto(
 data class PlaylistSongDto(
     @SerialName("playlist_id") val playlistId: Long,
     @SerialName("song_id") val songId: String,
-    val position: Int = 0
+    val position: Int
 )
 
 @Serializable
