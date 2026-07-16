@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
@@ -54,11 +55,11 @@ fun ShareBottomSheet(
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             Text(
-                text = "${locString(R.string.share)}: $titleToShare",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+                                text = stringResource(R.string.share_with, titleToShare),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -102,7 +103,7 @@ fun ShareBottomSheet(
 
             if (followedUsers.isEmpty()) {
                 Text(
-                    text = "No friends found to share with.",
+                    text = locString(R.string.no_friends),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier.padding(vertical = 16.dp)
