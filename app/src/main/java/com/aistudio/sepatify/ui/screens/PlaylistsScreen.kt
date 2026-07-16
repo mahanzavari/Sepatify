@@ -107,8 +107,15 @@ fun PlaylistsScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 ListItem(
-                    headlineContent = { Text("Add Playlist", fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text("Create a new playlist with songs") },
+                    headlineContent = { 
+                        Text(
+                            text = locString(R.string.add_playlist_title), 
+                            fontWeight = FontWeight.Bold
+                        ) 
+                    },
+                    supportingContent = { 
+                        Text(text = locString(R.string.add_playlist_desc)) 
+                    },
                     leadingContent = {
                         Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -123,8 +130,15 @@ fun PlaylistsScreen(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
                 ListItem(
-                    headlineContent = { Text("Add Folder", fontWeight = FontWeight.Bold) },
-                    supportingContent = { Text("Group existing playlists together") },
+                    headlineContent = { 
+                        Text(
+                            text = locString(R.string.add_folder_title), 
+                            fontWeight = FontWeight.Bold
+                        ) 
+                    },
+                    supportingContent = { 
+                        Text(text = locString(R.string.add_folder_desc)) 
+                    },
                     leadingContent = {
                         Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
@@ -584,8 +598,8 @@ fun PlaylistDetailView(
         if (showDeleteConfirm) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = false },
-                title = { Text("Delete Playlist", fontWeight = FontWeight.Bold) },
-                text = { Text("Are you sure you want to delete '${playlist.title}'? This action cannot be undone.") },
+                title = { Text(locString(R.string.delete_playlist_title), fontWeight = FontWeight.Bold) },
+                text = { Text(String.format(locString(R.string.delete_playlist_confirm), playlist.title)) },
                 confirmButton = {
                     Button(
                         onClick = {
