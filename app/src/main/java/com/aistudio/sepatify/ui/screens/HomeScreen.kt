@@ -314,6 +314,7 @@ fun BentoMediumCard(
 }
 
 @Composable
+@Composable
 fun BentoSmallCard(
     title: String,
     icon: ImageVector,
@@ -323,29 +324,37 @@ fun BentoSmallCard(
     hasBorder: Boolean = false,
     onClick: () -> Unit
 ) {
+    val colors = MaterialTheme.sepatifyColors
+    val shapes = MaterialTheme.sepatifyShapes
+    val dimens = MaterialTheme.sepatifyDimens
+
     val borderModifier = if (hasBorder) {
-        Modifier.border(width = 1.dp, color = Color(0x1B79747E), shape = RoundedCornerShape(24.dp))
+        Modifier.border(
+            width = dimens.borderThin, 
+            color = colors.neutralGrey, 
+            shape = shapes.card
+        )
     } else Modifier
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(dimens.heightBentoSmall)
             .then(borderModifier)
             .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
+        shape = shapes.card,
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 14.dp),
+                .padding(horizontal = dimens.spaceFourteen),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(dimens.sizeAvatarSmall)
                     .clip(CircleShape)
                     .background(iconContainerColor),
                 contentAlignment = Alignment.Center
@@ -354,7 +363,7 @@ fun BentoSmallCard(
                     imageVector = icon,
                     contentDescription = title,
                     tint = textColor,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(dimens.sizeIconNormal)
                 )
             }
             Text(

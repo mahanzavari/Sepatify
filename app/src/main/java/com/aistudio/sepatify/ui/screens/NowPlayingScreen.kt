@@ -79,9 +79,13 @@ fun NowPlayingScreen(
     val visualizerBars by sharedAudioViewModel.visualizerHeights.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
-    var dominantColor by remember { mutableStateOf(Color(0xFF121212)) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
+    // for colors.kr
+    val colors = MaterialTheme.sepatifyColors
+
+    var dominantColor by remember { mutableStateOf(colors.playerBgFallback) }
+
 
     // =======================================================
     // 1. DYNAMIC VINYL ROTATION ANGLE LINKED TO PLAYBACK SPEED
@@ -147,7 +151,7 @@ fun NowPlayingScreen(
                         }
                     }
                 } catch (e: Exception) {
-                    dominantColor = Color(0xFF1E3524)
+                    dominantColor = colors.playerDefaultDominant
                 }
             }
         }
@@ -557,7 +561,7 @@ fun NowPlayingScreen(
                                     modifier = Modifier
                                         .fillMaxSize(0.04f)
                                         .aspectRatio(1f)
-                                        .background(Color(0xFF1A1A1A), CircleShape)
+                                        .background(colors.playerSpindleHole, CircleShape)
                                 )
                             }
                         }
