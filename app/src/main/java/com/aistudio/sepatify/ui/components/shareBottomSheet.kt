@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Share
@@ -20,10 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 
@@ -43,6 +45,10 @@ fun ShareBottomSheet(
 
     val titleToShare = song?.title ?: playlist?.title ?: ""
 
+    val dimens = MaterialTheme.sepatifyDimens
+    val shapes = MaterialTheme.sepatifyShapes
+    val colors = MaterialTheme.sepatifyColors
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -51,18 +57,18 @@ fun ShareBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceEight)
         ) {
             Text(
-                text = "${locString(R.string.share)}: $titleToShare",
+                text = stringResource(R.string.share_with, titleToShare),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceLarge))
 
-            // Option 1: Share Externally (Intent)
+            // Option 1: Share Externally via Android Intent
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -71,14 +77,20 @@ fun ShareBottomSheet(
                         coroutineScope.launch { sheetState.hide(); onDismiss() }
                     },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                shape = RoundedCornerShape(16.dp)
+                shape = shapes.button
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(dimens.spaceNormal)
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(
+                        imageVector = Icons.Default.Share, 
+                        contentDescription = null, 
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                     Text(
                         text = locString(R.string.share_via_apps),
                         style = MaterialTheme.typography.titleMedium,
@@ -87,59 +99,74 @@ fun ShareBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceLarge))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaGrooves * 2.5f))
+            Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
-            // Option 2: Send internally to followers
+            // Option 2: Send internally inside Sepatify Chat System
             Text(
                 text = locString(R.string.send_to_friends),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaStandard)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
             if (followedUsers.isEmpty()) {
                 Text(
-                    text = "No friends found to share with.",
+                    text = locString(R.string.no_friends),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaMuted),
+                    modifier = Modifier.padding(vertical = dimens.spaceNormal)
                 )
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = dimens.heightMaxLazyColumn),
+                    verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
+                    contentPadding = PaddingValues(bottom = dimens.spaceLarge)
                 ) {
                     items(followedUsers) { user ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(shapes.small)
                                 .clickable {
                                     sendInternalMessage(user, song, playlist, chatViewModel, context, locString)
                                     coroutineScope.launch { sheetState.hide(); onDismiss() }
                                 }
-                                .padding(12.dp),
+                                .padding(dimens.spaceTwelve),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                                    .size(dimens.sizeAvatarNormal)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary.copy(
+                                            alpha = dimens.alphaGrooves * 3.75f
+                                        ), 
+                                        shape = CircleShape
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(text = user.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = user.take(1).uppercase(), 
+                                    color = MaterialTheme.colorScheme.primary, 
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                             Text(
                                 text = user,
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(dimens.aspectRatioSquare)
                             )
-                            Icon(Icons.Default.Chat, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                imageVector = Icons.Default.Chat, 
+                                contentDescription = "Send", 
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }

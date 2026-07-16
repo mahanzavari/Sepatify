@@ -34,10 +34,12 @@ val DarkOnSurface = Color(0xFFE2E3DE)
 val GoldAccent = Color(0xFFFFD700) // Pure Gold badge for simulated premium users
 val DarkGoldAccent = Color(0xFFC5A030)
 
-// Shared semantic colors used across the app instead of scattered hardcoded values.
+// Shared Semantic Colors
 val SurfaceElevated = Color(0xFF1E1E1E)
 val SurfaceMuted = Color(0xFF2E2E2E)
 val SurfaceHighlight = Color(0xFF27856A)
+
+// Playlist Accents
 val PlaylistAccentBlue = Color(0xFF003354)
 val PlaylistAccentPurple = Color(0xFF2D164B)
 val PlaylistAccentRose = Color(0xFF3B080B)

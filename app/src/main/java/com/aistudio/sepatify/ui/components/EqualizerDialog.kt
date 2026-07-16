@@ -83,8 +83,8 @@ fun EqualizerDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Playback Crossfade", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(text = "Smoothly blend track volume during transitions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = stringResource(R.string.playback_crossfade), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(text = stringResource(R.string.playback_crossfade_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = crossfadeEnabled,
@@ -98,8 +98,8 @@ fun EqualizerDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = "Transition Duration", style = MaterialTheme.typography.bodyMedium)
-                                Text(text = "$crossfadeDurationSec seconds", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                Text(text = stringResource(R.string.transition_duration), style = MaterialTheme.typography.bodyMedium)
+                                Text(text = stringResource(R.string.seconds_value, crossfadeDurationSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
                             Slider(
                                 value = crossfadeDurationSec.toFloat(),
@@ -126,8 +126,8 @@ fun EqualizerDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Equalizer & Effects", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(text = "Enable device-level hardware audio tuning", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = stringResource(R.string.equalizer_effects), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(text = stringResource(R.string.equalizer_effects_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = eqEnabled,
@@ -139,7 +139,7 @@ fun EqualizerDialog(
                 if (eqEnabled) {
                     // === Equalizer Bands ===
                     if (eqFrequencies.isNotEmpty()) {
-                        Text(text = "Bands", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(text = stringResource(R.string.bands), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         val minLevel = eqBandRange.first
                         val maxLevel = eqBandRange.second
 
@@ -150,8 +150,8 @@ fun EqualizerDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(text = "$freq Hz", style = MaterialTheme.typography.bodyMedium)
-                                    Text(text = "${levelMilliBels / 100} dB", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                    Text(text = stringResource(R.string.frequency_hz, freq), style = MaterialTheme.typography.bodyMedium)
+                                    Text(text = stringResource(R.string.db_value, levelMilliBels / 100), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                                 }
                                 Slider(
                                     value = levelMilliBels.toFloat(),
@@ -169,7 +169,7 @@ fun EqualizerDialog(
 
                     // === Bass & Virtualizer ===
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(text = "Audio Enhancements", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Text(text = stringResource(R.string.audio_enhancements), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
                         // Bass Boost
                         Column {
@@ -177,8 +177,8 @@ fun EqualizerDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = "Bass Boost", style = MaterialTheme.typography.bodyMedium)
-                                Text(text = "${bassBoostStrength / 10}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                Text(text = stringResource(R.string.bass_boost), style = MaterialTheme.typography.bodyMedium)
+                                Text(text = stringResource(R.string.percent_value, bassBoostStrength / 10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
                             Slider(
                                 value = bassBoostStrength.toFloat(),
@@ -193,8 +193,8 @@ fun EqualizerDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = "3D Virtualizer", style = MaterialTheme.typography.bodyMedium)
-                                Text(text = "${virtualizerStrength / 10}%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                Text(text = stringResource(R.string.virtualizer_3d), style = MaterialTheme.typography.bodyMedium)
+                                Text(text = stringResource(R.string.percent_value, virtualizerStrength / 10), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
                             Slider(
                                 value = virtualizerStrength.toFloat(),
@@ -208,8 +208,16 @@ fun EqualizerDialog(
 
                     // === Reverb Preset ===
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(text = "Reverb Preset", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                        val presets = listOf("None", "Small Room", "Medium Room", "Large Room", "Medium Hall", "Large Hall", "Plate")
+                        Text(text = stringResource(R.string.reverb_preset), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        val presets = listOf(
+                            stringResource(R.string.reverb_none),
+                            stringResource(R.string.reverb_small_room),
+                            stringResource(R.string.reverb_medium_room),
+                            stringResource(R.string.reverb_large_room),
+                            stringResource(R.string.reverb_medium_hall),
+                            stringResource(R.string.reverb_large_hall),
+                            stringResource(R.string.reverb_plate)
+                        )
                         
                         var expanded by remember { mutableStateOf(false) }
                         
@@ -223,7 +231,7 @@ fun EqualizerDialog(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(text = presets.getOrElse(reverbPreset) { "None" })
+                                    Text(text = presets.getOrElse(reverbPreset) { stringResource(R.string.reverb_none) })
                                     Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
                                 }
                             }

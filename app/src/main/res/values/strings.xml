@@ -199,4 +199,75 @@
     <string name="share_via_apps">Share via other apps</string>
     <string name="send_to_friends">Send to friends</string>
     <string name="sent_success">Sent to %1$s successfully!</string>
+    <string name="no_friends">You have not yet added any frineds.</string>
+    <string name="share_with">Share %1$s with</string>
+
+    <!-- Equalizer Dialog -->
+    <string name="eq_title">Equalizer &amp; Audio Effects</string>
+    <string name="playback_crossfade">Playback Crossfade</string>
+    <string name="playback_crossfade_desc">Smoothly blend track volume during transitions</string>
+    <string name="transition_duration">Transition Duration</string>
+    <string name="seconds_value">%1$d seconds</string>
+    <string name="equalizer_effects">Equalizer &amp; Effects</string>
+    <string name="equalizer_effects_desc">Enable device-level hardware audio tuning</string>
+    <string name="bands">Bands</string>
+    <string name="frequency_hz">%1$d Hz</string>
+    <string name="db_value">%1$d dB</string>
+    <string name="audio_enhancements">Audio Enhancements</string>
+    <string name="bass_boost">Bass Boost</string>
+    <string name="percent_value">%1$d%%</string>
+    <string name="virtualizer_3d">3D Virtualizer</string>
+    <string name="reverb_preset">Reverb Preset</string>
+    <string name="reverb_none">None</string>
+    <string name="reverb_small_room">Small Room</string>
+    <string name="reverb_medium_room">Medium Room</string>
+    <string name="reverb_large_room">Large Room</string>
+    <string name="reverb_medium_hall">Medium Hall</string>
+    <string name="reverb_large_hall">Large Hall</string>
+    <string name="reverb_plate">Plate</string>
+
+    <!-- Downloads Screen -->
+    <string name="tracks_count">%1$d Tracks</string>
+    <string name="sort">Sort</string>
+
+    <!-- Share Bottom Sheet -->
+    <string name="no_friends_to_share">No friends found to share with.</string>
+
+    <!-- Enhanced Library Screens -->
+    <string name="songs_count">%1$d songs</string>
+    <string name="shuffle_all">Shuffle All</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_loading">Loading...</string>
+    <string name="cd_send">Send</string>
+    <string name="cd_logo">Logo</string>
+    <string name="cd_toggle_password">Toggle Password</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_notifications">Notifications</string>
+    <string name="cd_avatar">Avatar</string>
+    <string name="cd_premium">Premium</string>
+    <string name="cd_album_cover">Album Cover</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_unlike">Unlike</string>
+    <string name="cd_liked">Liked</string>
+    <string name="cd_minimize_player">Minimize player</string>
+    <string name="cd_lyrics">Lyrics</string>
+    <string name="cd_sleep_timer">Sleep Timer</string>
+    <string name="cd_like_song">Like Song</string>
+    <string name="cd_share">Share</string>
+    <string name="cd_shuffle">Shuffle</string>
+    <string name="cd_previous">Previous</string>
+    <string name="cd_play_pause">Play/Pause</string>
+    <string name="cd_next">Next</string>
+    <string name="cd_repeat">Repeat</string>
+    <string name="cd_speed">Speed</string>
+    <string name="cd_sort">Sort</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_downloaded">Downloaded</string>
+    <string name="cd_share_playlist">Share Playlist</string>
+    <string name="cd_more_options">More Options</string>
+
+    <!-- Preferences -->
+    <string name="guest_user_default">Guest User</string>
 </resources>

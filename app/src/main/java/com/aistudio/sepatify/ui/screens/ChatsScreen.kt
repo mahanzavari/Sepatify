@@ -24,6 +24,7 @@ import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.ChatMessageEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
@@ -50,16 +51,18 @@ fun ChatsScreen(
     var chatInputText by remember { mutableStateOf("") }
     val dimens = MaterialTheme.sepatifyDimens
     val shapes = MaterialTheme.sepatifyShapes
+    val colors = MaterialTheme.sepatifyColors
 
     val isKeyboardVisible = WindowInsets.isImeVisible
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+    // Using themes semantic dimensions instead of hardcoded .dp
     val bottomPadding = if (isKeyboardVisible) {
         dimens.spaceNormal
     } else {
         var padding = dimens.spaceNormal + navBarPadding
-        if (isMiniPlayerVisible) padding += 90.dp // MiniPlayer height + safe margin
-        if (activeChatUser == null) padding += 72.dp // App NavBar height
+        if (isMiniPlayerVisible) padding += dimens.marginKeyboardMiniplayer
+        if (activeChatUser == null) padding += dimens.heightBottomNavBar
         padding
     }
 
@@ -68,8 +71,8 @@ fun ChatsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(start = dimens.spaceNormal, end = dimens.spaceNormal, top = dimens.spaceNormal)
-            .imePadding() // Pushes the chat components up alongside the keyboard
-            .padding(bottom = bottomPadding) // Ensures it doesn't hide behind the miniplayer when the keyboard is closed
+            .imePadding()
+            .padding(bottom = bottomPadding)
     ) {
         if (activeChatUser == null) {
             // General Chats / Contacts Hub
@@ -102,15 +105,14 @@ fun ChatsScreen(
                 )
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
-                    modifier = Modifier.fillMaxWidth().weight(1f)
+                    modifier = Modifier.fillMaxWidth().weight(dimens.aspectRatioSquare)
                 ) {
                     items(matchingUsers) { usr ->
                         val isFollowingFlow = chatViewModel.isFollowing(usr).collectAsState(initial = false)
 
-                        // --- ADDED: Collect Profile ---
+                        // Collect Profile
                         val profile by chatViewModel.getProfile(usr).collectAsState(initial = null)
                         val displayName = profile?.displayName ?: usr
-                        // ------------------------------
 
                         Row(
                             modifier = Modifier
@@ -128,10 +130,9 @@ fun ChatsScreen(
                                     modifier = Modifier
                                         .size(dimens.sizeAvatarNormal)
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // --- UPDATED: Load Avatar Image ---
                                     if (!profile?.avatarUrl.isNullOrEmpty()) {
                                         AsyncImage(
                                             model = profile!!.avatarUrl,
@@ -142,7 +143,6 @@ fun ChatsScreen(
                                     } else {
                                         Text(text = displayName.take(1).uppercase(), color = MaterialTheme.colorScheme.primary)
                                     }
-                                    // ----------------------------------
                                 }
                                 Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
                             }
@@ -167,12 +167,12 @@ fun ChatsScreen(
                 Text(
                     text = locString(R.string.conversations_title),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = dimens.alphaSemiMuted)
                 )
 
                 if (chatsFirstLoad) {
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        modifier = Modifier.fillMaxWidth().weight(dimens.aspectRatioSquare),
                         verticalArrangement = Arrangement.spacedBy(dimens.spaceFour)
                     ) {
                         items(6) { ChatRowSkeleton() }
@@ -187,13 +187,11 @@ fun ChatsScreen(
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(dimens.spaceTen),
-                        modifier = Modifier.fillMaxWidth().weight(1f)
+                        modifier = Modifier.fillMaxWidth().weight(dimens.aspectRatioSquare)
                     ) {
                         items(recentConversations) { user ->
-                            // --- ADDED: Collect Profile ---
                             val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
                             val displayName = profile?.displayName ?: user
-                            // ------------------------------
 
                             Row(
                                 modifier = Modifier
@@ -207,10 +205,9 @@ fun ChatsScreen(
                                     modifier = Modifier
                                         .size(dimens.sizeAvatarLarge)
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // --- UPDATED: Load Avatar Image ---
                                     if (!profile?.avatarUrl.isNullOrEmpty()) {
                                         AsyncImage(
                                             model = profile!!.avatarUrl,
@@ -221,19 +218,22 @@ fun ChatsScreen(
                                     } else {
                                         Text(text = displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                                     }
-                                    // ----------------------------------
                                 }
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(modifier = Modifier.weight(dimens.aspectRatioSquare)) {
                                     Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
 
                                     val isOnline = onlineUsers.contains(user)
                                     Text(
                                         text = if (isOnline) locString(R.string.status_online) else locString(R.string.status_offline),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                        color = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = dimens.alphaMuted)
                                     )
                                 }
-                                Icon(Icons.Default.Chat, contentDescription = locString(R.string.chat_icon_desc), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f))
+                                Icon(
+                                    imageVector = Icons.Default.Chat, 
+                                    contentDescription = locString(R.string.chat_icon_desc), 
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaOverlayAmbient)
+                                )
                             }
                         }
                     }
@@ -245,10 +245,8 @@ fun ChatsScreen(
             val pagedMessages = chatViewModel.getMessagesPaged(user).collectAsLazyPagingItems()
             val otherIsTyping = remember(user) { chatViewModel.getTypingState(user) }.collectAsState(initial = false)
 
-            // --- ADDED: Collect Profile ---
             val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
             val displayName = profile?.displayName ?: user
-            // ------------------------------
 
             var isTypingSent by remember(user) { mutableStateOf(false) }
 
@@ -293,12 +291,11 @@ fun ChatsScreen(
                 }
                 Spacer(modifier = Modifier.width(dimens.spaceEight))
 
-                // --- ADDED: Avatar in Chat Header ---
                 Box(
                     modifier = Modifier
                         .size(dimens.sizeAvatarNormal)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!profile?.avatarUrl.isNullOrEmpty()) {
@@ -317,7 +314,6 @@ fun ChatsScreen(
                     }
                 }
                 Spacer(modifier = Modifier.width(dimens.spaceTwelve))
-                // ------------------------------------
 
                 Column {
                     Text(text = displayName, style = MaterialTheme.typography.titleMedium)
@@ -340,7 +336,7 @@ fun ChatsScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(dimens.aspectRatioSquare),
                 verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
                 contentPadding = PaddingValues(vertical = dimens.spaceEight)
             ) {
@@ -350,7 +346,7 @@ fun ChatsScreen(
                             icon = Icons.Default.ChatBubbleOutline,
                             title = locString(R.string.chat_say_hello_title),
                             subtitle = locString(R.string.chat_say_hello_desc),
-                            modifier = Modifier.fillMaxWidth().height(220.dp)
+                            modifier = Modifier.fillMaxWidth().height(dimens.heightEmptyChatVisual)
                         )
                     }
                 }
@@ -365,7 +361,7 @@ fun ChatsScreen(
                         Surface(
                             shape = if (isMe) shapes.chatBubbleMe else shapes.chatBubbleOther,
                             color = if (isMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.widthIn(max = 280.dp)
+                            modifier = Modifier.widthIn(max = dimens.maxWidthChatBubble)
                         ) {
                             Column(modifier = Modifier.padding(dimens.spaceTwelve)) {
                                 if (msg.isSongShare) {
@@ -400,7 +396,7 @@ fun ChatsScreen(
                                                     .size(dimens.sizeAvatarNormal)
                                                     .clip(MaterialTheme.shapes.extraSmall)
                                             )
-                                            Column(modifier = Modifier.weight(1f)) {
+                                            Column(modifier = Modifier.weight(dimens.aspectRatioSquare)) {
                                                 Text(text = msg.songTitle ?: "", style = MaterialTheme.typography.labelMedium)
                                                 Text(text = msg.songArtist ?: "", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                             }
@@ -421,7 +417,7 @@ fun ChatsScreen(
                             }
                         }
 
-                        // Tick marks alignment
+                        // Tick marks alignment using mapped theme alphas
                         if (isMe) {
                             Row(
                                 modifier = Modifier.padding(top = dimens.spaceTwo),
@@ -441,13 +437,13 @@ fun ChatsScreen(
                                 Icon(
                                     imageVector = iconVector,
                                     contentDescription = statusText,
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaStandard),
                                     modifier = Modifier.size(dimens.spaceTwelve)
                                 )
                                 Text(
                                     text = statusText,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = dimens.alphaMuted)
                                 )
                             }
                         }
@@ -467,7 +463,7 @@ fun ChatsScreen(
                     value = chatInputText,
                     onValueChange = { chatInputText = it },
                     placeholder = { Text(locString(R.string.message_hint)) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(dimens.aspectRatioSquare),
                     shape = shapes.card
                 )
                 IconButton(

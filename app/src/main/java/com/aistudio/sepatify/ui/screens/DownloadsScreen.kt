@@ -21,6 +21,7 @@ import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.DownloadedSongEntity
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.viewmodel.DownloadViewModel
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,15 +77,15 @@ fun DownloadsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${downloadedSongs.size} Tracks",
+                    text = stringResource(R.string.tracks_count, downloadedSongs.size),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
 
                 Box {
                     TextButton(onClick = { expanded = true }) {
-                        Icon(Icons.Default.Sort, contentDescription = "Sort")
+                        Icon(Icons.Default.Sort, contentDescription = stringResource(R.string.cd_sort))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Sort")
+                        Text(text = stringResource(R.string.sort))
                     }
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         DropdownMenuItem(
@@ -171,7 +172,7 @@ fun DownloadsScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete",
+                                    contentDescription = stringResource(R.string.cd_delete),
                                     tint = Color.White,
                                     modifier = Modifier.padding(end = 16.dp)
                                 )
@@ -208,7 +209,7 @@ fun DownloadsScreen(
                                 }
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Downloaded",
+                                    contentDescription = stringResource(R.string.cd_downloaded),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(24.dp)
                                 )

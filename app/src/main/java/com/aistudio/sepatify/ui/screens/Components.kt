@@ -1,5 +1,9 @@
 package com.aistudio.sepatify.ui.screens
 
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -238,6 +242,8 @@ fun CommonTopBar(
         label = "shimmerOffset"
     )
 
+    val colors = MaterialTheme.sepatifyColors
+
     // ایجاد یک گرادینت نوری سفید و شیشه‌ای مایل (بدون تغییر دادن رنگ طبیعی عکس)
     val lightShimmerBrush = Brush.linearGradient(
         colors = listOf(
@@ -295,23 +301,22 @@ fun CommonTopBar(
                         .scale(avatarScale),
                     contentAlignment = Alignment.Center
                 ) {
-                    // دایره اصلی آواتار
+                    // Avatar's Circle
                     Box(
                         modifier = Modifier
                             .size(36.dp)
                             .align(Alignment.Center)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                            // حاشیه طلایی لوکس دور عکس برای کاربر پرمیوم
+                            // Premium profile border 
                             .border(
                                 width = if (isPremium) 2.dp else 0.dp,
-                                color = Color(0xFFFFD54F),
+                                color = colors.premiumGoldAccent,
                                 shape = CircleShape
                             )
                             .clickable { onAvatarClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        // ۱. رندر عکس گالری کاربر با رنگ ۱۰۰٪ واقعی و اصلی
                         if (avatarUrl.isNotEmpty()) {
                             AsyncImage(
                                 model = avatarUrl,
@@ -325,11 +330,10 @@ fun CommonTopBar(
                             Text(
                                 text = initial,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = if (isPremium) Color(0xFF7A4F00) else MaterialTheme.colorScheme.primary
+                                color = if (isPremium) colors.premiumGoldTextDark else MaterialTheme.colorScheme.primary
                             )
                         }
 
-                        // ۲. لایه افکت انعکاس نور (شیمر شیشه‌ای پویا بدون کدر یا تیره کردن تصویر)
                         if (isPremium) {
                             Box(
                                 modifier = Modifier
@@ -347,14 +351,14 @@ fun CommonTopBar(
                                 .offset(x = 2.dp, y = 2.dp)
                                 .size(16.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFFD54F))
+                                .background(colors.premiumGoldAccent)
                                 .border(1.dp, Color.White, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = "Premium",
-                                tint = Color(0xFF7A4F00),
+                                tint = colors.premiumGoldTextDark,
                                 modifier = Modifier.size(11.dp)
                             )
                         }

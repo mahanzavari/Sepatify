@@ -25,6 +25,8 @@ import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.HomeUiState
 import com.aistudio.sepatify.ui.viewmodel.HomeViewModel
 
@@ -37,6 +39,8 @@ fun HomeScreen(
     locString: (Int) -> String
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
+    val colors = MaterialTheme.sepatifyColors
+
 
     Column(
         modifier = Modifier
@@ -155,21 +159,6 @@ fun HomeScreen(
                 // 2. QUICK ACTIONS (Bento Grid Style)
                 val isDark = isSystemInDarkTheme()
 
-                val likedBg = if (isDark) Color(0xFF003354) else Color(0xFFD0E4FF)
-                val likedTxt = if (isDark) Color(0xFFD0E4FF) else Color(0xFF001D35)
-                val likedIconBg = if (isDark) Color(0xFF001D35) else Color(0xFFAAC7FF)
-
-                val recentBg = if (isDark) Color(0xFF1E1E1E) else Color(0xFFFFFFFF)
-                val recentTxt = if (isDark) Color(0xFFEADDFF) else Color(0xFF1C1B1F)
-                val recentIconBg = if (isDark) Color(0xFF21005D) else Color(0xFFF3EDF7)
-
-                val playlistsBg = if (isDark) Color(0xFF3B080B) else Color(0xFFFFDAD6)
-                val playlistsTxt = if (isDark) Color(0xFFFFDAD6) else Color(0xFF410002)
-                val playlistsIconBg = if (isDark) Color(0xFF680003) else Color(0xFFFFB4AB)
-
-                val artistsBg = if (isDark) Color(0xFF2D164B) else Color(0xFFF3E8FF)
-                val artistsTxt = if (isDark) Color(0xFFEADDFF) else Color(0xFF21005D)
-                val artistsIconBg = if (isDark) Color(0xFF21005D) else Color(0xFFEADDFF)
 
                 Row(
                     modifier = Modifier
@@ -182,9 +171,9 @@ fun HomeScreen(
                         title = locString(R.string.quick_liked),
                         subtitle = "Offline tracks",
                         icon = Icons.Default.Favorite,
-                        backgroundColor = likedBg,
-                        textColor = likedTxt,
-                        iconContainerColor = likedIconBg,
+                        backgroundColor = colors.bentoLikedBg,
+                        textColor = colors.bentoLikedTxt,
+                        iconContainerColor = colors.bentoLikedIconBg,
                         modifier = Modifier.weight(1f),
                         onClick = { onQuickActionClick("liked") }
                     )
@@ -197,18 +186,19 @@ fun HomeScreen(
                         BentoSmallCard(
                             title = locString(R.string.quick_recent),
                             icon = Icons.Default.History,
-                            backgroundColor = recentBg,
-                            textColor = recentTxt,
-                            iconContainerColor = recentIconBg,
+                            backgroundColor = colors.bentoRecentBg,
+                            textColor = colors.bentoRecentTxt,
+                            iconContainerColor = colors.bentoRecentIconBg,
                             hasBorder = !isDark,
                             onClick = { onQuickActionClick("recent") }
                         )
+
                         BentoSmallCard(
                             title = locString(R.string.quick_playlists),
                             icon = Icons.Default.LibraryMusic,
-                            backgroundColor = playlistsBg,
-                            textColor = playlistsTxt,
-                            iconContainerColor = playlistsIconBg,
+                            backgroundColor = colors.bentoPlaylistsBg,
+                            textColor = colors.bentoPlaylistsTxt,
+                            iconContainerColor = colors.bentoPlaylistsIconBg,
                             onClick = { onQuickActionClick("playlists") }
                         )
                     }
@@ -219,9 +209,9 @@ fun HomeScreen(
                     title = locString(R.string.quick_artists),
                     subtitle = "Social Hub & Core Community",
                     icon = Icons.Default.People,
-                    backgroundColor = artistsBg,
-                    textColor = artistsTxt,
-                    iconContainerColor = artistsIconBg,
+                    backgroundColor = colors.bentoArtistsBg,
+                    textColor = colors.bentoArtistsTxt,
+                    iconContainerColor = colors.bentoArtistsIconBg,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -335,29 +325,37 @@ fun BentoSmallCard(
     hasBorder: Boolean = false,
     onClick: () -> Unit
 ) {
+    val colors = MaterialTheme.sepatifyColors
+    val shapes = MaterialTheme.sepatifyShapes
+    val dimens = MaterialTheme.sepatifyDimens
+
     val borderModifier = if (hasBorder) {
-        Modifier.border(width = 1.dp, color = Color(0x1B79747E), shape = RoundedCornerShape(24.dp))
+        Modifier.border(
+            width = dimens.borderThin, 
+            color = colors.neutralGrey, 
+            shape = shapes.card
+        )
     } else Modifier
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(dimens.heightBentoSmall)
             .then(borderModifier)
             .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
+        shape = shapes.card,
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 14.dp),
+                .padding(horizontal = dimens.spaceFourteen),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(dimens.sizeAvatarSmall)
                     .clip(CircleShape)
                     .background(iconContainerColor),
                 contentAlignment = Alignment.Center
@@ -366,7 +364,7 @@ fun BentoSmallCard(
                     imageVector = icon,
                     contentDescription = title,
                     tint = textColor,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(dimens.sizeIconNormal)
                 )
             }
             Text(
