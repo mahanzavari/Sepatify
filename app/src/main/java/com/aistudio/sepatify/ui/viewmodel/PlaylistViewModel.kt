@@ -14,24 +14,43 @@ class PlaylistViewModel(
     private val songRepository: SongRepository
 ) : ViewModel() {
 
-    val userPlaylists: StateFlow<List<PlaylistEntity>> = songRepository.getUserPlaylists()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Trigger used to instantly refresh the playlist fetch after creating a new one or a folder
+    private val refreshTrigger = MutableStateFlow(0)
 
-    fun createNewPlaylist(title: String, description: String, category: String = "User") {
+    val userPlaylists: StateFlow<List<PlaylistEntity>> = refreshTrigger.flatMapLatest {
+        songRepository.getUserPlaylists()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun refreshPlaylists() {
+        refreshTrigger.value += 1
+    }
+
+    fun createNewPlaylistWithSongs(title: String, description: String, songIds: List<String>) {
         viewModelScope.launch {
-            songRepository.createPlaylist(title, description, category)
+            val pid = songRepository.createPlaylist(title, description, "User")
+            if (pid != -1L) {
+                songIds.forEach { songId ->
+                    songRepository.addSongToPlaylist(pid, songId)
+                }
+                refreshPlaylists()
+            }
+        }
+    }
+
+    fun groupPlaylistsIntoFolder(folderName: String, playlistIds: List<Long>) {
+        viewModelScope.launch {
+            val categoryName = "folder:$folderName"
+            playlistIds.forEach { pid ->
+                songRepository.updatePlaylistCategory(pid, categoryName)
+            }
+            refreshPlaylists()
         }
     }
 
     fun deletePlaylist(playlistId: Long) {
         viewModelScope.launch {
             songRepository.deletePlaylist(playlistId)
-        }
-    }
-
-    fun addSongToPlaylist(playlistId: Long, songId: String) {
-        viewModelScope.launch {
-            songRepository.addSongToPlaylist(playlistId, songId)
+            refreshPlaylists()
         }
     }
 

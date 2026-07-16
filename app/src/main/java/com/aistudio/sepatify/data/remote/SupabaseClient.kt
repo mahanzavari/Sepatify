@@ -151,3 +151,8 @@ data class FollowDto(
     @SerialName("followed_id") val followedId: String,
     val profiles: ProfileDto? = null
 )
+
+@Serializable
+data class PlaylistCategoryUpdateDto(
+    @SerialName("category") val category: String
+)

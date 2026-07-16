@@ -102,6 +102,9 @@ interface PlaylistDao {
         WHERE playlist_song_cross_ref.playlistId = :playlistId
     """)
     fun getDownloadedSongsForPlaylist(playlistId: Long): Flow<List<DownloadedSongEntity>>
+    
+    @Query("UPDATE playlists SET category = :category WHERE id = :playlistId")
+    suspend fun updatePlaylistCategory(playlistId: Long, category: String)
 }
 
 @Dao

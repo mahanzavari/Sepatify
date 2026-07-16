@@ -124,3 +124,8 @@ data class TypingPayload(
     @SerialName("user_id") val userId: String,
     @SerialName("is_typing") val isTyping: Boolean
 )
+
+@Serializable
+data class PlaylistCategoryUpdateDto(
+    val category: String
+)

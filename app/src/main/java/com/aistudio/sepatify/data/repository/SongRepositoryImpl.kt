@@ -290,7 +290,7 @@ class SongRepositoryImpl(
         val uid = authRepository.currentUserId() ?: return -1L
         return try {
             val created = Supa.client.from("playlists")
-                .insert(NewPlaylistDto(ownerId = uid, title = title, description = description, category = "User")) {
+                .insert(NewPlaylistDto(ownerId = uid, title = title, description = description, category = category)) {
                     select(columns = Columns.ALL)
                 }
                 .decodeSingle<PlaylistDto>()
@@ -319,6 +319,13 @@ class SongRepositoryImpl(
                     eq("playlist_id", playlistId)
                     eq("song_id", songId)
                 }
+            }
+        }
+    }
+    override suspend fun updatePlaylistCategory(playlistId: Long, category: String) {
+        runCatching {
+            Supa.client.from("playlists").update(com.aistudio.sepatify.data.remote.dto.PlaylistCategoryUpdateDto(category)) {
+                filter { eq("id", playlistId) }
             }
         }
     }
