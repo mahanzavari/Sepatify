@@ -200,14 +200,15 @@
     <string name="send_to_friends">Send to friends</string>
     <string name="sent_success">Sent to %1$s successfully!</string>
     <string name="no_friends">You have not yet added any frineds.</string>
+    <string name="share_with">Share %1$s with</string>
 
     <!-- Equalizer Dialog -->
-    <string name="eq_title">Equalizer & Audio Effects</string>
+    <string name="eq_title">Equalizer &amp; Audio Effects</string>
     <string name="playback_crossfade">Playback Crossfade</string>
     <string name="playback_crossfade_desc">Smoothly blend track volume during transitions</string>
     <string name="transition_duration">Transition Duration</string>
     <string name="seconds_value">%1$d seconds</string>
-    <string name="equalizer_effects">Equalizer & Effects</string>
+    <string name="equalizer_effects">Equalizer &amp; Effects</string>
     <string name="equalizer_effects_desc">Enable device-level hardware audio tuning</string>
     <string name="bands">Bands</string>
     <string name="frequency_hz">%1$d Hz</string>

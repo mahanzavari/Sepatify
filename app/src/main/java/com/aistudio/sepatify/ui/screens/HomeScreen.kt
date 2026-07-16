@@ -25,6 +25,8 @@ import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.HomeUiState
 import com.aistudio.sepatify.ui.viewmodel.HomeViewModel
 
@@ -313,7 +315,6 @@ fun BentoMediumCard(
     }
 }
 
-@Composable
 @Composable
 fun BentoSmallCard(
     title: String,

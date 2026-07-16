@@ -56,6 +56,9 @@ import java.net.URL
 import androidx.compose.ui.util.lerp
 import kotlin.math.abs
 import kotlin.math.pow
+import com.aistudio.sepatify.ui.theme.sepatifyColors
+import com.aistudio.sepatify.ui.theme.sepatifyDimens
+import com.aistudio.sepatify.ui.theme.sepatifyShapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
