@@ -563,6 +563,8 @@ fun PlaylistDetailView(
     locString: (Int) -> String
 ) {
     val dimens = MaterialTheme.sepatifyDimens
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
@@ -573,8 +575,34 @@ fun PlaylistDetailView(
             }
             IconButton(onClick = onShare) { Icon(Icons.Default.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.primary) }
             if (playlist.isUserCreated) {
-                IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
-            }
+                IconButton(onClick = { showDeleteConfirm = true }) { 
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) 
+                }
+             }
+         }
+ 
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text("Delete Playlist", fontWeight = FontWeight.Bold) },
+                text = { Text("Are you sure you want to delete '${playlist.title}'? This action cannot be undone.") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteConfirm = false
+                            onDelete()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(locString(R.string.cd_delete), color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = false }) {
+                        Text(locString(R.string.cancel))
+                    }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(dimens.spaceNormal))
