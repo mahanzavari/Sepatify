@@ -57,27 +57,19 @@ class ChatRepositoryImpl(
     private val typingStates = mutableMapOf<String, MutableStateFlow<Boolean>>()
     private val typingChannelUsers = mutableSetOf<String>()
 
-    // Profile Cache
     private val profileCache = MutableStateFlow<Map<String, ProfileDto>>(emptyMap())
 
-    // Presence System State
     private val _onlineUsers = MutableStateFlow<Set<String>>(emptySet())
     private var presenceChannel: io.github.jan.supabase.realtime.RealtimeChannel? = null
-
-    // Heartbeat controls
     private val activeUserTimestamps = ConcurrentHashMap<String, Long>()
     private var presenceHeartbeatJob: Job? = null
     private var presenceCleanupJob: Job? = null
 
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
-
-        // --- ADDED: Start listening to Realtime Profile Updates ---
         repoScope.launch { subscribeToRealtimeProfiles() }
-        // ---------------------------------------------------------
     }
 
-    // --- ADDED: Realtime Profile Invalidation Listener ---
     private suspend fun subscribeToRealtimeProfiles() {
         try {
             val channel = Supa.client.realtime.channel("public-profiles-updates")
@@ -89,9 +81,8 @@ class ChatRepositoryImpl(
                 if (action is PostgresAction.Update) {
                     val record = action.record
                     val id = record["id"]?.jsonPrimitive?.content ?: return@collect
-
                     val usernameToUpdate = idToUsername[id]
-                    // Only re-fetch if this profile is actively cached/viewed by the UI right now
+
                     if (usernameToUpdate != null && profileCache.value.containsKey(usernameToUpdate)) {
                         try {
                             val freshProfile = Supa.client.from("profiles")
@@ -108,29 +99,73 @@ class ChatRepositoryImpl(
                                 idToUsername[id] = freshProfile.username
                                 usernameToId[freshProfile.username] = id
                             }
-                        } catch (e: Exception) {
-                            // Ignore network fetch errors during realtime sync
-                        }
+                        } catch (e: Exception) { }
                     }
                 }
             }
-        } catch (e: Exception) {
-            // Realtime not reachable
-        }
+        } catch (e: Exception) { }
     }
-    // -----------------------------------------------------
 
     override fun getProfileFlow(username: String): Flow<ProfileDto?> {
         return profileCache.map { it[username] }.onStart {
             if (!profileCache.value.containsKey(username)) {
-                repoScope.launch { resolveId(username) } // Triggers fetch and cache if missing
+                repoScope.launch { resolveId(username) }
             }
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Presence System Implementation (Broadcast Heartbeat Strategy)
-    // ---------------------------------------------------------------------
+    // === OPTIMIZED NETWORK RESOLUTION ===
+
+    override fun getFollowersProfiles(userId: String?): Flow<List<ProfileDto>> = flow {
+        val targetId = userId ?: authRepository.currentUserId()
+        if (targetId == null) {
+            emit(emptyList())
+            return@flow
+        }
+        try {
+            val rows = Supa.client.from("follows")
+                .select(columns = Columns.raw("follower_id, profiles:profiles!follows_follower_id_fkey(*)")) {
+                    filter { eq("followed_id", targetId) }
+                }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>()
+            emit(rows.mapNotNull { it.profiles })
+        } catch (e: Exception) { emit(emptyList()) }
+    }
+
+    override fun getFollowingProfiles(userId: String?): Flow<List<ProfileDto>> = flow {
+        val targetId = userId ?: authRepository.currentUserId()
+        if (targetId == null) {
+            emit(emptyList())
+            return@flow
+        }
+        try {
+            val rows = Supa.client.from("follows")
+                .select(columns = Columns.raw("followed_id, profiles:profiles!follows_followed_id_fkey(*)")) {
+                    filter { eq("follower_id", targetId) }
+                }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>()
+            emit(rows.mapNotNull { it.profiles })
+        } catch (e: Exception) { emit(emptyList()) }
+    }
+
+    override fun getFollowStats(userId: String?): Flow<Pair<Int, Int>> = flow {
+        val targetId = userId ?: authRepository.currentUserId()
+        if (targetId == null) {
+            emit(0 to 0)
+            return@flow
+        }
+        try {
+            val followersCount = Supa.client.from("follows")
+                .select(columns = Columns.list("follower_id")) { filter { eq("followed_id", targetId) } }
+                .decodeList<JsonObject>().size
+
+            val followingCount = Supa.client.from("follows")
+                .select(columns = Columns.list("followed_id")) { filter { eq("follower_id", targetId) } }
+                .decodeList<JsonObject>().size
+
+            emit(followersCount to followingCount)
+        } catch (e: Exception) { emit(0 to 0) }
+    }
 
     override fun getOnlineUsers(): Flow<Set<String>> = _onlineUsers.asStateFlow()
 
@@ -140,31 +175,20 @@ class ChatRepositoryImpl(
 
         if (presenceChannel == null) {
             presenceChannel = Supa.client.realtime.channel("presence-global")
-
             repoScope.launch {
                 try {
                     presenceChannel?.broadcastFlow<JsonObject>(event = "presence")?.collect { jsonObject ->
                         val username = jsonObject["username"]?.jsonPrimitive?.content ?: return@collect
                         val status = jsonObject["status"]?.jsonPrimitive?.content ?: return@collect
 
-                        if (status == "online") {
-                            activeUserTimestamps[username] = System.currentTimeMillis()
-                        } else if (status == "offline") {
-                            activeUserTimestamps.remove(username)
-                        }
+                        if (status == "online") activeUserTimestamps[username] = System.currentTimeMillis()
+                        else if (status == "offline") activeUserTimestamps.remove(username)
 
                         _onlineUsers.value = activeUserTimestamps.keys.toSet()
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                } catch (e: Exception) { }
             }
-
-            try {
-                presenceChannel?.subscribe()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            try { presenceChannel?.subscribe() } catch (e: Exception) { }
 
             presenceCleanupJob = repoScope.launch {
                 while (isActive) {
@@ -179,9 +203,7 @@ class ChatRepositoryImpl(
                             changed = true
                         }
                     }
-                    if (changed) {
-                        _onlineUsers.value = activeUserTimestamps.keys.toSet()
-                    }
+                    if (changed) _onlineUsers.value = activeUserTimestamps.keys.toSet()
                 }
             }
         }
@@ -190,53 +212,36 @@ class ChatRepositoryImpl(
         presenceHeartbeatJob = repoScope.launch {
             while (isActive) {
                 try {
-                    presenceChannel?.broadcast(
-                        "presence",
-                        buildJsonObject {
-                            put("username", JsonPrimitive(myUsername))
-                            put("status", JsonPrimitive("online"))
-                        }
-                    )
+                    presenceChannel?.broadcast("presence", buildJsonObject {
+                        put("username", JsonPrimitive(myUsername))
+                        put("status", JsonPrimitive("online"))
+                    })
                 } catch (e: Exception) { }
                 delay(10000)
             }
         }
-
         try {
-            presenceChannel?.broadcast(
-                "presence",
-                buildJsonObject {
-                    put("username", JsonPrimitive(myUsername))
-                    put("status", JsonPrimitive("online"))
-                }
-            )
+            presenceChannel?.broadcast("presence", buildJsonObject {
+                put("username", JsonPrimitive(myUsername))
+                put("status", JsonPrimitive("online"))
+            })
         } catch (e: Exception) { }
     }
 
     override suspend fun untrackPresence() {
         presenceHeartbeatJob?.cancel()
-
         val myId = authRepository.currentUserId() ?: return
         val myUsername = resolveUsername(myId)
-
         try {
-            presenceChannel?.broadcast(
-                "presence",
-                buildJsonObject {
-                    put("username", JsonPrimitive(myUsername))
-                    put("status", JsonPrimitive("offline"))
-                }
-            )
+            presenceChannel?.broadcast("presence", buildJsonObject {
+                put("username", JsonPrimitive(myUsername))
+                put("status", JsonPrimitive("offline"))
+            })
         } catch (e: Exception) { }
     }
 
-    // ---------------------------------------------------------------------
-    // Username <-> Supabase user id resolution
-    // ---------------------------------------------------------------------
-
     private suspend fun resolveId(username: String): String? {
         profileCache.value[username]?.let { return it.id }
-
         usernameToId[username]?.let { return it }
         return try {
             val profile = Supa.client.from("profiles")
@@ -245,14 +250,10 @@ class ChatRepositoryImpl(
             profile?.let {
                 usernameToId[username] = it.id
                 idToUsername[it.id] = username
-
                 profileCache.update { current -> current + (username to it) }
-
                 it.id
             }
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
     private suspend fun resolveUsername(id: String): String {
@@ -264,28 +265,16 @@ class ChatRepositoryImpl(
             val name = profile?.username ?: id
             idToUsername[id] = name
             usernameToId[name] = id
-
-            profile?.let { p ->
-                profileCache.update { current -> current + (name to p) }
-            }
-
+            profile?.let { p -> profileCache.update { current -> current + (name to p) } }
             name
-        } catch (e: Exception) {
-            id
-        }
+        } catch (e: Exception) { id }
     }
-
-    // ---------------------------------------------------------------------
-    // Existing Chat / Feed functionality below
-    // ---------------------------------------------------------------------
 
     override fun getRecentConversations(): Flow<List<String>> {
         return chatMessageDao.getRecentConversations()
             .onStart {
                 repoScope.launch {
-                    if (authRepository.hasValidSession()) {
-                        syncRecentConversations()
-                    }
+                    if (authRepository.hasValidSession()) syncRecentConversations()
                 }
             }
     }
@@ -295,21 +284,13 @@ class ChatRepositoryImpl(
         try {
             val remoteMessages = Supa.client.from("chat_messages")
                 .select(columns = Columns.ALL) {
-                    filter {
-                        or {
-                            eq("sender_id", myId)
-                            eq("receiver_id", myId)
-                        }
-                    }
+                    filter { or { eq("sender_id", myId); eq("receiver_id", myId) } }
                     order("created_at", Order.DESCENDING)
                     limit(60)
                 }
                 .decodeList<ChatMessageDto>()
-
             remoteMessages.forEach { upsertRemoteMessage(it, myId) }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { }
     }
 
     override fun getMessages(otherUser: String): Flow<List<ChatMessageEntity>> {
@@ -334,14 +315,8 @@ class ChatRepositoryImpl(
                 .select(columns = Columns.ALL) {
                     filter {
                         or {
-                            and {
-                                eq("sender_id", myId)
-                                eq("receiver_id", otherId)
-                            }
-                            and {
-                                eq("sender_id", otherId)
-                                eq("receiver_id", myId)
-                            }
+                            and { eq("sender_id", myId); eq("receiver_id", otherId) }
+                            and { eq("sender_id", otherId); eq("receiver_id", myId) }
                         }
                     }
                     order("created_at", Order.ASCENDING)
@@ -379,17 +354,13 @@ class ChatRepositoryImpl(
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
             format.timeZone = TimeZone.getTimeZone("UTC")
             format.parse(iso.take(19))?.time ?: System.currentTimeMillis()
-        } catch (e: Exception) {
-            System.currentTimeMillis()
-        }
+        } catch (e: Exception) { System.currentTimeMillis() }
     }
 
     private suspend fun subscribeToRealtimeMessages() {
         try {
             val channel = Supa.client.realtime.channel("chat-messages-global")
-            val changes = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-                table = "chat_messages"
-            }
+            val changes = channel.postgresChangeFlow<PostgresAction>(schema = "public") { table = "chat_messages" }
             channel.subscribe()
             changes.collect { action ->
                 val myId = authRepository.currentUserId() ?: return@collect
@@ -401,9 +372,7 @@ class ChatRepositoryImpl(
 
                 if (dto.senderId == myId || dto.receiverId == myId) {
                     upsertRemoteMessage(dto, myId)
-                    if (dto.receiverId == myId && dto.status == "Sent") {
-                        markDelivered(dto.id)
-                    }
+                    if (dto.receiverId == myId && dto.status == "Sent") markDelivered(dto.id)
                 }
             }
         } catch (e: Exception) { }
@@ -422,11 +391,7 @@ class ChatRepositoryImpl(
         val otherId = resolveId(otherUser) ?: return
         try {
             Supa.client.from("chat_messages").update(mapOf("status" to "Read")) {
-                filter {
-                    eq("receiver_id", myId)
-                    eq("sender_id", otherId)
-                    neq("status", "Read")
-                }
+                filter { eq("receiver_id", myId); eq("sender_id", otherId); neq("status", "Read") }
             }
             chatMessageDao.markConversationRead("Me", otherUser)
         } catch (e: Exception) { }
@@ -434,49 +399,32 @@ class ChatRepositoryImpl(
 
     override suspend fun sendMessage(otherUser: String, text: String, songShare: Song?) {
         val localEntity = ChatMessageEntity(
-            senderName = "Me",
-            receiverName = otherUser,
-            text = text,
-            isSongShare = songShare != null,
-            songId = songShare?.id,
-            songTitle = songShare?.title,
-            songArtist = songShare?.artistName,
-            songCover = songShare?.coverImageUrl,
-            songAudio = songShare?.audioUrl,
+            senderName = "Me", receiverName = otherUser, text = text,
+            isSongShare = songShare != null, songId = songShare?.id, songTitle = songShare?.title,
+            songArtist = songShare?.artistName, songCover = songShare?.coverImageUrl, songAudio = songShare?.audioUrl,
             status = "Sending"
         )
         val localId = chatMessageDao.insertMessage(localEntity)
-
         val myId = authRepository.currentUserId()
         val otherId = resolveId(otherUser)
         if (myId == null || otherId == null) return
 
         try {
-            val inserted = Supa.client.from("chat_messages")
-                .insert(
-                    NewChatMessageDto(
-                        senderId = myId,
-                        receiverId = otherId,
-                        text = text,
-                        isSongShare = songShare != null,
-                        songId = songShare?.id,
-                        songTitle = songShare?.title,
-                        songArtist = songShare?.artistName,
-                        songCover = songShare?.coverImageUrl,
-                        songAudio = songShare?.audioUrl,
-                        status = "Sent"
-                    )
-                ) { select(columns = Columns.ALL) }
-                .decodeSingle<ChatMessageDto>()
+            val inserted = Supa.client.from("chat_messages").insert(
+                NewChatMessageDto(
+                    senderId = myId, receiverId = otherId, text = text,
+                    isSongShare = songShare != null, songId = songShare?.id, songTitle = songShare?.title,
+                    songArtist = songShare?.artistName, songCover = songShare?.coverImageUrl, songAudio = songShare?.audioUrl,
+                    status = "Sent"
+                )
+            ) { select(columns = Columns.ALL) }.decodeSingle<ChatMessageDto>()
 
             chatMessageDao.insertMessage(localEntity.copy(id = localId, remoteId = inserted.id, status = "Sent"))
         } catch (e: Exception) { }
     }
 
     private fun getOrCreateTypingFlow(otherUser: String): MutableStateFlow<Boolean> {
-        return synchronized(typingStates) {
-            typingStates.getOrPut(otherUser) { MutableStateFlow(false) }
-        }
+        return synchronized(typingStates) { typingStates.getOrPut(otherUser) { MutableStateFlow(false) } }
     }
 
     private suspend fun typingChannelName(otherUser: String): String? {
@@ -495,18 +443,14 @@ class ChatRepositoryImpl(
             repoScope.launch {
                 try {
                     channel.broadcastFlow<JsonObject>(event = "typing").collect { jsonObject ->
-                        val payload = runCatching {
-                            jsonParser.decodeFromJsonElement<TypingPayload>(jsonObject)
-                        }.getOrNull()
+                        val payload = runCatching { jsonParser.decodeFromJsonElement<TypingPayload>(jsonObject) }.getOrNull()
                         if (payload != null && payload.userId != myId) {
                             getOrCreateTypingFlow(otherUser).value = payload.isTyping
                         }
                     }
                 } catch (e: Exception) { }
             }
-        } catch (e: Exception) {
-            typingChannelUsers.remove(otherUser)
-        }
+        } catch (e: Exception) { typingChannelUsers.remove(otherUser) }
     }
 
     override fun getTypingState(otherUser: String): Flow<Boolean> {
@@ -520,11 +464,10 @@ class ChatRepositoryImpl(
         val channelName = typingChannelName(otherUser) ?: return
         try {
             val channel = Supa.client.realtime.channel(channelName)
-            val payload = buildJsonObject {
+            channel.broadcast("typing", buildJsonObject {
                 put("user_id", JsonPrimitive(myId))
                 put("is_typing", JsonPrimitive(isTyping))
-            }
-            channel.broadcast("typing", payload)
+            })
         } catch (e: Exception) { }
     }
 
@@ -540,13 +483,8 @@ class ChatRepositoryImpl(
                     filter { eq("follower_id", myId) }
                 }
                 .decodeList<JsonObject>()
-            
-            emit(rows.mapNotNull { row -> 
-                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content 
-            })
-        } catch (e: Exception) {
-            emit(emptyList())
-        }
+            emit(rows.mapNotNull { row -> (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content })
+        } catch (e: Exception) { emit(emptyList()) }
     }
 
     override fun getFollowers(): Flow<List<String>> = flow {
@@ -561,13 +499,8 @@ class ChatRepositoryImpl(
                     filter { eq("followed_id", myId) }
                 }
                 .decodeList<JsonObject>()
-                
-            emit(rows.mapNotNull { row -> 
-                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content 
-            })
-        } catch (e: Exception) {
-            emit(emptyList())
-        }
+            emit(rows.mapNotNull { row -> (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content })
+        } catch (e: Exception) { emit(emptyList()) }
     }
 
     override suspend fun toggleFollowUser(username: String) {
@@ -575,22 +508,11 @@ class ChatRepositoryImpl(
         val otherId = resolveId(username) ?: return
         try {
             val alreadyFollowing = Supa.client.from("follows")
-                .select(columns = Columns.ALL) {
-                    filter {
-                        eq("follower_id", myId)
-                        eq("followed_id", otherId)
-                    }
-                }
-                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>()
-                .isNotEmpty()
+                .select(columns = Columns.ALL) { filter { eq("follower_id", myId); eq("followed_id", otherId) } }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().isNotEmpty()
 
             if (alreadyFollowing) {
-                Supa.client.from("follows").delete {
-                    filter {
-                        eq("follower_id", myId)
-                        eq("followed_id", otherId)
-                    }
-                }
+                Supa.client.from("follows").delete { filter { eq("follower_id", myId); eq("followed_id", otherId) } }
             } else {
                 Supa.client.from("follows").insert(
                     com.aistudio.sepatify.data.remote.dto.FollowDto(followerId = myId, followedId = otherId)
@@ -608,18 +530,10 @@ class ChatRepositoryImpl(
         }
         try {
             val exists = Supa.client.from("follows")
-                .select(columns = Columns.ALL) {
-                    filter {
-                        eq("follower_id", myId)
-                        eq("followed_id", otherId)
-                    }
-                }
-                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>()
-                .isNotEmpty()
+                .select(columns = Columns.ALL) { filter { eq("follower_id", myId); eq("followed_id", otherId) } }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().isNotEmpty()
             emit(exists)
-        } catch (e: Exception) {
-            emit(false)
-        }
+        } catch (e: Exception) { emit(false) }
     }
 
     override fun searchUsers(query: String): Flow<List<String>> = flow {
@@ -627,15 +541,10 @@ class ChatRepositoryImpl(
         try {
             val profiles = Supa.client.from("profiles")
                 .select(columns = Columns.ALL) {
-                    if (query.isNotBlank()) {
-                        filter { ilike("username", "%$query%") }
-                    }
+                    if (query.isNotBlank()) filter { ilike("username", "%$query%") }
                     limit(30)
-                }
-                .decodeList<ProfileDto>()
+                }.decodeList<ProfileDto>()
             emit(profiles.filter { it.id != myId }.map { it.username })
-        } catch (e: Exception) {
-            emit(emptyList())
-        }
+        } catch (e: Exception) { emit(emptyList()) }
     }
 }

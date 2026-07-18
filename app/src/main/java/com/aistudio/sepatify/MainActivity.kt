@@ -54,6 +54,7 @@ private const val TAB_PROFILE = "profile"
 private const val TAB_LIKED = "liked"
 private const val TAB_RECENT = "recent"
 private const val TAB_FOLLOWED = "followed"
+private const val TAB_PUBLIC_PROFILE = "public_profile"
 
 private data class BottomNavItem(
     val tabKey: String,
@@ -65,10 +66,8 @@ private data class BottomNavItem(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
         setContent {
-            // Main ViewModels from Koin
             val mainViewModel: MainViewModel = koinViewModel()
             val authViewModel: AuthViewModel = koinViewModel()
             val homeViewModel: HomeViewModel = koinViewModel()
@@ -78,26 +77,20 @@ class MainActivity : ComponentActivity() {
             val chatViewModel: ChatViewModel = koinViewModel()
             val sharedAudioViewModel: SharedAudioViewModel = koinViewModel()
 
-            // Observe settings
             val currentLanguage by mainViewModel.currentLanguage.collectAsState()
             val currentTheme by mainViewModel.currentTheme.collectAsState()
             val currentFontSizeScale by mainViewModel.fontSizeScale.collectAsState()
             val isPremium by mainViewModel.isPremium.collectAsState()
             val userEmail by mainViewModel.userEmail.collectAsState()
 
-            // Configuration for live locale/RTL translations
             val context = LocalContext.current
             val locale = Locale(currentLanguage)
             Locale.setDefault(locale)
-            val config = Configuration(LocalConfiguration.current).apply {
-                setLocale(locale)
-            }
+            val config = Configuration(LocalConfiguration.current).apply { setLocale(locale) }
             val localizedContext = context.createConfigurationContext(config)
             val layoutDirection = if (currentLanguage == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr
 
-            // Find original ActivityResultRegistryOwner from original context
-            var activityOwner: androidx.activity.result.ActivityResultRegistryOwner =
-                context as androidx.activity.result.ActivityResultRegistryOwner
+            var activityOwner: androidx.activity.result.ActivityResultRegistryOwner = context as androidx.activity.result.ActivityResultRegistryOwner
             var currentContext = context
             while (currentContext is android.content.ContextWrapper) {
                 if (currentContext is androidx.activity.result.ActivityResultRegistryOwner) {
@@ -113,53 +106,23 @@ class MainActivity : ComponentActivity() {
                 androidx.activity.compose.LocalActivityResultRegistryOwner provides activityOwner
             ) {
                 SepatifyTheme(themeMode = currentTheme, fontSizeScale = currentFontSizeScale) {
-                    val locString: (Int) -> String = { resId ->
-                        localizedContext.resources.getString(resId)
-                    }
-
+                    val locString: (Int) -> String = { resId -> localizedContext.resources.getString(resId) }
                     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
                     val dimens = MaterialTheme.sepatifyDimens
 
-                    // Wait for session verification
                     if (isCheckingSession) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(dimens.sizeEmptyStateCircle)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = "Loading...",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(dimens.sizeEmptyStateIcon)
-                                )
+                        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(dimens.sizeEmptyStateCircle).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)), contentAlignment = Alignment.Center) {
+                                Icon(imageVector = Icons.Default.MusicNote, contentDescription = "Loading...", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(dimens.sizeEmptyStateIcon))
                             }
                         }
                     } else if (userEmail.isNullOrBlank()) {
-                        LoginScreen(
-                            authViewModel = authViewModel,
-                            onAuthSuccess = { _, _ -> },
-                            locString = locString
-                        )
+                        LoginScreen(authViewModel = authViewModel, onAuthSuccess = { _, _ -> }, locString = locString)
                     } else {
                         AppMainHub(
-                            mainViewModel = mainViewModel,
-                            homeViewModel = homeViewModel,
-                            searchViewModel = searchViewModel,
-                            downloadViewModel = downloadViewModel,
-                            playlistViewModel = playlistViewModel,
-                            chatViewModel = chatViewModel,
-                            sharedAudioViewModel = sharedAudioViewModel,
-                            isPremium = isPremium,
-                            locString = locString
+                            mainViewModel = mainViewModel, homeViewModel = homeViewModel, searchViewModel = searchViewModel,
+                            downloadViewModel = downloadViewModel, playlistViewModel = playlistViewModel, chatViewModel = chatViewModel,
+                            sharedAudioViewModel = sharedAudioViewModel, isPremium = isPremium, locString = locString
                         )
                     }
                 }
@@ -168,12 +131,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(
-    ExperimentalAnimationApi::class,
-    ExperimentalMaterial3Api::class,
-    ExperimentalLayoutApi::class,
-    ExperimentalSharedTransitionApi::class
-)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun AppMainHub(
     mainViewModel: MainViewModel,
@@ -187,6 +145,9 @@ fun AppMainHub(
     locString: (Int) -> String
 ) {
     var activeTab by remember { mutableStateOf(TAB_HOME) }
+    var activeChatUser by remember { mutableStateOf<String?>(null) }
+    var activeProfileUser by remember { mutableStateOf<String?>(null) }
+
     var showNowPlayingOverlay by remember { mutableStateOf(false) }
     var showMiniPlayer by remember { mutableStateOf(false) }
     var itemToShare by remember { mutableStateOf<Any?>(null) }
@@ -195,43 +156,29 @@ fun AppMainHub(
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsState()
     val progress by sharedAudioViewModel.progress.collectAsState()
     val duration by sharedAudioViewModel.duration.collectAsState()
-
     val displayName by mainViewModel.userDisplayName.collectAsState()
     val avatarUrl by mainViewModel.userAvatar.collectAsState()
 
-    LaunchedEffect(currentSong?.id) {
-        if (currentSong != null) {
-            showMiniPlayer = true
-        }
-    }
+    LaunchedEffect(currentSong?.id) { if (currentSong != null) showMiniPlayer = true }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
     val dimens = MaterialTheme.sepatifyDimens
     val shapes = MaterialTheme.sepatifyShapes
-    val colors = MaterialTheme.sepatifyColors
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
-                chatViewModel.trackPresence()
-            } else if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                chatViewModel.untrackPresence()
-            }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) chatViewModel.trackPresence()
+            else if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) chatViewModel.untrackPresence()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            chatViewModel.untrackPresence()
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); chatViewModel.untrackPresence() }
     }
 
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showNotificationDialog by remember { mutableStateOf(false) }
     var showEqualizerDialog by remember { mutableStateOf(false) }
-    var activeChatUser by remember { mutableStateOf<String?>(null) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = remember(context) {
@@ -253,196 +200,54 @@ fun AppMainHub(
     )
 
     androidx.activity.compose.BackHandler(
-        enabled = showNowPlayingOverlay || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
+        enabled = showNowPlayingOverlay || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null) || activeTab == TAB_PUBLIC_PROFILE || activeTab == TAB_FOLLOWED
     ) {
-        if (showNowPlayingOverlay) {
-            showNowPlayingOverlay = false
-        } else if (activeTab == TAB_CHAT && activeChatUser != null) {
-            activeChatUser = null
-        } else if (activeTab != TAB_HOME) {
-            activeTab = TAB_HOME
-        } else if (isPlaying) {
-            activity?.moveTaskToBack(true)
-        }
+        if (showNowPlayingOverlay) showNowPlayingOverlay = false
+        else if (activeTab == TAB_CHAT && activeChatUser != null) activeChatUser = null
+        else if (activeTab == TAB_PUBLIC_PROFILE) activeTab = TAB_FOLLOWED
+        else if (activeTab != TAB_HOME) { activeTab = TAB_HOME; activeProfileUser = null }
+        else if (isPlaying) activity?.moveTaskToBack(true)
     }
 
-    if (showPrivacyDialog) {
-        PrivacyAndSocialDialog(onDismiss = { showPrivacyDialog = false }, locString = locString)
-    }
-
-    if (showNotificationDialog) {
-        NotificationDialog(onDismiss = { showNotificationDialog = false }, locString = locString)
-    }
-
-    if (showEqualizerDialog) {
-        EqualizerDialog(viewModel = sharedAudioViewModel, onDismiss = { showEqualizerDialog = false })
-    }
-
-    itemToShare?.let { shareTarget ->
-        ShareBottomSheet(
-            song = shareTarget as? Song,
-            playlist = shareTarget as? PlaylistEntity,
-            chatViewModel = chatViewModel,
-            onDismiss = { itemToShare = null },
-            locString = locString
-        )
-    }
+    if (showPrivacyDialog) PrivacyAndSocialDialog(onDismiss = { showPrivacyDialog = false }, locString = locString)
+    if (showNotificationDialog) NotificationDialog(onDismiss = { showNotificationDialog = false }, locString = locString)
+    if (showEqualizerDialog) EqualizerDialog(viewModel = sharedAudioViewModel, onDismiss = { showEqualizerDialog = false })
+    itemToShare?.let { shareTarget -> ShareBottomSheet(song = shareTarget as? Song, playlist = shareTarget as? PlaylistEntity, chatViewModel = chatViewModel, onDismiss = { itemToShare = null }, locString = locString) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier.width(dimens.widthDrawer),
-                drawerContainerColor = MaterialTheme.colorScheme.surface,
-                drawerContentColor = MaterialTheme.colorScheme.onSurface
-            ) {
+            ModalDrawerSheet(modifier = Modifier.width(dimens.widthDrawer), drawerContainerColor = MaterialTheme.colorScheme.surface) {
                 Spacer(modifier = Modifier.height(dimens.spaceNormal))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceTwelve),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(dimens.sizeIconExtraLarge)
-                    )
-                    Text(
-                        text = locString(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceTwelve), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
+                    Icon(imageVector = Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(dimens.sizeIconExtraLarge))
+                    Text(text = locString(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = dimens.spaceEight),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaShimmerHighlight)
-                )
-
-                Text(
-                    text = locString(R.string.drawer_account_section),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceEight)
-                )
-
+                HorizontalDivider(modifier = Modifier.padding(vertical = dimens.spaceEight), color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaShimmerHighlight))
+                Text(text = locString(R.string.drawer_account_section), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceEight))
                 NavigationDrawerItem(
                     label = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(dimens.sizeAvatarNormal)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (avatarUrl.isNotEmpty()) {
-                                    AsyncImage(
-                                        model = avatarUrl,
-                                        contentDescription = locString(R.string.user_avatar_content_description),
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    val initial = if (displayName.isNotEmpty()) displayName.take(1).uppercase() else "G"
-                                    Text(
-                                        text = initial,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
+                            Box(modifier = Modifier.size(dimens.sizeAvatarNormal).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)), contentAlignment = Alignment.Center) {
+                                if (avatarUrl.isNotEmpty()) AsyncImage(model = avatarUrl, contentDescription = locString(R.string.user_avatar_content_description), modifier = Modifier.fillMaxSize())
+                                else Text(text = displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             }
-
                             Column {
-                                Text(
-                                    text = displayName.ifEmpty { locString(R.string.drawer_guest_user) },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = locString(R.string.drawer_view_profile),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text(text = displayName.ifEmpty { locString(R.string.drawer_guest_user) }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                Text(text = locString(R.string.drawer_view_profile), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     },
                     selected = activeTab == TAB_PROFILE,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        activeTab = TAB_PROFILE
-                    },
-                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve),
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent,
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = dimens.alphaMuted)
-                    )
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = dimens.spaceTwelve),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaShimmerHighlight)
-                )
-
-                Text(
-                    text = locString(R.string.drawer_settings_section),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceEight)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text(locString(R.string.drawer_account_details)) },
-                    selected = activeTab == TAB_PROFILE,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        activeTab = TAB_PROFILE
-                    },
+                    onClick = { scope.launch { drawerState.close() }; activeTab = TAB_PROFILE },
                     modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
                 )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    label = { Text(locString(R.string.drawer_privacy_social)) },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        showPrivacyDialog = true
-                    },
-                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
-                    label = { Text(locString(R.string.drawer_notifications)) },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        showNotificationDialog = true
-                    },
-                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
-                )
-
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.GraphicEq, contentDescription = null) },
-                    label = { Text(locString(R.string.drawer_equalizer_audio)) },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        showEqualizerDialog = true
-                    },
-                    modifier = Modifier.padding(horizontal = dimens.spaceTwelve)
-                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = dimens.spaceTwelve), color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaShimmerHighlight))
+                Text(text = locString(R.string.drawer_settings_section), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = dimens.spaceLarge, vertical = dimens.spaceEight))
+                NavigationDrawerItem(icon = { Icon(Icons.Default.Person, contentDescription = null) }, label = { Text(locString(R.string.drawer_account_details)) }, selected = activeTab == TAB_PROFILE, onClick = { scope.launch { drawerState.close() }; activeTab = TAB_PROFILE }, modifier = Modifier.padding(horizontal = dimens.spaceTwelve))
+                NavigationDrawerItem(icon = { Icon(Icons.Default.Lock, contentDescription = null) }, label = { Text(locString(R.string.drawer_privacy_social)) }, selected = false, onClick = { scope.launch { drawerState.close() }; showPrivacyDialog = true }, modifier = Modifier.padding(horizontal = dimens.spaceTwelve))
+                NavigationDrawerItem(icon = { Icon(Icons.Default.Notifications, contentDescription = null) }, label = { Text(locString(R.string.drawer_notifications)) }, selected = false, onClick = { scope.launch { drawerState.close() }; showNotificationDialog = true }, modifier = Modifier.padding(horizontal = dimens.spaceTwelve))
+                NavigationDrawerItem(icon = { Icon(Icons.Default.GraphicEq, contentDescription = null) }, label = { Text(locString(R.string.drawer_equalizer_audio)) }, selected = false, onClick = { scope.launch { drawerState.close() }; showEqualizerDialog = true }, modifier = Modifier.padding(horizontal = dimens.spaceTwelve))
             }
         }
     ) {
@@ -451,10 +256,7 @@ fun AppMainHub(
                 topBar = {
                     if (!showNowPlayingOverlay) {
                         CommonTopBar(
-                            title = locString(R.string.app_name),
-                            avatarUrl = avatarUrl,
-                            displayName = displayName,
-                            isPremium = isPremium,
+                            title = locString(R.string.app_name), avatarUrl = avatarUrl, displayName = displayName, isPremium = isPremium,
                             onSettingsClick = { scope.launch { drawerState.open() } },
                             onAvatarClick = { scope.launch { drawerState.open() } },
                             onNotificationsClick = { showNotificationDialog = true }
@@ -463,128 +265,55 @@ fun AppMainHub(
                 },
                 bottomBar = {}
             ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = dimens.zero,
-                            start = paddingValues.calculateStartPadding(LocalLayoutDirection.current),
-                            end = paddingValues.calculateEndPadding(LocalLayoutDirection.current)
-                        )
-                ) {
+                Box(modifier = Modifier.fillMaxSize().padding(top = paddingValues.calculateTopPadding(), start = paddingValues.calculateStartPadding(LocalLayoutDirection.current), end = paddingValues.calculateEndPadding(LocalLayoutDirection.current))) {
                     AnimatedContent(
                         targetState = activeTab,
-                        modifier = Modifier.fillMaxSize(),
                         transitionSpec = {
                             val initialIndex = bottomNavItems.indexOfFirst { it.tabKey == initialState }.takeIf { it >= 0 } ?: 0
                             val targetIndex = bottomNavItems.indexOfFirst { it.tabKey == targetState }.takeIf { it >= 0 } ?: 0
                             val direction = if (targetIndex >= initialIndex) 1 else -1
-
-                            (slideInHorizontally(
-                                initialOffsetX = { direction * it / 4 },
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                )
-                            ) + fadeIn(animationSpec = tween(180)))
-                                .togetherWith(
-                                    slideOutHorizontally(
-                                        targetOffsetX = { -direction * it / 4 },
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioNoBouncy,
-                                            stiffness = Spring.StiffnessMediumLow
-                                        )
-                                    ) + fadeOut(animationSpec = tween(120))
-                                )
+                            (slideInHorizontally(initialOffsetX = { direction * it / 4 }, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(animationSpec = tween(180))) togetherWith
+                                    (slideOutHorizontally(targetOffsetX = { -direction * it / 4 }, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(animationSpec = tween(120)))
                         },
-                        label = "tabContentAnimation"
+                        label = "tabContent"
                     ) { tab ->
                         when (tab) {
                             TAB_HOME -> HomeScreen(
                                 homeViewModel = homeViewModel,
-                                onSongSelect = { song, queue ->
-                                    sharedAudioViewModel.playSong(song, queue)
-                                },
+                                onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) },
                                 onQuickActionClick = { action ->
                                     when (action) {
                                         "liked" -> activeTab = TAB_LIKED
                                         "recent" -> activeTab = TAB_RECENT
                                         "playlists" -> activeTab = TAB_PLAYLISTS
-                                        "artists" -> activeTab = TAB_FOLLOWED
+                                        "artists" -> { activeProfileUser = null; activeTab = TAB_FOLLOWED }
                                     }
                                 },
                                 locString = locString
                             )
+                            TAB_SEARCH -> SearchScreen(searchViewModel = searchViewModel, onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) }, locString = locString)
+                            TAB_PLAYLISTS -> PlaylistsScreen(playlistViewModel = playlistViewModel, onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) }, onShareClick = { itemToShare = it }, locString = locString)
+                            TAB_LIKED -> LikedSongsScreen(playlistViewModel = playlistViewModel, sharedAudioViewModel = sharedAudioViewModel, onBackClick = { activeTab = TAB_HOME }, onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) }, locString = locString)
+                            TAB_RECENT -> RecentlyPlayedScreen(playlistViewModel = playlistViewModel, sharedAudioViewModel = sharedAudioViewModel, onBackClick = { activeTab = TAB_HOME }, onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) }, locString = locString)
+                            TAB_DOWNLOADS -> DownloadsScreen(downloadViewModel = downloadViewModel, isPremium = isPremium, onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) }, locString = locString)
+                            TAB_CHAT -> ChatsScreen(chatViewModel = chatViewModel, activeChatUser = activeChatUser, onActiveChatUserChange = { activeChatUser = it }, onPlaySharedSong = { song -> sharedAudioViewModel.playSong(song) }, locString = locString, isMiniPlayerVisible = currentSong != null)
+                            TAB_PROFILE -> ProfileScreen(mainViewModel = mainViewModel, locString = locString)
 
-                            TAB_SEARCH -> SearchScreen(
-                                searchViewModel = searchViewModel,
-                                onSongSelect = { song, queue ->
-                                    sharedAudioViewModel.playSong(song, queue)
-                                },
-                                locString = locString
-                            )
-
-                            TAB_PLAYLISTS -> PlaylistsScreen(
-                                playlistViewModel = playlistViewModel,
-                                onSongSelect = { song, queue ->
-                                    sharedAudioViewModel.playSong(song, queue)
-                                },
-                                onShareClick = { itemToShare = it },
-                                locString = locString
-                            )
-
-                            TAB_LIKED -> LikedSongsScreen(
-                                playlistViewModel = playlistViewModel,
-                                sharedAudioViewModel = sharedAudioViewModel,
-                                onBackClick = { activeTab = TAB_HOME },
-                                onSongSelect = { song, queue ->
-                                    sharedAudioViewModel.playSong(song, queue)
-                                },
-                                locString = locString
-                            )
-
-                            TAB_RECENT -> RecentlyPlayedScreen(
-                                playlistViewModel = playlistViewModel,
-                                sharedAudioViewModel = sharedAudioViewModel,
-                                onBackClick = { activeTab = TAB_HOME },
-                                onSongSelect = { song, queue ->
-                                    sharedAudioViewModel.playSong(song, queue)
-                                },
-                                locString = locString
-                            )
-
-                            TAB_FOLLOWED -> FollowedUsersScreen(
+                            TAB_FOLLOWED -> ConnectionsScreen(
                                 chatViewModel = chatViewModel,
-                                locString = locString,
-                                onUserClick = { user ->
-                                    activeChatUser = user
-                                    activeTab = TAB_CHAT
-                                }
-                            )
-
-                            TAB_DOWNLOADS -> DownloadsScreen(
-                                downloadViewModel = downloadViewModel,
-                                isPremium = isPremium,
-                                onSongSelect = { song, queue ->
-                                    sharedAudioViewModel.playSong(song, queue)
-                                },
+                                activeProfileUsername = activeProfileUser,
+                                onBackClick = { if (activeProfileUser != null) activeTab = TAB_PUBLIC_PROFILE else activeTab = TAB_HOME },
+                                onUserClick = { user -> activeProfileUser = user; activeTab = TAB_PUBLIC_PROFILE },
                                 locString = locString
                             )
 
-                            TAB_CHAT -> ChatsScreen(
+                            TAB_PUBLIC_PROFILE -> PublicProfileScreen(
                                 chatViewModel = chatViewModel,
-                                activeChatUser = activeChatUser,
-                                onActiveChatUserChange = { activeChatUser = it },
-                                onPlaySharedSong = { song ->
-                                    sharedAudioViewModel.playSong(song)
-                                },
-                                locString = locString,
-                                isMiniPlayerVisible = currentSong != null
-                            )
-
-                            TAB_PROFILE -> ProfileScreen(
-                                mainViewModel = mainViewModel,
+                                activeProfileUsername = activeProfileUser,
+                                onBackClick = { activeTab = TAB_FOLLOWED },
+                                onFollowersClick = { user -> activeProfileUser = user; activeTab = TAB_FOLLOWED },
+                                onFollowingClick = { user -> activeProfileUser = user; activeTab = TAB_FOLLOWED },
+                                onChatClick = { user -> activeChatUser = user; activeTab = TAB_CHAT },
                                 locString = locString
                             )
                         }
@@ -593,73 +322,22 @@ fun AppMainHub(
                     if (!showNowPlayingOverlay) {
                         val isKeyboardVisible = WindowInsets.isImeVisible
                         val showNavigationBar = !isKeyboardVisible && !(activeTab == TAB_CHAT && activeChatUser != null)
-                        
+
                         if (showNavigationBar || (currentSong != null && showMiniPlayer)) {
                             Column(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.Transparent,
-                                                MaterialTheme.colorScheme.background.copy(alpha = dimens.alphaSemiMuted),
-                                                MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
-                                                MaterialTheme.colorScheme.background
-                                            )
-                                        )
-                                    )
-                                    .navigationBarsPadding()
+                                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Brush.verticalGradient(colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background.copy(alpha = dimens.alphaSemiMuted), MaterialTheme.colorScheme.background.copy(alpha = 0.95f), MaterialTheme.colorScheme.background))).navigationBarsPadding()
                             ) {
                                 Spacer(modifier = Modifier.height(dimens.spaceHuge))
-                                
                                 if (currentSong != null) {
-                                    MiniPlayer(
-                                        currentSong = currentSong!!,
-                                        isPlaying = isPlaying,
-                                        progress = progress,
-                                        duration = duration,
-                                        onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() },
-                                        onPlayerBarClick = { showNowPlayingOverlay = true },
-                                        coverModifier = Modifier
-                                    )
+                                    MiniPlayer(currentSong = currentSong!!, isPlaying = isPlaying, progress = progress, duration = duration, onPlayPauseClick = { sharedAudioViewModel.togglePlayPause() }, onPlayerBarClick = { showNowPlayingOverlay = true })
                                 }
-                                
                                 if (showNavigationBar) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(dimens.heightBottomNavBar)
-                                            .padding(horizontal = dimens.spaceEight),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    Row(modifier = Modifier.fillMaxWidth().height(dimens.heightBottomNavBar).padding(horizontal = dimens.spaceEight), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                         bottomNavItems.forEach { item ->
                                             val selected = (activeTab == item.tabKey)
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .fillMaxHeight()
-                                                    .clickable(
-                                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                                                        indication = null,
-                                                        onClick = { activeTab = item.tabKey }
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .width(dimens.widthBottomNavTab)
-                                                        .height(dimens.heightBottomNavTabContainer)
-                                                        .clip(shapes.button)
-                                                        .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight) else Color.Transparent),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        imageVector = item.icon,
-                                                        contentDescription = locString(item.titleResId),
-                                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = dimens.alphaStandard)
-                                                    )
+                                            Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, onClick = { activeTab = item.tabKey; activeProfileUser = null }), contentAlignment = Alignment.Center) {
+                                                Box(modifier = Modifier.width(dimens.widthBottomNavTab).height(dimens.heightBottomNavTabContainer).clip(shapes.button).background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight) else Color.Transparent), contentAlignment = Alignment.Center) {
+                                                    Icon(imageVector = item.icon, contentDescription = locString(item.titleResId), tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = dimens.alphaStandard))
                                                 }
                                             }
                                         }
@@ -672,33 +350,14 @@ fun AppMainHub(
             }
         }
     }
-
     SharedTransitionLayout(modifier = Modifier.fillMaxSize()) {
         AnimatedVisibility(
             visible = showNowPlayingOverlay,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium)
-            ),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(durationMillis = 350)
-            )
+            enter = slideInVertically(initialOffsetY = { it }, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium)),
+            exit = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(durationMillis = 350))
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                NowPlayingScreen(
-                    sharedAudioViewModel = sharedAudioViewModel,
-                    downloadViewModel = downloadViewModel,
-                    isPremium = isPremium,
-                    onBackClick = { showNowPlayingOverlay = false },
-                    onShareClick = { itemToShare = currentSong },
-                    locString = locString,
-                    coverModifier = Modifier
-                )
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                NowPlayingScreen(sharedAudioViewModel = sharedAudioViewModel, downloadViewModel = downloadViewModel, isPremium = isPremium, onBackClick = { showNowPlayingOverlay = false }, onShareClick = { itemToShare = currentSong }, locString = locString)
             }
         }
     }
@@ -713,9 +372,14 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text(text = locString(R.string.save_changes))
+            }
+        },
         title = {
             Text(
-                locString(R.string.privacy_social_settings_title),
+                text = locString(R.string.privacy_social_settings_title),
                 style = MaterialTheme.typography.titleLarge
             )
         },
@@ -731,12 +395,12 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
-                            locString(R.string.privacy_share_activity),
+                            text = locString(R.string.privacy_share_activity),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            locString(R.string.privacy_share_activity_desc),
+                            text = locString(R.string.privacy_share_activity_desc),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -751,12 +415,12 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
-                            locString(R.string.privacy_private_session),
+                            text = locString(R.string.privacy_private_session),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            locString(R.string.privacy_private_session_desc),
+                            text = locString(R.string.privacy_private_session_desc),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -771,23 +435,18 @@ fun PrivacyAndSocialDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
-                            locString(R.string.privacy_profile_search),
+                            text = locString(R.string.privacy_profile_search),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            locString(R.string.privacy_profile_search_desc),
+                            text = locString(R.string.privacy_profile_search_desc),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = profileVisibility, onCheckedChange = { profileVisibility = it })
                 }
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(locString(R.string.save_changes))
             }
         }
     )
@@ -802,7 +461,17 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(locString(R.string.notification_settings_title), style = MaterialTheme.typography.titleLarge) },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text(text = locString(R.string.save_changes))
+            }
+        },
+        title = {
+            Text(
+                text = locString(R.string.notification_settings_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = dimens.spaceEight),
@@ -815,12 +484,12 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
-                            locString(R.string.notification_new_music),
+                            text = locString(R.string.notification_new_music),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            locString(R.string.notification_new_music_desc),
+                            text = locString(R.string.notification_new_music_desc),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -835,12 +504,12 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
-                            locString(R.string.notification_social),
+                            text = locString(R.string.notification_social),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            locString(R.string.notification_social_desc),
+                            text = locString(R.string.notification_social_desc),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -855,23 +524,18 @@ fun NotificationDialog(onDismiss: () -> Unit, locString: (Int) -> String) {
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = dimens.spaceEight)) {
                         Text(
-                            locString(R.string.notification_promo),
+                            text = locString(R.string.notification_promo),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            locString(R.string.notification_promo_desc),
+                            text = locString(R.string.notification_promo_desc),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = systemUpdates, onCheckedChange = { systemUpdates = it })
                 }
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) {
-                Text(locString(R.string.save_changes))
             }
         }
     )

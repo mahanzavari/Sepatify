@@ -23,6 +23,10 @@ interface ChatRepository {
     suspend fun trackPresence()
     suspend fun untrackPresence()
 
-    // --- ADDED: Expose cached profile stream ---
     fun getProfileFlow(username: String): Flow<ProfileDto?>
+
+    // --- NEW: Optimized Social Network APIs ---
+    fun getFollowersProfiles(userId: String? = null): Flow<List<ProfileDto>>
+    fun getFollowingProfiles(userId: String? = null): Flow<List<ProfileDto>>
+    fun getFollowStats(userId: String? = null): Flow<Pair<Int, Int>>
 }
