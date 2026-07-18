@@ -35,11 +35,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.data.network.NetworkMonitor
 import com.aistudio.sepatify.ui.theme.SepatifyTheme
 import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
@@ -107,6 +109,27 @@ class MainActivity : ComponentActivity() {
                 currentContext = currentContext.baseContext
             }
 
+            // Initialize NetworkMonitor and Snackbar state
+            val networkMonitor = remember { NetworkMonitor(context) }
+            val isOnline by networkMonitor.isConnected.collectAsState(initial = true)
+            val snackbarHostState = remember { SnackbarHostState() }
+
+// Added currentLanguage as a key to relaunch this block whenever the language changes
+            LaunchedEffect(isOnline, currentLanguage) {
+                if (!isOnline) {
+                    // Dismiss the previous snackbar first to force a refresh with the new translation
+                    snackbarHostState.currentSnackbarData?.dismiss()
+
+                    // Show the snackbar again with the updated language text
+                    snackbarHostState.showSnackbar(
+                        message = if (currentLanguage == "fa") "اتصال اینترنت شما قطع شده است" else "Your internet connection is offline",
+                        duration = androidx.compose.material3.SnackbarDuration.Indefinite
+                    )
+                } else {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                }
+            }
+
             CompositionLocalProvider(
                 LocalContext provides localizedContext,
                 LocalLayoutDirection provides layoutDirection,
@@ -119,57 +142,111 @@ class MainActivity : ComponentActivity() {
 
                     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
 
-                    // Wait for the session verification to complete before rendering logic
-                    if (isCheckingSession) {
+                    // Global Scaffold layout with beautiful custom Red Snackbar
+                    Scaffold(
+                        snackbarHost = {
+                            SnackbarHost(
+                                hostState = snackbarHostState,
+                                // Set bottom padding to 0.dp so it sits flush at the very bottom of the screen
+                                modifier = Modifier.padding(bottom = 10.dp)
+                            ) { data ->
+                                androidx.compose.material3.Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                                        containerColor = Color(0xFFD32F2F)
+                                    ),
+                                    elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                            .fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudOff,
+                                            contentDescription = "Offline",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = data.visuals.message,
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    ) { paddingValues ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background),
-                            contentAlignment = Alignment.Center
+                                .padding(paddingValues)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = "Loading...",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(40.dp)
+                            // Wait for the session verification to complete before rendering logic
+                            if (isCheckingSession) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.background),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MusicNote,
+                                            contentDescription = "Loading...",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    }
+                                }
+                            } else if (userEmail.isNullOrBlank()) {
+                                // User not logged in, show Auth Screen backed by Supabase
+                                LoginScreen(
+                                    authViewModel = authViewModel,
+                                    onAuthSuccess = { email, name ->
+                                        // Auth success callback is monitored inside LoginScreen
+                                    },
+                                    locString = locString
+                                )
+                            } else {
+                                // App Main Hub with navigation
+                                AppMainHub(
+                                    mainViewModel = mainViewModel,
+                                    homeViewModel = homeViewModel,
+                                    searchViewModel = searchViewModel,
+                                    downloadViewModel = downloadViewModel,
+                                    playlistViewModel = playlistViewModel,
+                                    chatViewModel = chatViewModel,
+                                    sharedAudioViewModel = sharedAudioViewModel,
+                                    isPremium = isPremium,
+                                    locString = locString
                                 )
                             }
                         }
-                    } else if (userEmail.isNullOrBlank()) {
-                        // User not logged in, show Auth Screen backed by Supabase
-                        LoginScreen(
-                            authViewModel = authViewModel,
-                            onAuthSuccess = { email, name ->
-                                // Auth success callback is monitored inside LoginScreen
-                            },
-                            locString = locString
-                        )
-                    } else {
-                        // App Main Hub with navigation
-                        AppMainHub(
-                            mainViewModel = mainViewModel,
-                            homeViewModel = homeViewModel,
-                            searchViewModel = searchViewModel,
-                            downloadViewModel = downloadViewModel,
-                            playlistViewModel = playlistViewModel,
-                            chatViewModel = chatViewModel,
-                            sharedAudioViewModel = sharedAudioViewModel,
-                            isPremium = isPremium,
-                            locString = locString
-                        )
                     }
                 }
             }
         }
     }
 }
+
 
 @OptIn(
     ExperimentalAnimationApi::class,
