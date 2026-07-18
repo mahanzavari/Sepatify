@@ -87,8 +87,8 @@ fun ShareBottomSheet(
                     horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Share, 
-                        contentDescription = null, 
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
@@ -146,14 +146,14 @@ fun ShareBottomSheet(
                                     .background(
                                         color = MaterialTheme.colorScheme.primary.copy(
                                             alpha = dimens.alphaGrooves * 3.75f
-                                        ), 
+                                        ),
                                         shape = CircleShape
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = user.take(1).uppercase(), 
-                                    color = MaterialTheme.colorScheme.primary, 
+                                    text = user.take(1).uppercase(),
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -163,8 +163,8 @@ fun ShareBottomSheet(
                                 modifier = Modifier.weight(dimens.aspectRatioSquare)
                             )
                             Icon(
-                                imageVector = Icons.Default.Chat, 
-                                contentDescription = "Send", 
+                                imageVector = Icons.Default.Chat,
+                                contentDescription = "Send",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -186,7 +186,13 @@ private fun shareExternally(context: Context, song: Song?, playlist: PlaylistEnt
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, shareText)
     }
-    context.startActivity(Intent.createChooser(intent, locString(R.string.share)))
+
+    val chooserIntent = Intent.createChooser(intent, locString(R.string.share))
+    // FIX: A ConfigurationContext lacks standard Activity start behavior.
+    // Adding FLAG_ACTIVITY_NEW_TASK allows the Android Framework to safely launch the Share Sheet natively.
+    chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    context.startActivity(chooserIntent)
 }
 
 private fun sendInternalMessage(user: String, song: Song?, playlist: PlaylistEntity?, chatViewModel: ChatViewModel, context: Context, locString: (Int) -> String) {
