@@ -11,10 +11,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,11 +26,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.LazyPagingItems
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.PlaylistEntity
@@ -37,7 +45,6 @@ import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.PlaylistViewModel
-import androidx.compose.ui.unit.dp
 
 enum class PlaylistsViewState { MAIN, FOLDER_DETAIL, CREATE_PLAYLIST, CREATE_FOLDER }
 
@@ -160,10 +167,11 @@ fun PlaylistsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(dimens.spaceNormal)
+            .padding(top = dimens.spaceNormal, start = dimens.spaceNormal, end = dimens.spaceNormal)
     ) {
         AnimatedContent(
             targetState = selectedPlaylist != null || activeView != PlaylistsViewState.MAIN,
+            modifier = Modifier.fillMaxSize(),
             transitionSpec = {
                 (slideInHorizontally(initialOffsetX = { if (targetState) it / 4 else -it / 4 }) + fadeIn()) togetherWith
                         (slideOutHorizontally(targetOffsetX = { if (targetState) -it / 4 else it / 4 }) + fadeOut())
@@ -192,9 +200,9 @@ fun PlaylistsScreen(
                     }
 
                     val totalPlaylists = listOf(
-                        PlaylistEntity(-3, locString(R.string.quick_liked), "Your liked tracks", false, "Liked"),
-                        PlaylistEntity(-1, locString(R.string.international_music_category), "Seeded playlist tracks", false, "International"),
-                        PlaylistEntity(-2, locString(R.string.local_music_category), "Traditional local tracks", false, "Local")
+                        PlaylistEntity(-3L, locString(R.string.quick_liked), "Your liked tracks", false, "Liked"),
+                        PlaylistEntity(-1L, locString(R.string.international_music_category), "Seeded playlist tracks", false, "International"),
+                        PlaylistEntity(-2L, locString(R.string.local_music_category), "Traditional local tracks", false, "Local")
                     ) + playlists
 
                     val standardPlaylists = totalPlaylists.filter { !it.category.startsWith("folder:") }
@@ -204,12 +212,18 @@ fun PlaylistsScreen(
                     val gridItems = standardPlaylists + folderNames
 
                     if (playlistsFirstLoad) {
-                        LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve), verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2), 
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve), 
+                            verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
+                        ) {
                             items(6) { PlaylistCardSkeleton() }
                         }
                     } else {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
                             verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
                             contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)
@@ -334,6 +348,7 @@ fun FolderDetailView(
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
             verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
             contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)
@@ -622,7 +637,7 @@ fun PlaylistDetailView(
         Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
         if (playlist.category == "Local" && !hasPermission) {
-            Column(modifier = Modifier.fillMaxWidth().padding(dimens.spaceHuge), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)) {
+            Column(modifier = Modifier.fillMaxWidth().weight(1f).padding(dimens.spaceHuge), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)) {
                 Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(dimens.spaceTera), tint = MaterialTheme.colorScheme.primary)
                 Text(locString(R.string.permission_storage_required), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                 Button(onClick = requestPermission) { Text(locString(R.string.permission_grant_btn)) }
@@ -631,8 +646,10 @@ fun PlaylistDetailView(
             val pagedSongs = remember(playlist.id, playlist.category) { playlistViewModel.getSongsForPlaylistPaged(playlist.id, playlist.category) }.collectAsLazyPagingItems()
             when (pagedSongs.loadState.refresh) {
                 is androidx.paging.LoadState.Loading -> {
-                    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)) {
-                        items(6) { SongRowSkeleton() }
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)) {
+                            items(6) { SongRowSkeleton() }
+                        }
                     }
                 }
                 else -> {
@@ -645,30 +662,148 @@ fun PlaylistDetailView(
                             }
                         }
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)) {
-                            items(pagedSongs.itemCount) { index ->
-                                val s = pagedSongs[index] ?: return@items
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items.filterNotNull()) }.padding(vertical = dimens.spaceSix),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AsyncImage(model = s.coverImageUrl, contentDescription = s.title, modifier = Modifier.size(dimens.sizeSongThumbnailMedium).clip(MaterialTheme.shapes.extraSmall))
-                                    Spacer(modifier = Modifier.width(dimens.spaceTwelve))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                                        Text(s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-                                    }
-                                    if (playlist.isUserCreated) {
-                                        IconButton(onClick = { onRemoveSong(s.id); pagedSongs.refresh() }) {
-                                            Icon(Icons.Default.RemoveCircle, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                        val listState = rememberLazyListState()
+                        
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll, end = 24.dp)
+                            ) {
+                                items(pagedSongs.itemCount) { index ->
+                                    val s = pagedSongs[index] ?: return@items
+                                    val art = rememberSongArt(s)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items.filterNotNull()) }.padding(vertical = dimens.spaceSix),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                            model = art, 
+                                            contentDescription = s.title, 
+                                            modifier = Modifier.size(dimens.sizeSongThumbnailMedium).clip(MaterialTheme.shapes.extraSmall),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(modifier = Modifier.width(dimens.spaceTwelve))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                                            Text(s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                                        }
+                                        if (playlist.isUserCreated) {
+                                            IconButton(onClick = { onRemoveSong(s.id); pagedSongs.refresh() }) {
+                                                Icon(Icons.Default.RemoveCircle, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                                            }
                                         }
                                     }
                                 }
                             }
+
+                            // Interactive Custom Alphabet Scrollbar / Fast Slider
+                            val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".map { it.toString() }
+                            var currentLetter by remember { mutableStateOf<String?>(null) }
+                            val coroutineScope = rememberCoroutineScope()
+
+                            BoxWithConstraints(
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .fillMaxHeight()
+                                    .width(24.dp)
+                                    .padding(top = 16.dp, bottom = dimens.spaceBottomOverScroll, start = 2.dp, end = 2.dp)
+                            ) {
+                                val sliderHeight = maxHeight
+                                val itemHeight = sliderHeight / alphabet.size
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .pointerInput(Unit) {
+                                            detectVerticalDragGestures(
+                                                onDragStart = { offset ->
+                                                    val idx = (offset.y / itemHeight.toPx()).toInt().coerceIn(0, alphabet.lastIndex)
+                                                    currentLetter = alphabet[idx]
+                                                    scrollToLetter(currentLetter, pagedSongs, listState, coroutineScope)
+                                                },
+                                                onVerticalDrag = { change, _ ->
+                                                    val idx = (change.position.y / itemHeight.toPx()).toInt().coerceIn(0, alphabet.lastIndex)
+                                                    val newLetter = alphabet[idx]
+                                                    if (newLetter != currentLetter) {
+                                                        currentLetter = newLetter
+                                                        scrollToLetter(currentLetter, pagedSongs, listState, coroutineScope)
+                                                    }
+                                                },
+                                                onDragEnd = { currentLetter = null },
+                                                onDragCancel = { currentLetter = null }
+                                            )
+                                        },
+                                    verticalArrangement = Arrangement.SpaceEvenly,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    alphabet.forEach { letter ->
+                                        Text(
+                                            text = letter,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 9.sp,
+                                            color = if (currentLetter == letter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                                            fontWeight = if (currentLetter == letter) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Dynamic Pop-up Preview Bubble when Sliding
+                            LetterPreviewBubble(currentLetter)
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.LetterPreviewBubble(currentLetter: String?) {
+    AnimatedVisibility(
+        visible = currentLetter != null,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = Modifier.align(Alignment.Center)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = currentLetter ?: "",
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+    }
+}
+
+
+// Custom Helper to jump the LazyColumn precisely to the requested Alphabet letter segment
+private fun scrollToLetter(
+    letter: String?,
+    pagedSongs: LazyPagingItems<Song>,
+    listState: LazyListState,
+    coroutineScope: CoroutineScope
+) {
+    if (letter == null) return
+    val items = pagedSongs.itemSnapshotList.items
+    val index = items.indexOfFirst { song ->
+        val firstChar = song.title.take(1).uppercase()
+        if (letter == "#") {
+            firstChar.firstOrNull()?.isLetter() == false
+        } else {
+            firstChar == letter
+        }
+    }
+    if (index != -1) {
+        coroutineScope.launch {
+            listState.scrollToItem(index)
         }
     }
 }

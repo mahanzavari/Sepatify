@@ -70,9 +70,7 @@ class PlaylistViewModel(
     }
 
     fun getSongsForPlaylistPaged(playlistId: Long, category: String): Flow<PagingData<Song>> {
-        if (playlistId == -3L) {
-            return songRepository.getLikedSongs().map { PagingData.from(it) }
-        }
+        // Delegate routing seamlessly up to repository & ensure ViewModel caches it uniformly
         return songRepository.getSongsForPlaylistPaged(playlistId, category).cachedIn(viewModelScope)
     }
 }

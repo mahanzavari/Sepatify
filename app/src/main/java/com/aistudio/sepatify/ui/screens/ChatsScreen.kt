@@ -1,6 +1,7 @@
 package com.aistudio.sepatify.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -418,6 +419,7 @@ fun ChatsScreen(
                         }
 
                         // Tick marks alignment using mapped theme alphas
+                        // Tick marks alignment using mapped theme alphas
                         if (isMe) {
                             Row(
                                 modifier = Modifier.padding(top = dimens.spaceTwo),
@@ -426,25 +428,57 @@ fun ChatsScreen(
                             ) {
                                 val statusText = when (msg.status) {
                                     "Sending" -> locString(R.string.message_sending)
+                                    "Sent" -> locString(R.string.message_sent)
                                     "Delivered" -> locString(R.string.message_delivered)
                                     else -> locString(R.string.message_read)
                                 }
                                 val iconVector = when (msg.status) {
                                     "Sending" -> Icons.Default.Schedule
-                                    "Delivered" -> Icons.Default.Check
+                                    "Sent" -> Icons.Default.Check
                                     else -> Icons.Default.DoneAll
                                 }
-                                Icon(
-                                    imageVector = iconVector,
-                                    contentDescription = statusText,
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaStandard),
-                                    modifier = Modifier.size(dimens.spaceTwelve)
+                                
+                                val targetColor = if (msg.status == "Read") {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaStandard)
+                                } else {
+                                    MaterialTheme.colorScheme.onBackground.copy(alpha = dimens.alphaMuted)
+                                }
+                                
+                                val animatedColor by animateColorAsState(
+                                    targetValue = targetColor,
+                                    animationSpec = tween(350),
+                                    label = "statusColor"
                                 )
-                                Text(
-                                    text = statusText,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = dimens.alphaMuted)
-                                )
+
+                                AnimatedContent(
+                                    targetState = iconVector,
+                                    transitionSpec = {
+                                        (scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)) + fadeIn(tween(250))) togetherWith
+                                        (scaleOut(tween(200)) + fadeOut(tween(200)))
+                                    },
+                                    label = "statusIcon"
+                                ) { vector ->
+                                    Icon(
+                                        imageVector = vector,
+                                        contentDescription = statusText,
+                                        tint = animatedColor,
+                                        modifier = Modifier.size(dimens.spaceTwelve)
+                                    )
+                                }
+                                
+                                AnimatedContent(
+                                    targetState = statusText,
+                                    transitionSpec = {
+                                        fadeIn(tween(250)) togetherWith fadeOut(tween(200))
+                                    },
+                                    label = "statusText"
+                                ) { text ->
+                                    Text(
+                                        text = text,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = animatedColor
+                                    )
+                                }
                             }
                         }
                     }

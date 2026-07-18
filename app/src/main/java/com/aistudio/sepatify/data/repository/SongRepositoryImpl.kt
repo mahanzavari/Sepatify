@@ -5,6 +5,7 @@ import android.provider.MediaStore
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.map 
 import com.aistudio.sepatify.data.local.*
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.data.remote.PlaylistSongsPagingSource
@@ -24,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -411,7 +413,7 @@ class SongRepositoryImpl(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return songList
+        return songList.sortedBy { it.title.lowercase() }
     }
 
     override fun getSongsForPlaylist(playlistId: Long, category: String): Flow<List<Song>> {
@@ -441,11 +443,45 @@ class SongRepositoryImpl(
     }
 
     override fun getSongsForPlaylistPaged(playlistId: Long, category: String): Flow<PagingData<Song>> {
-        if (playlistId < 0) {
-            // Local / Global / Liked sentinels are small, device-bound or single-shot lists - no
-            // need for server-side pagination; wrap the already-loaded list as a single page.
-            return getSongsForPlaylist(playlistId, category).map { PagingData.from(it) }
+        if (playlistId == SENTINEL_LIKED_ID || category == "Liked") {
+            return Pager(PagingConfig(pageSize = 20)) {
+                likedSongDao.getLikedSongsPaged()
+            }.flow.map { pagingData ->
+                pagingData.map { Song(it.id, it.title, it.artistName, it.coverImageUrl, it.audioUrl) }
+            }
         }
+        if (playlistId == SENTINEL_LOCAL_ID || category == "Local") {
+            return Pager(PagingConfig(pageSize = 50)) {
+                object : androidx.paging.PagingSource<Int, Song>() {
+                    override fun getRefreshKey(state: androidx.paging.PagingState<Int, Song>): Int? = null
+                    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Song> {
+                        return try {
+                            val items = getDeviceLocalSongs()
+                            LoadResult.Page(data = items, prevKey = null, nextKey = null)
+                        } catch (e: Exception) {
+                            LoadResult.Error(e)
+                        }
+                    }
+                }
+            }.flow
+        }
+        if (playlistId == SENTINEL_GLOBAL_ID || category == "Global") {
+            return Pager(PagingConfig(pageSize = 50)) {
+                object : androidx.paging.PagingSource<Int, Song>() {
+                    override fun getRefreshKey(state: androidx.paging.PagingState<Int, Song>): Int? = null
+                    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Song> {
+                        return try {
+                            val items = getGlobalPlaylists().first()
+                            LoadResult.Page(data = items, prevKey = null, nextKey = null)
+                        } catch (e: Exception) {
+                            LoadResult.Error(e)
+                        }
+                    }
+                }
+            }.flow
+        }
+        
+        // Server-side default pagination for user playlists
         return Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
             PlaylistSongsPagingSource(playlistId)
         }.flow

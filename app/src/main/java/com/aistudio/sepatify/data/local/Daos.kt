@@ -24,6 +24,10 @@ interface LikedSongDao {
     @Query("SELECT * FROM liked_songs ORDER BY timestamp DESC")
     fun getLikedSongs(): Flow<List<LikedSongEntity>>
 
+    // Add this native Room PagingSource
+    @Query("SELECT * FROM liked_songs ORDER BY timestamp DESC")
+    fun getLikedSongsPaged(): androidx.paging.PagingSource<Int, LikedSongEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLikedSong(song: LikedSongEntity)
 
