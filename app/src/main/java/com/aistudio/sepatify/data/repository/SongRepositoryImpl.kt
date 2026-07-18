@@ -413,7 +413,7 @@ class SongRepositoryImpl(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return songList
+        return songList.sortedBy { it.title.lowercase() }
     }
 
     override fun getSongsForPlaylist(playlistId: Long, category: String): Flow<List<Song>> {

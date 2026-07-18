@@ -167,10 +167,11 @@ fun PlaylistsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(dimens.spaceNormal)
+            .padding(top = dimens.spaceNormal, start = dimens.spaceNormal, end = dimens.spaceNormal)
     ) {
         AnimatedContent(
             targetState = selectedPlaylist != null || activeView != PlaylistsViewState.MAIN,
+            modifier = Modifier.fillMaxSize(),
             transitionSpec = {
                 (slideInHorizontally(initialOffsetX = { if (targetState) it / 4 else -it / 4 }) + fadeIn()) togetherWith
                         (slideOutHorizontally(targetOffsetX = { if (targetState) -it / 4 else it / 4 }) + fadeOut())
@@ -211,12 +212,18 @@ fun PlaylistsScreen(
                     val gridItems = standardPlaylists + folderNames
 
                     if (playlistsFirstLoad) {
-                        LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve), verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2), 
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve), 
+                            verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
+                        ) {
                             items(6) { PlaylistCardSkeleton() }
                         }
                     } else {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
                             verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
                             contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)
@@ -341,6 +348,7 @@ fun FolderDetailView(
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
             verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
             contentPadding = PaddingValues(bottom = dimens.spaceBottomOverScroll)
@@ -699,7 +707,7 @@ fun PlaylistDetailView(
                                     .align(Alignment.CenterEnd)
                                     .fillMaxHeight()
                                     .width(24.dp)
-                                    .padding(vertical = 16.dp, horizontal = 2.dp)
+                                    .padding(top = 16.dp, bottom = dimens.spaceBottomOverScroll, start = 2.dp, end = 2.dp)
                             ) {
                                 val sliderHeight = maxHeight
                                 val itemHeight = sliderHeight / alphabet.size
