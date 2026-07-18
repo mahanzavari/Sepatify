@@ -38,6 +38,7 @@ class SongRepositoryImpl(
     private val recentlyPlayedDao: RecentlyPlayedDao,
     private val searchHistoryDao: SearchHistoryDao,
     private val songCacheDao: SongCacheDao,
+    private val playlistDao: PlaylistDao,
     private val authRepository: AuthRepository
 ) : SongRepository {
 
@@ -100,7 +101,7 @@ class SongRepositoryImpl(
             }
 
             val songs = Supa.client.from("playlist_songs")
-                .select(columns = Columns.raw("song_id, songs(*)")) {
+                .select(columns = Columns.raw("playlist_id, song_id, songs(*)")) {
                     filter { isIn("playlist_id", globalPlaylistIds) }
                     order("position", Order.ASCENDING)
                     limit(30)
@@ -258,44 +259,60 @@ class SongRepositoryImpl(
     // Playlists (Global playlists + the signed-in user's own playlists live in Supabase)
     // ---------------------------------------------------------------------
 
-    override fun getUserPlaylists(): Flow<List<PlaylistEntity>> = flow {
-        val uid = authRepository.currentUserId()
-        try {
-            val playlists = Supa.client.from("playlists")
-                .select(columns = Columns.ALL) {
-                    if (uid != null) {
-                        filter { or { eq("category", "Global"); eq("owner_id", uid) } }
-                    } else {
-                        filter { eq("category", "Global") }
+    override fun getUserPlaylists(): Flow<List<PlaylistEntity>> {
+        // 1. Sync from remote in background
+        repoScope.launch {
+            val uid = authRepository.currentUserId()
+            try {
+                val remote = Supa.client.from("playlists")
+                    .select(columns = Columns.ALL) {
+                        if (uid != null) {
+                            filter { or { eq("category", "Global"); eq("owner_id", uid) } }
+                        } else {
+                            filter { eq("category", "Global") }
+                        }
+                        order("created_at", Order.ASCENDING)
                     }
-                    order("created_at", Order.ASCENDING)
-                }
-                .decodeList<PlaylistDto>()
-                .map { dto ->
-                    PlaylistEntity(
+                    .decodeList<PlaylistDto>()
+                    
+                remote.forEach { dto ->
+                    playlistDao.insertPlaylist(PlaylistEntity(
                         id = dto.id,
                         title = dto.title,
                         description = dto.description,
                         isUserCreated = dto.ownerId != null,
                         category = dto.category
-                    )
+                    ))
                 }
-            emit(playlists)
-        } catch (e: Exception) {
-            emit(emptyList())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-    }.catch { emit(emptyList()) }
+        // 2. Return local Room DB as the single source of truth for immediate UI updates
+        return playlistDao.getPlaylists()
+    }
 
     override suspend fun createPlaylist(title: String, description: String, category: String): Long {
         val uid = authRepository.currentUserId() ?: return -1L
         return try {
-            val created = Supa.client.from("playlists")
-                .insert(NewPlaylistDto(ownerId = uid, title = title, description = description, category = "User")) {
+             val createdList = Supa.client.from("playlists")
+                .insert(com.aistudio.sepatify.data.remote.dto.NewPlaylistDto(ownerId = uid, title = title, description = description, category = category)) {
                     select(columns = Columns.ALL)
                 }
-                .decodeSingle<PlaylistDto>()
+                .decodeList<com.aistudio.sepatify.data.remote.dto.PlaylistDto>()
+
+                val created = createdList.firstOrNull() ?: throw Exception("Empty database response")
+
+            playlistDao.insertPlaylist(PlaylistEntity(
+                id = created.id,
+                title = created.title,
+                description = created.description,
+                isUserCreated = true,
+                category = created.category
+            ))
             created.id
         } catch (e: Exception) {
+            e.printStackTrace()
             -1L
         }
     }
@@ -304,13 +321,34 @@ class SongRepositoryImpl(
         runCatching {
             Supa.client.from("playlists").delete { filter { eq("id", playlistId) } }
         }
+        playlistDao.deletePlaylist(playlistId)
     }
 
     override suspend fun addSongToPlaylist(playlistId: Long, songId: String) {
         runCatching {
-            Supa.client.from("playlist_songs").insert(PlaylistSongDto(playlistId, songId))
+            Supa.client.from("playlist_songs").insert(com.aistudio.sepatify.data.remote.dto.PlaylistSongDto(playlistId, songId, position = 0))
         }
     }
+
+    override suspend fun addSongsToPlaylist(playlistId: Long, songIds: List<String>): Result<Unit> {
+        val validSongIds = songIds.filter { !it.startsWith("local_") }
+         if (validSongIds.isEmpty()) return Result.failure(Exception("No valid cloud songs selected"))
+        
+        val dtos = validSongIds.mapIndexed { index, sid ->
+            com.aistudio.sepatify.data.remote.dto.PlaylistSongDto(playlistId, sid, position = index)
+        }
+        return try {
+            Supa.client.from("playlist_songs").insert(dtos)
+            validSongIds.forEach { sid ->
+                playlistDao.insertSongCrossRef(PlaylistSongCrossRef(playlistId, sid))
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
 
     override suspend fun removeSongFromPlaylist(playlistId: Long, songId: String) {
         runCatching {
@@ -321,6 +359,14 @@ class SongRepositoryImpl(
                 }
             }
         }
+    }
+    override suspend fun updatePlaylistCategory(playlistId: Long, category: String) {
+        runCatching {
+            Supa.client.from("playlists").update(com.aistudio.sepatify.data.remote.dto.PlaylistCategoryUpdateDto(category)) {
+                filter { eq("id", playlistId) }
+            }
+        }
+        playlistDao.updatePlaylistCategory(playlistId, category)
     }
 
     private fun getDeviceLocalSongs(): List<Song> {
@@ -381,7 +427,7 @@ class SongRepositoryImpl(
         return flow {
             try {
                 val songs = Supa.client.from("playlist_songs")
-                    .select(columns = Columns.raw("song_id, songs(*)")) {
+                    .select(columns = Columns.raw("playlist_id, song_id, songs(*)")) {
                         filter { eq("playlist_id", playlistId) }
                         order("position", Order.ASCENDING)
                     }

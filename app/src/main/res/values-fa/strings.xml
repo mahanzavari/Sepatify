@@ -75,6 +75,15 @@
     <string name="international_music_category">موسیقی بین‌المللی</string>
     <string name="local_music_category">موسیقی محلی</string>
     <string name="playlist_created_success">لیست پخش با موفقیت ایجاد شد</string>
+    <string name="delete_playlist_title">حذف لیست پخش</string>
+    <string name="delete_playlist_confirm">آیا مطمئن هستید که می‌خواهید \'%1$s\' را حذف کنید؟ این عمل غیرقابل بازگشت است.</string>
+    
+    <!-- playlist addition ModalBottomSheet -->
+    <string name="create_new_library">ساختن جدید</string>
+    <string name="add_playlist_title">افزودن لیست پخش</string>
+    <string name="add_playlist_desc">یک لیست پخش جدید با آهنگ ایجاد کنید</string>
+    <string name="add_folder_title">افزودن پوشه</string>
+    <string name="add_folder_desc">لیست‌های پخش موجود را با هم دسته‌بندی کنید</string>
 
     <!-- Chat / Social Tab -->
     <string name="chat_title">گفتگوهای اجتماعی</string>

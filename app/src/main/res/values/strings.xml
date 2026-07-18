@@ -76,6 +76,15 @@
     <string name="international_music_category">International Music</string>
     <string name="local_music_category">Local Music</string>
     <string name="playlist_created_success">Playlist created successfully</string>
+    <string name="delete_playlist_title">Delete Playlist</string>
+    <string name="delete_playlist_confirm">Are you sure you want to delete \'%1$s\'? This action cannot be undone.</string>
+    <!-- playlist addition ModalBottomSheet -->
+    <string name="create_new_library">Create New</string>
+    <string name="add_playlist_title">Add Playlist</string>
+    <string name="add_playlist_desc">Create a new playlist with songs</string>
+    <string name="add_folder_title">Add Folder</string>
+    <string name="add_folder_desc">Group existing playlists together</string>
+    
 
     <!-- Chat / Social Tab -->
     <string name="chat_title">Social Chats</string>

@@ -115,7 +115,7 @@ data class NewPlaylistDto(
 data class PlaylistSongDto(
     @SerialName("playlist_id") val playlistId: Long,
     @SerialName("song_id") val songId: String,
-    val position: Int = 0
+    val position: Int
 )
 
 @Serializable
@@ -150,4 +150,9 @@ data class FollowDto(
     @SerialName("follower_id") val followerId: String,
     @SerialName("followed_id") val followedId: String,
     val profiles: ProfileDto? = null
+)
+
+@Serializable
+data class PlaylistCategoryUpdateDto(
+    @SerialName("category") val category: String
 )

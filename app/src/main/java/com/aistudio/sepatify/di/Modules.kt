@@ -26,7 +26,7 @@ val appModule = module {
 
     // Repositories
     single<AuthRepository> { AuthRepositoryImpl() }
-    single<SongRepository> { SongRepositoryImpl(androidContext(), get(), get(), get(), get(), get()) }
+    single<SongRepository> { SongRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get(), get()) }
     single<DownloadRepository> { DownloadRepositoryImpl(androidContext(), get(), get()) }
 

@@ -17,21 +17,38 @@ class PlaylistViewModel(
     val userPlaylists: StateFlow<List<PlaylistEntity>> = songRepository.getUserPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun createNewPlaylist(title: String, description: String, category: String = "User") {
+    // Ensure the onResult signature is exactly: (Boolean, String?) -> Unit
+    fun createNewPlaylistWithSongs(title: String, description: String, songIds: List<String>, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            songRepository.createPlaylist(title, description, category)
+            val pid = songRepository.createPlaylist(title, description, "User")
+            if (pid != -1L) {
+                val result = songRepository.addSongsToPlaylist(pid, songIds)
+                if (result.isFailure) {
+                    // Rollback playlist creation if songs failed to add
+                    songRepository.deletePlaylist(pid)
+                    onResult(false, result.exceptionOrNull()?.message)
+                } else {
+                    onResult(true, null)
+                }
+            } else {
+                onResult(false, "Failed to create playlist record")
+            }
+        }
+    }
+
+    fun groupPlaylistsIntoFolder(folderName: String, playlistIds: List<Long>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            val categoryName = "folder:$folderName"
+            playlistIds.forEach { pid ->
+                songRepository.updatePlaylistCategory(pid, categoryName)
+            }
+            onComplete()
         }
     }
 
     fun deletePlaylist(playlistId: Long) {
         viewModelScope.launch {
             songRepository.deletePlaylist(playlistId)
-        }
-    }
-
-    fun addSongToPlaylist(playlistId: Long, songId: String) {
-        viewModelScope.launch {
-            songRepository.addSongToPlaylist(playlistId, songId)
         }
     }
 
