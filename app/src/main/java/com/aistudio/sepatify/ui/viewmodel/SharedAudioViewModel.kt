@@ -12,6 +12,16 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
+
+
+
+// --- Add this sealed interface at the top or bottom of your SharedAudioViewModel file ---
+sealed interface AudioUiEvent {
+    data class SongLikedStatusChanged(val songTitle: String, val isLiked: Boolean) : AudioUiEvent
+    data class AddedToPlaylist(val songTitle: String, val playlistName: String) : AudioUiEvent
+}
+
+
 class SharedAudioViewModel(
     private val songRepository: SongRepository,
     private val downloadRepository: DownloadRepository,
@@ -113,6 +123,12 @@ class SharedAudioViewModel(
     fun toggleLikeSong(song: Song) {
         viewModelScope.launch {
             songRepository.toggleLikeSong(song)
+
+            // Fetch the updated state to confirm if it's liked or unliked
+            val isLikedNow = songRepository.isSongLiked(song.id).first()
+
+            // Emit the event to trigger the custom snackbar in MainActivity
+            _uiEvent.emit(AudioUiEvent.SongLikedStatusChanged(song.title, isLikedNow))
         }
     }
 
@@ -192,4 +208,21 @@ class SharedAudioViewModel(
         sleepTimerJob?.cancel()
         visualizerJob?.cancel()
     }
+
+
+    // Event flow to safely emit UI notifications across screens
+    private val _uiEvent = MutableSharedFlow<AudioUiEvent>()
+    val uiEvent = _uiEvent.asSharedFlow()
+
+
+
+    // Call this function whenever your UI allows adding a track to a playlist
+    fun notifyAddedToPlaylist(songTitle: String, playlistName: String) {
+        viewModelScope.launch {
+            _uiEvent.emit(AudioUiEvent.AddedToPlaylist(songTitle, playlistName))
+        }
+    }
 }
+
+
+

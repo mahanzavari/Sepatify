@@ -45,6 +45,8 @@ import com.aistudio.sepatify.data.network.NetworkMonitor
 import com.aistudio.sepatify.ui.theme.SepatifyTheme
 import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
 
@@ -114,19 +116,58 @@ class MainActivity : ComponentActivity() {
             val isOnline by networkMonitor.isConnected.collectAsState(initial = true)
             val snackbarHostState = remember { SnackbarHostState() }
 
-// Added currentLanguage as a key to relaunch this block whenever the language changes
+            // Listen to persistent network status changes
             LaunchedEffect(isOnline, currentLanguage) {
                 if (!isOnline) {
-                    // Dismiss the previous snackbar first to force a refresh with the new translation
                     snackbarHostState.currentSnackbarData?.dismiss()
-
-                    // Show the snackbar again with the updated language text
                     snackbarHostState.showSnackbar(
                         message = if (currentLanguage == "fa") "اتصال اینترنت شما قطع شده است" else "Your internet connection is offline",
                         duration = androidx.compose.material3.SnackbarDuration.Indefinite
                     )
                 } else {
-                    snackbarHostState.currentSnackbarData?.dismiss()
+                    // Automatically clear network warnings when back online
+                    if (snackbarHostState.currentSnackbarData?.visuals?.message?.contains("قطع") == true ||
+                        snackbarHostState.currentSnackbarData?.visuals?.message?.contains("offline") == true) {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                    }
+                }
+            }
+
+// Track the active coroutine job for transient alerts to allow instant cancellations
+            var snackbarJob: Job? = null
+
+// Listen to transient ViewModel operation events (Likes, Playlist entries)
+            LaunchedEffect(key1 = currentLanguage) {
+                sharedAudioViewModel.uiEvent.collect { event ->
+                    // 1. Force cancel the previous execution context instantly to eliminate queuing lag
+                    snackbarJob?.cancel()
+
+                    val message = when (event) {
+                        is AudioUiEvent.SongLikedStatusChanged -> {
+                            if (event.isLiked) {
+                                if (currentLanguage == "fa") "آهنگ '${event.songTitle}' به محبوب‌ها اضافه شد" else "'${event.songTitle}' added to Liked Songs"
+                            } else {
+                                if (currentLanguage == "fa") "آهنگ '${event.songTitle}' از محبوب‌ها حذف شد" else "'${event.songTitle}' removed from Liked Songs"
+                            }
+                        }
+                        is AudioUiEvent.AddedToPlaylist -> {
+                            if (currentLanguage == "fa") "به لیست پخش '${event.playlistName}' اضافه شد" else "Added to '${event.playlistName}' playlist"
+                        }
+                        else -> ""
+                    }
+
+                    if (message.isNotEmpty()) {
+                        // 2. Assign the new tracking token to our top-level job variable
+                        snackbarJob = launch {
+                            // Instantly dismiss without waiting for layout measure updates
+                            snackbarHostState.currentSnackbarData?.dismiss()
+
+                            snackbarHostState.showSnackbar(
+                                message = message,
+                                duration = androidx.compose.material3.SnackbarDuration.Short
+                            )
+                        }
+                    }
                 }
             }
 
@@ -142,21 +183,37 @@ class MainActivity : ComponentActivity() {
 
                     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
 
-                    // Global Scaffold layout with beautiful custom Red Snackbar
+                    // Global Scaffold layout with Adaptive single-line layout flush to the bottom navigation edge
                     Scaffold(
                         snackbarHost = {
                             SnackbarHost(
                                 hostState = snackbarHostState,
-                                // Set bottom padding to 0.dp so it sits flush at the very bottom of the screen
                                 modifier = Modifier.padding(bottom = 10.dp)
                             ) { data ->
+                                val msg = data.visuals.message
+                                val isOffline = msg.contains("قطع") || msg.contains("offline")
+                                val isRemoved = msg.contains("حذف") || msg.contains("removed")
+
+                                // Dynamically choose background color based on message conditions
+                                val containerColor = when {
+                                    isOffline -> Color(0xFFD32F2F)   // Premium Deep Red
+                                    isRemoved -> Color(0xFF616161)   // Sleek Dark Grey for deletion
+                                    else -> Color(0xFF388E3C)        // Premium Green for addition/success
+                                }
+
+                                val iconVector = when {
+                                    isOffline -> Icons.Default.CloudOff
+                                    isRemoved -> Icons.Default.DeleteOutline // A neat delete icon for removal feedback
+                                    else -> Icons.Default.CheckCircle
+                                }
+
                                 androidx.compose.material3.Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp, vertical = 6.dp),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = androidx.compose.material3.CardDefaults.cardColors(
-                                        containerColor = Color(0xFFD32F2F)
+                                        containerColor = containerColor
                                     ),
                                     elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 4.dp)
                                 ) {
@@ -168,20 +225,19 @@ class MainActivity : ComponentActivity() {
                                         horizontalArrangement = Arrangement.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.CloudOff,
-                                            contentDescription = "Offline",
+                                            imageVector = iconVector,
+                                            contentDescription = "Event Status",
                                             tint = Color.White,
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = data.visuals.message,
+                                            text = msg,
                                             color = Color.White,
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                            textAlign = TextAlign.Center
+                                            maxLines = if (isOffline) 1 else 2,                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            textAlign = if (isOffline) TextAlign.Center else TextAlign.Start
                                         )
                                     }
                                 }
@@ -193,7 +249,6 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(paddingValues)
                         ) {
-                            // Wait for the session verification to complete before rendering logic
                             if (isCheckingSession) {
                                 Box(
                                     modifier = Modifier
@@ -217,16 +272,12 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             } else if (userEmail.isNullOrBlank()) {
-                                // User not logged in, show Auth Screen backed by Supabase
                                 LoginScreen(
                                     authViewModel = authViewModel,
-                                    onAuthSuccess = { email, name ->
-                                        // Auth success callback is monitored inside LoginScreen
-                                    },
+                                    onAuthSuccess = { email, name -> },
                                     locString = locString
                                 )
                             } else {
-                                // App Main Hub with navigation
                                 AppMainHub(
                                     mainViewModel = mainViewModel,
                                     homeViewModel = homeViewModel,
@@ -246,7 +297,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 
 @OptIn(
     ExperimentalAnimationApi::class,
