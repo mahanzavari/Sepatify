@@ -49,7 +49,7 @@ class SharedAudioViewModel(
     val sleepTimerMinutes: StateFlow<Int?> = _sleepTimerMinutes.asStateFlow()
 
     // Keeps beautiful visualizer heights flow
-    private val _visualizerHeights = MutableStateFlow(List(12) { 15 })
+    private val _visualizerHeights = MutableStateFlow(List(64) { 15 })
     val visualizerHeights: StateFlow<List<Int>> = _visualizerHeights.asStateFlow()
 
     private var sleepTimerJob: Job? = null
@@ -202,9 +202,9 @@ class SharedAudioViewModel(
         visualizerJob = viewModelScope.launch {
             while (true) {
                 if (isPlaying.value) {
-                    _visualizerHeights.value = List(12) { Random.nextInt(5, 45) }
+                    _visualizerHeights.value = List(64) { Random.nextInt(5, 45) }
                 } else {
-                    _visualizerHeights.value = List(12) { 5 }
+                    _visualizerHeights.value = List(64) { 5 }
                 }
                 delay(120)
             }

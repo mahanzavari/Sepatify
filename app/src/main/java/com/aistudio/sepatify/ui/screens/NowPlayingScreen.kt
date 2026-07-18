@@ -1019,7 +1019,7 @@ fun AudioVisualizerComponent(
     val rawVisualizerBars by sharedAudioViewModel.fftBands.collectAsState()
     val isBassDetected by sharedAudioViewModel.isBassDetected.collectAsState()
 
-    val totalBarsCount = 12
+    val totalBarsCount = 64
     val density = LocalDensity.current
     val dimens = MaterialTheme.sepatifyDimens
 
