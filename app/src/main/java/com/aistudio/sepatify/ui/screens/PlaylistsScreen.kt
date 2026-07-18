@@ -742,26 +742,7 @@ fun PlaylistDetailView(
                             }
 
                             // Dynamic Pop-up Preview Bubble when Sliding
-                            AnimatedVisibility(
-                                visible = currentLetter != null,
-                                enter = fadeIn(),
-                                exit = fadeOut(),
-                                modifier = Modifier.align(Alignment.Center)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(80.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = currentLetter ?: "",
-                                        style = MaterialTheme.typography.displayMedium,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                }
-                            }
+                            LetterPreviewBubble(currentLetter)
                         }
                     }
                 }
@@ -769,6 +750,31 @@ fun PlaylistDetailView(
         }
     }
 }
+
+@Composable
+private fun BoxScope.LetterPreviewBubble(currentLetter: String?) {
+    AnimatedVisibility(
+        visible = currentLetter != null,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = Modifier.align(Alignment.Center)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = currentLetter ?: "",
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+    }
+}
+
 
 // Custom Helper to jump the LazyColumn precisely to the requested Alphabet letter segment
 private fun scrollToLetter(
