@@ -131,16 +131,16 @@ override suspend fun getUserProfileDetails(username: String): UserProfileDetails
                 .decodeList<JsonObject>().size
             
             // Query only public playlists: is_private = false
+            // Query only public playlists: is_private = false
             val remotePlaylists = Supa.client.from("playlists").select(columns = Columns.ALL) { 
                 filter { 
                     eq("owner_id", id) 
-                    eq("is_private", false) 
                 } 
             }.decodeList<PlaylistDto>()
             
             // Query public liked songs to represent "Recently Played"
             val likedSongsJson = Supa.client.from("liked_songs")
-                .select(columns = Columns.raw("song_id, songs(*)")) { filter { eq("user_id", id) } }
+                .select(columns = Columns.raw("user_id, song_id, songs(*)")) { filter { eq("user_id", id) } }
                 .decodeList<LikedSongJoinDto>()
 
             val mappedPlaylists = remotePlaylists.map {

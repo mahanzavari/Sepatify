@@ -43,5 +43,4 @@ interface SongRepository {
     fun getSongsForPlaylist(playlistId: Long, category: String): Flow<List<Song>>
     fun getSongsForPlaylistPaged(playlistId: Long, category: String): Flow<PagingData<Song>>
     suspend fun updatePlaylistCategory(playlistId: Long, category: String)
-
 }

@@ -6,17 +6,20 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -30,11 +33,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.LazyPagingItems
 import coil.compose.AsyncImage
@@ -45,6 +45,8 @@ import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.PlaylistViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 enum class PlaylistsViewState { MAIN, FOLDER_DETAIL, CREATE_PLAYLIST, CREATE_FOLDER }
 
@@ -280,47 +282,47 @@ fun PlaylistsScreen(
                             }
                         }
                     }
-                } else {
-                    // Secondary Views
-                    when {
-                        selectedPlaylist != null -> {
-                            PlaylistDetailView(
-                                playlist = selectedPlaylist!!,
-                                hasPermission = hasPermission,
-                                onBack = { selectedPlaylist = null },
-                                onShare = { onShareClick(selectedPlaylist!!) },
-                                onDelete = {
-                                    playlistViewModel.deletePlaylist(selectedPlaylist!!.id)
-                                    selectedPlaylist = null
-                                },
-                                onRemoveSong = { sid -> playlistViewModel.removeSongFromPlaylist(selectedPlaylist!!.id, sid) },
-                                onSongSelect = onSongSelect,
-                                requestPermission = { launcher.launch(permission) },
-                                playlistViewModel = playlistViewModel,
-                                locString = locString
-                            )
-                        }
-                        activeView == PlaylistsViewState.FOLDER_DETAIL && activeFolder != null -> {
-                            FolderDetailView(
-                                folderName = activeFolder!!,
-                                playlists = playlists.filter { it.category == "folder:$activeFolder" },
-                                onBack = { activeView = PlaylistsViewState.MAIN; activeFolder = null },
-                                onPlaylistSelect = { selectedPlaylist = it }
-                            )
-                        }
-                        activeView == PlaylistsViewState.CREATE_PLAYLIST -> {
-                            CreatePlaylistView(
-                                playlistViewModel = playlistViewModel,
-                                onBack = { activeView = PlaylistsViewState.MAIN }
-                            )
-                        }
-                        activeView == PlaylistsViewState.CREATE_FOLDER -> {
-                            CreateFolderView(
-                                playlistViewModel = playlistViewModel,
-                                availablePlaylists = playlists.filter { it.isUserCreated && !it.category.startsWith("folder:") },
-                                onBack = { activeView = PlaylistsViewState.MAIN }
-                            )
-                        }
+                }
+            } else {
+                // Secondary Views
+                when {
+                    selectedPlaylist != null -> {
+                        PlaylistDetailView(
+                            playlist = selectedPlaylist!!,
+                            hasPermission = hasPermission,
+                            onBack = { selectedPlaylist = null },
+                            onShare = { onShareClick(selectedPlaylist!!) },
+                            onDelete = {
+                                playlistViewModel.deletePlaylist(selectedPlaylist!!.id)
+                                selectedPlaylist = null
+                            },
+                            onRemoveSong = { sid -> playlistViewModel.removeSongFromPlaylist(selectedPlaylist!!.id, sid) },
+                            onSongSelect = onSongSelect,
+                            requestPermission = { launcher.launch(permission) },
+                            playlistViewModel = playlistViewModel,
+                            locString = locString
+                        )
+                    }
+                    activeView == PlaylistsViewState.FOLDER_DETAIL && activeFolder != null -> {
+                        FolderDetailView(
+                            folderName = activeFolder!!,
+                            playlists = playlists.filter { it.category == "folder:$activeFolder" },
+                            onBack = { activeView = PlaylistsViewState.MAIN; activeFolder = null },
+                            onPlaylistSelect = { selectedPlaylist = it }
+                        )
+                    }
+                    activeView == PlaylistsViewState.CREATE_PLAYLIST -> {
+                        CreatePlaylistView(
+                            playlistViewModel = playlistViewModel,
+                            onBack = { activeView = PlaylistsViewState.MAIN }
+                        )
+                    }
+                    activeView == PlaylistsViewState.CREATE_FOLDER -> {
+                        CreateFolderView(
+                            playlistViewModel = playlistViewModel,
+                            availablePlaylists = playlists.filter { it.isUserCreated && !it.category.startsWith("folder:") },
+                            onBack = { activeView = PlaylistsViewState.MAIN }
+                        )
                     }
                 }
             }
@@ -514,10 +516,10 @@ fun CreateFolderView(
     availablePlaylists: List<PlaylistEntity>,
     onBack: () -> Unit
 ) {
+    val dimens = MaterialTheme.sepatifyDimens
     var folderName by remember { mutableStateOf("") }
     val selectedPlaylists = remember { mutableStateListOf<Long>() }
     var isGrouping by remember { mutableStateOf(false) }
-    val dimens = MaterialTheme.sepatifyDimens
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimens.spaceNormal), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -652,10 +654,7 @@ fun PlaylistDetailView(
                 Button(onClick = requestPermission) { Text(locString(R.string.permission_grant_btn)) }
             }
         } else {
-            val pagedSongs = remember(playlist.id, playlist.category) { playlistViewModel.getSongsForPlaylistPaged(playlist.id, playlist.category) }.collectAsStateLazyPagingItems()
-            fun LazyPagingItems<Song>.refreshIfAny() {
-                this.refresh()
-            }
+            val pagedSongs = remember(playlist.id, playlist.category) { playlistViewModel.getSongsForPlaylistPaged(playlist.id, playlist.category) }.collectAsLazyPagingItems()
             when (pagedSongs.loadState.refresh) {
                 is androidx.paging.LoadState.Loading -> {
                     Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -701,7 +700,7 @@ fun PlaylistDetailView(
                                             Text(s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                                         }
                                         if (playlist.isUserCreated) {
-                                            IconButton(onClick = { onRemoveSong(s.id); pagedSongs.refreshIfAny() }) {
+                                            IconButton(onClick = { onRemoveSong(s.id); pagedSongs.refresh() }) {
                                                 Icon(Icons.Default.RemoveCircle, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
                                             }
                                         }
@@ -769,57 +768,64 @@ fun PlaylistDetailView(
             }
         }
     }
+}
 
-    @Composable
-    private fun BoxScope.LetterPreviewBubble(currentLetter: String?) {
-        AnimatedVisibility(
-            visible = currentLetter != null,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = currentLetter ?: "",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        }
-    }
-
-    // Custom Helper to jump the LazyColumn precisely to the requested Alphabet letter segment
-    private fun scrollToLetter(
-        letter: String?,
-        pagedSongs: LazyPagingItems<Song>,
-        listState: LazyListState,
-        coroutineScope: CoroutineScope
+@Composable
+fun LetterPreviewBubble(currentLetter: String?, modifier: Modifier = Modifier) {
+    AnimatedVisibility(
+        visible = currentLetter != null,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier
     ) {
-        if (letter == null) return
-        val items = pagedSongs.itemSnapshotList.items
-        val index = items.indexOfFirst { song ->
-            val firstChar = song.title.take(1).uppercase()
-            if (letter == "#") {
-                firstChar.firstOrNull()?.isLetter() == false
-            } else {
-                firstChar == letter
-            }
-        }
-        if (index != -1) {
-            coroutineScope.launch {
-                listState.scrollToItem(index)
-            }
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = currentLetter ?: "",
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
         }
     }
+}
 
-    // Workaround extension for stable compilation of paged items collection
-    @Composable
-    private fun <T : Any> androidx.paging.compose.LazyPagingItems<T>.collectAsStateLazyPagingItems(): androidx.paging.compose.LazyPagingItems<T> {
-        return this
+fun scrollToLetter(
+    letter: String?,
+    pagedSongs: LazyPagingItems<Song>,
+    listState: LazyListState,
+    coroutineScope: CoroutineScope
+) {
+    if (letter == null) return
+    val items = pagedSongs.itemSnapshotList.items
+    val index = items.indexOfFirst { song ->
+        val firstChar = song.title.take(1).uppercase()
+        if (letter == "#") {
+            firstChar.firstOrNull()?.isLetter() == false
+        } else {
+            firstChar == letter
+        }
     }
+    if (index != -1) {
+        coroutineScope.launch {
+            listState.scrollToItem(index)
+        }
+    }
+}
+
+fun getCardColors(index: Int, isDark: Boolean, colors: com.aistudio.sepatify.ui.theme.SepatifyColors): Triple<Color, Color, Color> {
+    return when (index % 4) {
+        0 -> if (isDark) Triple(colors.playlistAccentBlue, colors.playlistAccentBlueLight, colors.playlistAccentBlueLight.copy(alpha = 0.7f))
+        else Triple(colors.playlistAccentBlueLight, colors.playlistTextBlueDark, colors.playlistAccentBlueLight)
+        1 -> if (isDark) Triple(colors.playlistAccentPurple, colors.playlistAccentPurpleLight, colors.playlistAccentPurpleLight)
+        else Triple(colors.playlistAccentPurpleLight, colors.playlistTextPurpleDark, colors.playlistAccentPurpleLight)
+        2 -> if (isDark) Triple(colors.playlistAccentRose, colors.playlistAccentRoseLight, colors.playlistAccentRoseLight)
+        else Triple(colors.playlistAccentRoseLight, colors.playlistTextRoseDark, colors.playlistAccentRoseLight)
+        else -> if (isDark) Triple(colors.playlistAccentMint, colors.playlistAccentMintLight, colors.playlistAccentMintLight)
+        else Triple(colors.playlistAccentMintLight, colors.playlistTextMintDark, colors.playlistAccentMintLight)
+    }
+}
