@@ -1,4 +1,3 @@
-// Paste this into: app/src/main/java/com/aistudio/sepatify/ui/screens/ChatsScreen.kt
 package com.aistudio.sepatify.ui.screens
 
 import androidx.compose.animation.*
@@ -30,6 +29,7 @@ import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
+import com.aistudio.sepatify.ui.viewmodel.ChatEvent
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -60,7 +60,6 @@ fun ChatsScreen(
     val isKeyboardVisible = WindowInsets.isImeVisible
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    // Using themes semantic dimensions instead of hardcoded .dp
     val bottomPadding = if (isKeyboardVisible) {
         dimens.spaceNormal
     } else {
@@ -79,7 +78,6 @@ fun ChatsScreen(
             .padding(bottom = bottomPadding)
     ) {
         if (activeChatUser == null) {
-            // General Chats / Contacts Hub
             Text(
                 text = locString(R.string.chat_title),
                 style = MaterialTheme.typography.titleLarge,
@@ -88,10 +86,9 @@ fun ChatsScreen(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            // User queries search
             OutlinedTextField(
                 value = searchUsersQuery,
-                onValueChange = { chatViewModel.updateSearchQuery(it) },
+                onValueChange = { chatViewModel.onEvent(ChatEvent.UpdateSearchQuery(it)) },
                 placeholder = { Text(locString(R.string.search_users_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = locString(R.string.chat_lookup_desc)) },
                 modifier = Modifier.fillMaxWidth(),
@@ -101,7 +98,6 @@ fun ChatsScreen(
             Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
             if (searchUsersQuery.isNotEmpty()) {
-                // Search Lookup list Results
                 Text(
                     text = locString(R.string.matching_users_title),
                     style = MaterialTheme.typography.titleSmall,
@@ -113,8 +109,6 @@ fun ChatsScreen(
                 ) {
                     items(matchingUsers) { usr ->
                         val isFollowingFlow = chatViewModel.isFollowing(usr).collectAsState(initial = false)
-
-                        // Collect Profile
                         val profile by chatViewModel.getProfile(usr).collectAsState(initial = null)
                         val displayName = profile?.displayName ?: usr
 
@@ -152,7 +146,7 @@ fun ChatsScreen(
                             }
 
                             Button(
-                                onClick = { chatViewModel.toggleFollow(usr) },
+                                onClick = { chatViewModel.onEvent(ChatEvent.ToggleFollow(usr)) },
                                 shape = shapes.button,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isFollowingFlow.value) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
@@ -167,7 +161,6 @@ fun ChatsScreen(
                     }
                 }
             } else {
-                // Default Chat feed for followed users
                 Text(
                     text = locString(R.string.conversations_title),
                     style = MaterialTheme.typography.titleSmall,
@@ -210,7 +203,7 @@ fun ChatsScreen(
                                         .size(dimens.sizeAvatarLarge)
                                         .clip(CircleShape)
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight))
-                                        .clickable { onViewUserProfile(user) }, // Tapping avatar opens profile
+                                        .clickable { onViewUserProfile(user) },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (!profile?.avatarUrl.isNullOrEmpty()) {
@@ -245,7 +238,6 @@ fun ChatsScreen(
                 }
             }
         } else {
-            // DIRECT DISCUSSION THREAD VIEW
             val user = activeChatUser
             val pagedMessages = chatViewModel.getMessagesPaged(user).collectAsLazyPagingItems()
             val otherIsTyping = remember(user) { chatViewModel.getTypingState(user) }.collectAsState(initial = false)
@@ -254,11 +246,8 @@ fun ChatsScreen(
             val displayName = profile?.displayName ?: user
 
             var isTypingSent by remember(user) { mutableStateOf(false) }
-
-            // Fixed: Create listState to manage viewport position
             val listState = rememberLazyListState()
 
-            // Fixed: Automatically animate scroll to the bottom when keyboard appears or messages arrive
             LaunchedEffect(pagedMessages.itemCount, isKeyboardVisible) {
                 if (pagedMessages.itemCount > 0) {
                     listState.animateScrollToItem(pagedMessages.itemCount - 1)
@@ -268,15 +257,15 @@ fun ChatsScreen(
             LaunchedEffect(chatInputText, user) {
                 if (chatInputText.isNotEmpty()) {
                     if (!isTypingSent) {
-                        chatViewModel.setTyping(user, true)
+                        chatViewModel.onEvent(ChatEvent.SetTyping(user, true))
                         isTypingSent = true
                     }
                     kotlinx.coroutines.delay(2500)
-                    chatViewModel.setTyping(user, false)
+                    chatViewModel.onEvent(ChatEvent.SetTyping(user, false))
                     isTypingSent = false
                 } else {
                     if (isTypingSent) {
-                        chatViewModel.setTyping(user, false)
+                        chatViewModel.onEvent(ChatEvent.SetTyping(user, false))
                         isTypingSent = false
                     }
                 }
@@ -286,14 +275,14 @@ fun ChatsScreen(
             DisposableEffect(lifecycleOwner, user) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                        chatViewModel.setTyping(user, false)
+                        chatViewModel.onEvent(ChatEvent.SetTyping(user, false))
                         isTypingSent = false
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose {
                     lifecycleOwner.lifecycle.removeObserver(observer)
-                    chatViewModel.setTyping(user, false)
+                    chatViewModel.onEvent(ChatEvent.SetTyping(user, false))
                 }
             }
 
@@ -347,9 +336,8 @@ fun ChatsScreen(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            // Message Bubble list
             LazyColumn(
-                state = listState, // Fixed: Bind custom listState
+                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(dimens.aspectRatioSquare),
@@ -381,7 +369,6 @@ fun ChatsScreen(
                         ) {
                             Column(modifier = Modifier.padding(dimens.spaceTwelve)) {
                                 if (msg.isSongShare) {
-                                    // Custom Shared song card
                                     Card(
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                                         shape = MaterialTheme.shapes.extraSmall,
@@ -433,7 +420,6 @@ fun ChatsScreen(
                             }
                         }
 
-                        // Tick marks alignment using mapped theme alphas
                         if (isMe) {
                             Row(
                                 modifier = Modifier.padding(top = dimens.spaceTwo),
@@ -501,7 +487,6 @@ fun ChatsScreen(
 
             Spacer(modifier = Modifier.height(dimens.spaceTen))
 
-            // Message entry footer row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -517,7 +502,7 @@ fun ChatsScreen(
                 IconButton(
                     onClick = {
                         if (chatInputText.isNotBlank()) {
-                            chatViewModel.sendMessage(user, chatInputText, null)
+                            chatViewModel.onEvent(ChatEvent.SendMessage(user, chatInputText, null))
                             chatInputText = ""
                         }
                     },

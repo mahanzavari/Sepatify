@@ -33,7 +33,6 @@ class ChatViewModel(
     val onlineUsers: StateFlow<Set<String>> = chatRepository.getOnlineUsers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    // The missing properties needed for the UI:
     private val _viewedUserDetails = MutableStateFlow<UserProfileDetails?>(null)
     val viewedUserDetails: StateFlow<UserProfileDetails?> = _viewedUserDetails.asStateFlow()
 
@@ -99,5 +98,18 @@ class ChatViewModel(
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: ChatEvent) {
+        when (event) {
+            is ChatEvent.LoadUserDetails   -> loadUserDetails(event.username)
+            ChatEvent.TrackPresence        -> trackPresence()
+            ChatEvent.UntrackPresence      -> untrackPresence()
+            is ChatEvent.ToggleFollow      -> toggleFollow(event.username)
+            is ChatEvent.SetTyping         -> setTyping(event.otherUser, event.isTyping)
+            is ChatEvent.SendMessage       -> sendMessage(event.otherUser, event.text, event.songShare)
+            is ChatEvent.UpdateSearchQuery -> updateSearchQuery(event.query)
+        }
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.viewmodel.ChatEvent
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
 
 @Composable
@@ -46,19 +47,18 @@ fun UserProfileScreen(
     val onlineUsers by chatViewModel.onlineUsers.collectAsState()
     val isOnline = onlineUsers.contains(username)
     
-    var selectedTab by remember { mutableStateOf(0) } // 0 for public playlists, 1 for recently played
+    var selectedTab by remember { mutableStateOf(0) } 
 
     LaunchedEffect(username) {
-        chatViewModel.loadUserDetails(username)
+        chatViewModel.onEvent(ChatEvent.LoadUserDetails(username))
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0D0E0E)) // Deep pitch black from Figma design
+            .background(Color(0xFF0D0E0E))
             .statusBarsPadding()
     ) {
-        // 1. Top Navigation Bar
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -78,11 +78,10 @@ fun UserProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
-            // 2. Profile Header (Bento Style Card)
             item {
                 Card(
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2020)) // Dark slate container
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2020))
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
@@ -96,7 +95,6 @@ fun UserProfileScreen(
                                     modifier = Modifier.fillMaxSize().clip(CircleShape).border(2.dp, Color(0xFF1DB954), CircleShape),
                                     contentScale = ContentScale.Crop
                                 )
-                                // Real-time websocket online indicator dot
                                 if (isOnline) {
                                     Box(
                                         modifier = Modifier
@@ -117,7 +115,6 @@ fun UserProfileScreen(
                                 )
                                 Text("@$username", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                // Custom Listening Badge
                                 Row(
                                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFF1DB954).copy(alpha = 0.15f)).padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
@@ -131,7 +128,7 @@ fun UserProfileScreen(
                         Spacer(modifier = Modifier.height(20.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(
-                                onClick = { chatViewModel.toggleFollow(username) },
+                                onClick = { chatViewModel.onEvent(ChatEvent.ToggleFollow(username)) },
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = if (isFollowing) Color.Transparent else Color(0xFF1DB954)),
                                 shape = RoundedCornerShape(12.dp),
@@ -156,7 +153,6 @@ fun UserProfileScreen(
                 }
             }
 
-            // 3. Social Stats Row
             item {
                 Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2020))) {
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -169,7 +165,6 @@ fun UserProfileScreen(
                 }
             }
 
-            // 4. Tabs (Responsive/Selectable)
             item {
                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFF1F2020)).padding(4.dp)) {
                     Box(
@@ -197,7 +192,6 @@ fun UserProfileScreen(
                 }
             }
 
-            // 5. Dynamic Header
             item {
                 Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(if (selectedTab == 0) "Public Playlists" else "Recently Played", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
@@ -205,7 +199,6 @@ fun UserProfileScreen(
                 }
             }
 
-            // 6. Dynamic Grid / List Content
             if (selectedTab == 0) {
                 val playlists = details?.playlists ?: emptyList()
                 if (playlists.isEmpty()) {
@@ -216,10 +209,10 @@ fun UserProfileScreen(
                             for (playlist in rowItems) {
                                 val gradientColors = remember(playlist.id) {
                                     val base = when (playlist.id % 4) {
-                                        0L -> Color(0xFF4A148C) // Deep Purple
-                                        1L -> Color(0xFF1B5E20) // Dark Emerald
-                                        2L -> Color(0xFFB71C1C) // Dark Red/Rose
-                                        else -> Color(0xFF01579B) // Deep Blue
+                                        0L -> Color(0xFF4A148C)
+                                        1L -> Color(0xFF1B5E20)
+                                        2L -> Color(0xFFB71C1C)
+                                        else -> Color(0xFF01579B)
                                     }
                                     listOf(base, base.copy(alpha = 0.5f))
                                 }
