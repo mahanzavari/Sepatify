@@ -31,6 +31,7 @@ interface SongRepository {
     fun isSongLiked(songId: String): Flow<Boolean>
     fun getRecentlyPlayedSongs(): Flow<List<Song>>
     suspend fun addRecentSong(song: Song)
+    suspend fun deleteRecentSong(songId: String)
 
     // Playlists (Global playlists come from Supabase; User playlists are owned by the signed-in user)
     fun getUserPlaylists(): Flow<List<PlaylistEntity>>
