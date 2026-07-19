@@ -2,9 +2,16 @@ package com.aistudio.sepatify.data.repository
 
 import androidx.paging.PagingData
 import com.aistudio.sepatify.data.local.ChatMessageEntity
+import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.data.remote.dto.ProfileDto
 import kotlinx.coroutines.flow.Flow
+
+data class UserProfileDetails(
+    val followersCount: Int,
+    val followingCount: Int,
+    val playlists: List<PlaylistEntity>
+)
 
 interface ChatRepository {
     fun getRecentConversations(): Flow<List<String>>
@@ -23,6 +30,8 @@ interface ChatRepository {
     suspend fun trackPresence()
     suspend fun untrackPresence()
 
-    // --- ADDED: Expose cached profile stream ---
     fun getProfileFlow(username: String): Flow<ProfileDto?>
+    
+    // The missing method needed for the UI:
+    suspend fun getUserProfileDetails(username: String): UserProfileDetails
 }
