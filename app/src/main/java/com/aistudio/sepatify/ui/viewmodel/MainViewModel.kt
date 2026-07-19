@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.aistudio.sepatify.data.local.PreferencesManager
 import com.aistudio.sepatify.data.repository.AuthRepository
 import com.aistudio.sepatify.data.local.AppDatabase
+import com.aistudio.sepatify.player.AudioPlayerManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -15,7 +16,8 @@ import kotlinx.coroutines.withContext
 class MainViewModel(
     private val preferencesManager: PreferencesManager,
     private val authRepository: AuthRepository,
-    private val appDatabase: AppDatabase
+    private val appDatabase: AppDatabase,
+    private val audioPlayerManager: AudioPlayerManager
 ) : ViewModel() {
 
     val currentTheme: StateFlow<String> = preferencesManager.themeFlow
@@ -92,6 +94,8 @@ class MainViewModel(
 
     fun logout() {
         viewModelScope.launch {
+            audioPlayerManager.stopPlayback()
+
             runCatching { authRepository.signOut() }
             preferencesManager.clearSession()
 
