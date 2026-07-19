@@ -36,6 +36,7 @@ fun ChatsScreen(
     chatViewModel: ChatViewModel,
     activeChatUser: String?,
     onActiveChatUserChange: (String?) -> Unit,
+    onViewUserProfile: (String) -> Unit,
     onPlaySharedSong: (Song) -> Unit,
     locString: (Int) -> String,
     isMiniPlayerVisible: Boolean
@@ -118,7 +119,7 @@ fun ChatsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onActiveChatUserChange(usr) }
+                                .clickable { onViewUserProfile(usr) }
                                 .padding(vertical = dimens.spaceEight),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -206,7 +207,8 @@ fun ChatsScreen(
                                     modifier = Modifier
                                         .size(dimens.sizeAvatarLarge)
                                         .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight))
+                                        .clickable { onViewUserProfile(user) }, // Tapping avatar opens profile
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (!profile?.avatarUrl.isNullOrEmpty()) {

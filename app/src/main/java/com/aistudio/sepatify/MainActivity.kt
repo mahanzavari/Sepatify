@@ -632,6 +632,7 @@ fun AppMainHub(
                                 chatViewModel = chatViewModel,
                                 activeChatUser = activeChatUser,
                                 onActiveChatUserChange = { activeChatUser = it },
+                                onViewUserProfile = { viewedUser = it },
                                 onPlaySharedSong = { song ->
                                     sharedAudioViewModel.playSong(song)
                                 },
