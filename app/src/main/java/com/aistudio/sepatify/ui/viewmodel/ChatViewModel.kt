@@ -8,6 +8,7 @@ import com.aistudio.sepatify.data.local.ChatMessageEntity
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.data.remote.dto.ProfileDto
 import com.aistudio.sepatify.data.repository.ChatRepository
+import com.aistudio.sepatify.data.repository.UserProfileDetails
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -32,6 +33,17 @@ class ChatViewModel(
     val onlineUsers: StateFlow<Set<String>> = chatRepository.getOnlineUsers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
+    // The missing properties needed for the UI:
+    private val _viewedUserDetails = MutableStateFlow<UserProfileDetails?>(null)
+    val viewedUserDetails: StateFlow<UserProfileDetails?> = _viewedUserDetails.asStateFlow()
+
+    fun loadUserDetails(username: String) {
+        viewModelScope.launch {
+            _viewedUserDetails.value = null
+            _viewedUserDetails.value = chatRepository.getUserProfileDetails(username)
+        }
+    }
+
     fun trackPresence() {
         viewModelScope.launch {
             chatRepository.trackPresence()
@@ -44,11 +56,9 @@ class ChatViewModel(
         }
     }
 
-    // --- ADDED: Fetch profile stream ---
     fun getProfile(username: String): Flow<ProfileDto?> {
         return chatRepository.getProfileFlow(username)
     }
-    // -----------------------------------
 
     fun isFollowing(username: String): Flow<Boolean> {
         return chatRepository.isFollowing(username)
@@ -64,7 +74,6 @@ class ChatViewModel(
         return chatRepository.getMessages(otherUser)
     }
 
-    // Paging 3 backed chat history (FR: chat history must use Paging 3).
     private val pagedMessagesCache = mutableMapOf<String, Flow<PagingData<ChatMessageEntity>>>()
     fun getMessagesPaged(otherUser: String): Flow<PagingData<ChatMessageEntity>> {
         return pagedMessagesCache.getOrPut(otherUser) {
