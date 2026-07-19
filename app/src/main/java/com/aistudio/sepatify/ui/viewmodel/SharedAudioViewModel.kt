@@ -21,7 +21,6 @@ class SharedAudioViewModel(
     private val audioPlayerManager: AudioPlayerManager
 ) : ViewModel() {
 
-    // Delegate playback flows directly to AudioPlayerManager
     val currentSong: StateFlow<Song?> = audioPlayerManager.currentSong
     val isPlaying: StateFlow<Boolean> = audioPlayerManager.isPlaying
     val playlist: StateFlow<List<Song>> = audioPlayerManager.playlist
@@ -31,7 +30,6 @@ class SharedAudioViewModel(
     val isRepeat: StateFlow<Boolean> = audioPlayerManager.isRepeat
     val playbackSpeed: StateFlow<Float> = audioPlayerManager.playbackSpeed
 
-    // Delegate Equalizer & Audio Effect flows directly to AudioPlayerManager
     val eqEnabled: StateFlow<Boolean> = audioPlayerManager.eqEnabled
     val eqBandLevels: StateFlow<Map<Int, Int>> = audioPlayerManager.eqBandLevels
     val eqFrequencies: StateFlow<List<Int>> = audioPlayerManager.eqFrequencies
@@ -44,11 +42,9 @@ class SharedAudioViewModel(
     val fftBands: StateFlow<FloatArray> = audioPlayerManager.fftBands
     val isBassDetected: StateFlow<Boolean> = audioPlayerManager.isBassDetected
 
-    // Keeps local sleep timer flow
     private val _sleepTimerMinutes = MutableStateFlow<Int?>(null)
     val sleepTimerMinutes: StateFlow<Int?> = _sleepTimerMinutes.asStateFlow()
 
-    // Keeps beautiful visualizer heights flow
     private val _visualizerHeights = MutableStateFlow(List(64) { 15 })
     val visualizerHeights: StateFlow<List<Int>> = _visualizerHeights.asStateFlow()
 
@@ -56,7 +52,6 @@ class SharedAudioViewModel(
     private var visualizerJob: Job? = null
 
     init {
-        // Load initial songs into play queue
         viewModelScope.launch {
             songRepository.getAllSongs().collectLatest { songs ->
                 if (audioPlayerManager.playlist.value.isEmpty()) {
@@ -69,20 +64,14 @@ class SharedAudioViewModel(
     }
 
     fun playSong(song: Song, queue: List<Song> = emptyList()) {
-        // Smart routing (FR): if this track was downloaded, stream it from disk instead of the network.
-        // We run this in the IO dispatcher to prevent UI freezing on huge queues.
         viewModelScope.launch(Dispatchers.IO) {
-            
-            // Bulk fetch to prevent O(N) database queries for large queues
             val downloadedList = downloadRepository.getDownloadedSongs().first()
             val downloadedMap = downloadedList.associateBy { it.id }
 
             fun resolveInstant(s: Song): Song {
-                // Fast-path: It's already a local device file, skip database and file checks entirely
                 if (s.id.startsWith("local_") || s.audioUrl.startsWith("/") || s.audioUrl.startsWith("file://")) {
                     return s
                 }
-                // Check if it's in the downloaded DB cache (O(1) in-memory lookup)
                 val downloadedEntity = downloadedMap[s.id]
                 if (downloadedEntity != null && File(downloadedEntity.localFilePath).exists()) {
                     return s.copy(audioUrl = "file://${downloadedEntity.localFilePath}")
@@ -95,7 +84,6 @@ class SharedAudioViewModel(
 
             songRepository.addRecentSong(resolvedSong)
             
-            // Switch back to the Main thread to immediately push it to ExoPlayer
             withContext(Dispatchers.Main) {
                 audioPlayerManager.playSong(resolvedSong, resolvedQueue)
             }
@@ -144,8 +132,6 @@ class SharedAudioViewModel(
         audioPlayerManager.setPlaybackSpeed(speed)
     }
 
-    // --- Audio Effects Controller API ---
-
     fun setEqualizerEnabled(enabled: Boolean) {
         audioPlayerManager.setEqualizerEnabled(enabled)
     }
@@ -174,8 +160,6 @@ class SharedAudioViewModel(
         audioPlayerManager.setCrossfadeDuration(seconds)
     }
 
-    // --- Sleep Timer Loop ---
-
     fun setSleepTimer(minutes: Int?) {
         _sleepTimerMinutes.value = minutes
         sleepTimerJob?.cancel()
@@ -188,14 +172,12 @@ class SharedAudioViewModel(
                     _sleepTimerMinutes.value = (remainingSeconds / 60) + if (remainingSeconds % 60 > 0) 1 else 0
                 }
                 if (isPlaying.value) {
-                    audioPlayerManager.togglePlayPause() // Pause playback
+                    audioPlayerManager.togglePlayPause()
                 }
                 _sleepTimerMinutes.value = null
             }
         }
     }
-
-    // --- Visualizer Loop ---
 
     private fun startVisualizerLoop() {
         visualizerJob?.cancel()
@@ -215,5 +197,29 @@ class SharedAudioViewModel(
         super.onCleared()
         sleepTimerJob?.cancel()
         visualizerJob?.cancel()
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: AudioEvent) {
+        when (event) {
+            is AudioEvent.PlaySong               -> playSong(event.song, event.queue)
+            AudioEvent.TogglePlayPause           -> togglePlayPause()
+            AudioEvent.StopPlayback              -> stopPlayback()
+            AudioEvent.PlayNext                  -> playNext()
+            AudioEvent.PlayPrevious              -> playPrevious()
+            is AudioEvent.SeekTo                 -> seekTo(event.position)
+            AudioEvent.ToggleShuffle             -> toggleShuffle()
+            AudioEvent.ToggleRepeat              -> toggleRepeat()
+            is AudioEvent.ToggleLikeSong         -> toggleLikeSong(event.song)
+            is AudioEvent.SetPlaybackSpeed       -> setPlaybackSpeed(event.speed)
+            is AudioEvent.SetEqualizerEnabled    -> setEqualizerEnabled(event.enabled)
+            is AudioEvent.SetEqualizerBandLevel  -> setEqualizerBandLevel(event.bandIndex, event.levelMilliBels)
+            is AudioEvent.SetBassBoostStrength   -> setBassBoostStrength(event.strength)
+            is AudioEvent.SetVirtualizerStrength -> setVirtualizerStrength(event.strength)
+            is AudioEvent.SetReverbPreset        -> setReverbPreset(event.presetIndex)
+            is AudioEvent.SetCrossfadeEnabled    -> setCrossfadeEnabled(event.enabled)
+            is AudioEvent.SetCrossfadeDuration   -> setCrossfadeDuration(event.seconds)
+            is AudioEvent.SetSleepTimer          -> setSleepTimer(event.minutes)
+        }
     }
 }

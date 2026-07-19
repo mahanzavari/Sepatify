@@ -12,7 +12,7 @@ class DownloadViewModel(
     private val downloadRepository: DownloadRepository
 ) : ViewModel() {
 
-    private val _sortType = MutableStateFlow("date") // "title", "artist", "date"
+    private val _sortType = MutableStateFlow("date")
     val sortType: StateFlow<String> = _sortType.asStateFlow()
 
     private val _activeDownloadIds = MutableStateFlow<Set<String>>(emptySet())
@@ -32,7 +32,6 @@ class DownloadViewModel(
         _sortType.value = sortBy
     }
 
-    /** Live WorkManager download progress (0f..1f) for [songId], or null when nothing is in-flight. */
     fun downloadProgressFor(songId: String): StateFlow<Float?> {
         return progressFlows.getOrPut(songId) {
             downloadRepository.getDownloadProgress(songId)
@@ -54,6 +53,15 @@ class DownloadViewModel(
     fun removeDownload(songId: String) {
         viewModelScope.launch {
             downloadRepository.deleteDownload(songId)
+        }
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: DownloadEvent) {
+        when (event) {
+            is DownloadEvent.UpdateSort       -> updateSort(event.sortBy)
+            is DownloadEvent.InitiateDownload -> initiateDownload(event.song)
+            is DownloadEvent.RemoveDownload   -> removeDownload(event.songId)
         }
     }
 }

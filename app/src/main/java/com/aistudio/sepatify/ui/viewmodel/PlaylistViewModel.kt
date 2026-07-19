@@ -17,14 +17,12 @@ class PlaylistViewModel(
     val userPlaylists: StateFlow<List<PlaylistEntity>> = songRepository.getUserPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Ensure the onResult signature is exactly: (Boolean, String?) -> Unit
     fun createNewPlaylistWithSongs(title: String, description: String, isPrivate: Boolean, songIds: List<String>, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
             val pid = songRepository.createPlaylist(title, description, "User", isPrivate)
             if (pid != -1L) {
                 val result = songRepository.addSongsToPlaylist(pid, songIds)
                 if (result.isFailure) {
-                    // Rollback playlist creation if songs failed to add
                     songRepository.deletePlaylist(pid)
                     onResult(false, result.exceptionOrNull()?.message)
                 } else {
@@ -76,7 +74,21 @@ class PlaylistViewModel(
     }
 
     fun getSongsForPlaylistPaged(playlistId: Long, category: String): Flow<PagingData<Song>> {
-        // Delegate routing seamlessly up to repository & ensure ViewModel caches it uniformly
         return songRepository.getSongsForPlaylistPaged(playlistId, category).cachedIn(viewModelScope)
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: PlaylistEvent) {
+        when (event) {
+            is PlaylistEvent.CreatePlaylist     -> createNewPlaylistWithSongs(
+                event.title, event.desc, event.isPrivate, event.songIds, event.onResult
+            )
+            is PlaylistEvent.GroupPlaylists     -> groupPlaylistsIntoFolder(
+                event.folderName, event.playlistIds, event.onComplete
+            )
+            is PlaylistEvent.DeletePlaylist     -> deletePlaylist(event.playlistId)
+            is PlaylistEvent.RemoveSong         -> removeSongFromPlaylist(event.playlistId, event.songId)
+            is PlaylistEvent.RemoveRecentSong   -> removeRecentSong(event.songId)
+        }
     }
 }
