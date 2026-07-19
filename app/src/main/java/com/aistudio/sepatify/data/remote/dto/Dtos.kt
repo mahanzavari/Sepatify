@@ -67,21 +67,23 @@ data class NewChatMessageDto(
 @Serializable
 data class PlaylistDto(
     @SerialName("id") val id: Long,
-    @SerialName("owner_id") val ownerId: String,
+    @SerialName("owner_id") val ownerId: String?,
     @SerialName("title") val title: String,
     @SerialName("description") val description: String = "",
     @SerialName("category") val category: String = "User",
     @SerialName("cover_url") val coverUrl: String? = null,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("is_private") val isPrivate: Boolean = false
 )
 
 @Serializable
 data class NewPlaylistDto(
-    @SerialName("owner_id") val ownerId: String,
+    @SerialName("owner_id") val ownerId: String?,
     @SerialName("title") val title: String,
     @SerialName("description") val description: String = "",
     @SerialName("category") val category: String = "User",
-    @SerialName("cover_url") val coverUrl: String? = null
+    @SerialName("cover_url") val coverUrl: String? = null,
+    @SerialName("is_private") val isPrivate: Boolean = false
 )
 
 @Serializable
