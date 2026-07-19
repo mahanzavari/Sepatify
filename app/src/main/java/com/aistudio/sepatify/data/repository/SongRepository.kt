@@ -35,7 +35,7 @@ interface SongRepository {
 
     // Playlists (Global playlists come from Supabase; User playlists are owned by the signed-in user)
     fun getUserPlaylists(): Flow<List<PlaylistEntity>>
-    suspend fun createPlaylist(title: String, description: String, category: String): Long
+    suspend fun createPlaylist(title: String, description: String, category: String, isPrivate: Boolean = false): Long
     suspend fun deletePlaylist(playlistId: Long)
     suspend fun addSongToPlaylist(playlistId: Long, songId: String)
     suspend fun addSongsToPlaylist(playlistId: Long, songIds: List<String>): Result<Unit>

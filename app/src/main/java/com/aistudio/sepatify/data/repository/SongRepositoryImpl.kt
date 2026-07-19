@@ -299,11 +299,11 @@ class SongRepositoryImpl(
         return playlistDao.getPlaylists()
     }
 
-    override suspend fun createPlaylist(title: String, description: String, category: String): Long {
+    override suspend fun createPlaylist(title: String, description: String, category: String, isPrivate: Boolean): Long 
         val uid = authRepository.currentUserId() ?: return -1L
         return try {
             val createdList = Supa.client.from("playlists")
-                .insert(com.aistudio.sepatify.data.remote.dto.NewPlaylistDto(ownerId = uid, title = title, description = description, category = category)) {
+                .insert(com.aistudio.sepatify.data.remote.dto.NewPlaylistDto(ownerId = uid, title = title, description = description, category = category, isPrivate = isPrivate)) {
                     select(columns = Columns.ALL)
                 }
                 .decodeList<com.aistudio.sepatify.data.remote.dto.PlaylistDto>()
@@ -315,7 +315,8 @@ class SongRepositoryImpl(
                 title = created.title,
                 description = created.description,
                 isUserCreated = true,
-                category = created.category
+                category = created.category,
+                isPrivate = created.isPrivate
             ))
             created.id
         } catch (e: Exception) {
