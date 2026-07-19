@@ -7,6 +7,7 @@ import com.aistudio.sepatify.data.repository.*
 import com.aistudio.sepatify.ui.viewmodel.*
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
+import com.aistudio.sepatify.data.network.NetworkMonitor
 import org.koin.dsl.module
 
 val appModule = module {
@@ -23,6 +24,7 @@ val appModule = module {
     single { PreferencesManager(androidContext()) }
     single { com.aistudio.sepatify.player.AudioPlayerManager(androidContext()) }
     single { WorkManager.getInstance(androidContext()) }
+    single { NetworkMonitor(androidContext()) }
 
     // Repositories
     single<AuthRepository> { AuthRepositoryImpl() }
