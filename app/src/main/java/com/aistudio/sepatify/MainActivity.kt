@@ -35,9 +35,9 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.data.network.NetworkMonitor
 import com.aistudio.sepatify.ui.components.EqualizerDialog
 import com.aistudio.sepatify.ui.components.ShareBottomSheet
-import com.aistudio.sepatify.data.network.NetworkMonitor
 import com.aistudio.sepatify.ui.theme.SepatifyTheme
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
@@ -67,7 +67,6 @@ private data class BottomNavItem(
 )
 
 class MainActivity : ComponentActivity() {
-
     private val networkMonitor: NetworkMonitor by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -166,8 +165,8 @@ class MainActivity : ComponentActivity() {
                             playlistViewModel = playlistViewModel,
                             chatViewModel = chatViewModel,
                             sharedAudioViewModel = sharedAudioViewModel,
-                            isConnected = isConnected,
                             isPremium = isPremium,
+                            isConnected = isConnected,
                             locString = locString
                         )
                     }
@@ -200,6 +199,8 @@ fun AppMainHub(
     var showNowPlayingOverlay by remember { mutableStateOf(false) }
     var showMiniPlayer by remember { mutableStateOf(false) }
     var itemToShare by remember { mutableStateOf<Any?>(null) }
+    var viewedUser by remember { mutableStateOf<String?>(null) }
+    var viewedUserPlaylist by remember { mutableStateOf<PlaylistEntity?>(null) }
 
     val currentSong by sharedAudioViewModel.currentSong.collectAsState()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsState()
@@ -261,6 +262,7 @@ fun AppMainHub(
         BottomNavItem(TAB_CHAT, R.string.nav_chat, Icons.Default.Chat, "nav_chat"),
         BottomNavItem(TAB_PROFILE, R.string.nav_profile, Icons.Default.Person, "nav_profile")
     )
+
     val snackbarHostState = remember { SnackbarHostState() }
     var wasDisconnected by remember { mutableStateOf(false) }
 
@@ -280,11 +282,16 @@ fun AppMainHub(
             )
         }
     }
+
     androidx.activity.compose.BackHandler(
-        enabled = showNowPlayingOverlay || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
+        enabled = showNowPlayingOverlay || viewedUserPlaylist != null || viewedUser != null || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
     ) {
         if (showNowPlayingOverlay) {
             showNowPlayingOverlay = false
+        } else if (viewedUserPlaylist != null) {
+            viewedUserPlaylist = null
+        } else if (viewedUser != null) {
+            viewedUser = null
         } else if (activeTab == TAB_CHAT && activeChatUser != null) {
             activeChatUser = null
         } else if (activeTab != TAB_HOME) {
@@ -499,7 +506,7 @@ fun AppMainHub(
                     ) { data ->
                         Snackbar(
                             modifier = Modifier.padding(12.dp).widthIn(max = 240.dp),
-                            shape = CircleShape, // Creates the fully curved pill-shape
+                            shape = CircleShape, 
                             containerColor = MaterialTheme.sepatifyColors.playlistAccentMintLight,
                             contentColor = MaterialTheme.sepatifyColors.playlistTextMintDark
                         ) {
@@ -609,10 +616,7 @@ fun AppMainHub(
                             TAB_FOLLOWED -> FollowedUsersScreen(
                                 chatViewModel = chatViewModel,
                                 locString = locString,
-                                onUserClick = { user ->
-                                    activeChatUser = user
-                                    activeTab = TAB_CHAT
-                                }
+                                onUserClick = { user -> viewedUser = user }
                             )
 
                             TAB_DOWNLOADS -> DownloadsScreen(
@@ -720,6 +724,49 @@ fun AppMainHub(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = viewedUser != null,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            if (viewedUser != null) {
+                UserProfileScreen(
+                    username = viewedUser!!,
+                    chatViewModel = chatViewModel,
+                    onBack = { viewedUser = null },
+                    onChatClick = {
+                        activeChatUser = viewedUser
+                        activeTab = TAB_CHAT
+                        viewedUser = null
+                    },
+                    onPlaylistClick = { viewedUserPlaylist = it }
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = viewedUserPlaylist != null,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            if (viewedUserPlaylist != null) {
+                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                    PlaylistDetailView(
+                        playlist = viewedUserPlaylist!!,
+                        hasPermission = true,
+                        onBack = { viewedUserPlaylist = null },
+                        onShare = { itemToShare = viewedUserPlaylist },
+                        onDelete = { }, // Public playlist, deletion disabled by UI mapping
+                        onRemoveSong = { }, // Public playlist, removal disabled by UI mapping
+                        onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) },
+                        requestPermission = { },
+                        playlistViewModel = playlistViewModel,
+                        locString = locString
+                    )
                 }
             }
         }
