@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.aistudio.sepatify.R
+import com.aistudio.sepatify.ui.viewmodel.AuthEvent
 import com.aistudio.sepatify.ui.viewmodel.AuthUiState
 import com.aistudio.sepatify.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
@@ -170,8 +171,8 @@ fun LoginScreen(
 
                     Button(
                         onClick = {
-                            if (targetIsSignUp) authViewModel.register(email, displayName, password)
-                            else authViewModel.login(email, password)
+                            if (targetIsSignUp) authViewModel.onEvent(AuthEvent.Register(email, displayName, password))
+                            else authViewModel.onEvent(AuthEvent.Login(email, password))
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -199,7 +200,7 @@ fun LoginScreen(
 
             TextButton(onClick = { 
                 isSignUp = !isSignUp 
-                authViewModel.resetState()
+                authViewModel.onEvent(AuthEvent.ResetState)
             }) {
                 Text(
                     text = if (isSignUp) locString(R.string.already_have_account) else locString(R.string.dont_have_account),

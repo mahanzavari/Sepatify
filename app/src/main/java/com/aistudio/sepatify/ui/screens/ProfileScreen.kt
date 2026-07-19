@@ -44,6 +44,7 @@ import com.aistudio.sepatify.R
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
+import com.aistudio.sepatify.ui.viewmodel.MainEvent
 import com.aistudio.sepatify.ui.viewmodel.MainViewModel
 import java.io.File
 import java.io.FileOutputStream
@@ -145,9 +146,9 @@ fun ProfileScreen(
                                     viewSize = viewSize
                                 )
                                 if (croppedUri != null) {
-                                    mainViewModel.updateAvatar(croppedUri.toString())
+                                    mainViewModel.onEvent(MainEvent.UpdateAvatar(croppedUri.toString()))
                                 } else {
-                                    mainViewModel.updateAvatar(selectedImageUri.toString())
+                                    mainViewModel.onEvent(MainEvent.UpdateAvatar(selectedImageUri.toString()))
                                 }
                                 showCropDialog = false
                             },
@@ -263,7 +264,7 @@ fun ProfileScreen(
                         Text(text = if (isPremium) locString(R.string.premium_user_badge) else locString(R.string.regular_user_badge), style = MaterialTheme.typography.titleMedium, color = if (isPremium) colors.premiumGoldTextDark else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(dimens.spaceTwelve))
                         Button(
-                            onClick = { mainViewModel.setPremium(!isPremium) }, 
+                            onClick = { mainViewModel.onEvent(MainEvent.SetPremium(!isPremium)) }, 
                             colors = ButtonDefaults.buttonColors(containerColor = if (isPremium) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary), 
                             shape = shapes.button
                         ) {
@@ -286,7 +287,7 @@ fun ProfileScreen(
                             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(dimens.spaceEight)) {
                                 listOf("system" to R.string.theme_system, "dark" to R.string.theme_dark, "light" to R.string.theme_light).forEach { (mode, nameRes) ->
-                                    MinimalChip(text = locString(nameRes), isSelected = currentTheme == mode, onClick = { mainViewModel.updateTheme(mode) }, modifier = Modifier.weight(1f))
+                                    MinimalChip(text = locString(nameRes), isSelected = currentTheme == mode, onClick = { mainViewModel.onEvent(MainEvent.UpdateTheme(mode)) }, modifier = Modifier.weight(1f))
                                 }
                             }
                         }
@@ -300,7 +301,7 @@ fun ProfileScreen(
                             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(dimens.spaceEight)) {
                                 listOf("en" to R.string.english_lang, "fa" to R.string.persian_lang).forEach { (lang, nameRes) ->
-                                    MinimalChip(text = locString(nameRes), isSelected = currentLang == lang, onClick = { mainViewModel.updateLanguage(lang) }, modifier = Modifier.weight(1f))
+                                    MinimalChip(text = locString(nameRes), isSelected = currentLang == lang, onClick = { mainViewModel.onEvent(MainEvent.UpdateLanguage(lang)) }, modifier = Modifier.weight(1f))
                                 }
                             }
                         }
@@ -310,7 +311,7 @@ fun ProfileScreen(
         }
 
         item {
-            Box(modifier = Modifier.fillMaxWidth().clip(shapes.button).clickable { mainViewModel.logout() }.padding(vertical = dimens.spaceTwelve), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().clip(shapes.button).clickable { mainViewModel.onEvent(MainEvent.Logout) }.padding(vertical = dimens.spaceTwelve), contentAlignment = Alignment.Center) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(dimens.sizeIconNormal))
                     Spacer(modifier = Modifier.width(dimens.spaceEight))
