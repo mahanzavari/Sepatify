@@ -750,25 +750,34 @@ fun AppMainHub(
             }
         }
 
+// Replace the AnimatedVisibility block for viewedUserPlaylist in MainActivity.kt
         AnimatedVisibility(
             visible = viewedUserPlaylist != null,
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { it })
         ) {
             if (viewedUserPlaylist != null) {
-                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                    PlaylistDetailView(
-                        playlist = viewedUserPlaylist!!,
-                        hasPermission = true,
-                        onBack = { viewedUserPlaylist = null },
-                        onShare = { itemToShare = viewedUserPlaylist },
-                        onDelete = { }, // Public playlist, deletion disabled by UI mapping
-                        onRemoveSong = { }, // Public playlist, removal disabled by UI mapping
-                        onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) },
-                        requestPermission = { },
-                        playlistViewModel = playlistViewModel,
-                        locString = locString
-                    )
+                // Fixed: Swap Box for Surface to fix content colors, and add status bars + horizontal margin padding
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                        PlaylistDetailView(
+                            playlist = viewedUserPlaylist!!,
+                            hasPermission = true,
+                            onBack = { viewedUserPlaylist = null },
+                            onShare = { itemToShare = viewedUserPlaylist },
+                            onDelete = { }, // Public playlist, deletion disabled by UI mapping
+                            onRemoveSong = { }, // Public playlist, removal disabled by UI mapping
+                            onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) },
+                            requestPermission = { },
+                            playlistViewModel = playlistViewModel,
+                            locString = locString
+                        )
+                    }
                 }
             }
         }

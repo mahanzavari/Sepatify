@@ -606,17 +606,44 @@ fun PlaylistDetailView(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+        Row(
+            modifier = Modifier.fillMaxWidth(), 
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) { 
+                Icon(
+                    imageVector = Icons.Default.ArrowBack, 
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground // Explicit high-contrast tint
+                ) 
+            }
             Spacer(modifier = Modifier.width(dimens.spaceEight))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = playlist.title, style = MaterialTheme.typography.titleLarge)
-                Text(text = playlist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                Text(
+                    text = playlist.title, 
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground // Explicit adaptive color
+                )
+                Text(
+                    text = playlist.description, 
+                    style = MaterialTheme.typography.bodySmall, 
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
             }
-            IconButton(onClick = onShare) { Icon(Icons.Default.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.primary) }
+            IconButton(onClick = onShare) { 
+                Icon(
+                    imageVector = Icons.Default.Share, 
+                    contentDescription = "Share", 
+                    tint = MaterialTheme.colorScheme.primary 
+                ) 
+            }
             if (playlist.isUserCreated) {
                 IconButton(onClick = { showDeleteConfirm = true }) { 
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) 
+                    Icon(
+                        imageVector = Icons.Default.Delete, 
+                        contentDescription = "Delete", 
+                        tint = MaterialTheme.colorScheme.error 
+                    ) 
                 }
              }
          }
@@ -648,7 +675,11 @@ fun PlaylistDetailView(
         Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
         if (playlist.category == "Local" && !hasPermission) {
-            Column(modifier = Modifier.fillMaxWidth().weight(1f).padding(dimens.spaceHuge), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(dimens.spaceHuge), 
+                horizontalAlignment = Alignment.CenterHorizontally, 
+                verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
+            ) {
                 Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(dimens.spaceTera), tint = MaterialTheme.colorScheme.primary)
                 Text(locString(R.string.permission_storage_required), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                 Button(onClick = requestPermission) { Text(locString(R.string.permission_grant_btn)) }
@@ -685,7 +716,10 @@ fun PlaylistDetailView(
                                     val s = pagedSongs[index] ?: return@items
                                     val art = rememberSongArt(s)
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items.filterNotNull()) }.padding(vertical = dimens.spaceSix),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items.filterNotNull()) }
+                                            .padding(vertical = dimens.spaceSix),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         AsyncImage(
@@ -696,8 +730,17 @@ fun PlaylistDetailView(
                                         )
                                         Spacer(modifier = Modifier.width(dimens.spaceTwelve))
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                                            Text(s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                                            Text(
+                                                text = s.title, 
+                                                style = MaterialTheme.typography.bodyLarge, 
+                                                color = MaterialTheme.colorScheme.onBackground, // Explicit adaptive color
+                                                maxLines = 1
+                                            )
+                                            Text(
+                                                text = s.artistName, 
+                                                style = MaterialTheme.typography.bodySmall, 
+                                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                                            )
                                         }
                                         if (playlist.isUserCreated) {
                                             IconButton(onClick = { onRemoveSong(s.id); pagedSongs.refresh() }) {
