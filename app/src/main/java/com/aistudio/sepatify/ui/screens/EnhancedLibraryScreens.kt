@@ -342,12 +342,10 @@ fun SwipeToRemoveRecentSongItem(
     var swipeOffset by remember { mutableStateOf(0f) }
     val animatedOffset by animateFloatAsState(targetValue = swipeOffset, label = "swipe-remove")
 
-    LaunchedEffect(swipeOffset) {
-        if (swipeOffset < -220f || swipeOffset > 220f) {
-            onRemove()
-            swipeOffset = 0f
-        }
-    }
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val dismissThreshold = screenWidthPx * 0.5f
 
     Box(
         modifier = Modifier
@@ -358,7 +356,15 @@ fun SwipeToRemoveRecentSongItem(
                         swipeOffset += dragAmount
                     },
                     onDragEnd = {
-                        swipeOffset = if (swipeOffset > 0) 220f else -220f
+                        if (Math.abs(swipeOffset) > dismissThreshold) {
+                            swipeOffset = if (swipeOffset > 0) screenWidthPx else -screenWidthPx
+                            onRemove()
+                        } else {
+                            swipeOffset = 0f
+                        }
+                    },
+                    onDragCancel = {
+                        swipeOffset = 0f
                     }
                 )
             }
@@ -493,12 +499,10 @@ fun SwipeToUnlikeSongItem(
     var swipeOffset by remember { mutableStateOf(0f) }
     val animatedOffset by animateFloatAsState(targetValue = swipeOffset, label = "swipe-unlike")
 
-    LaunchedEffect(swipeOffset) {
-        if (swipeOffset < -220f || swipeOffset > 220f) {
-            onUnlike()
-            swipeOffset = 0f
-        }
-    }
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val dismissThreshold = screenWidthPx * 0.5f
 
     Box(
         modifier = Modifier
@@ -509,7 +513,15 @@ fun SwipeToUnlikeSongItem(
                         swipeOffset += dragAmount
                     },
                     onDragEnd = {
-                        swipeOffset = if (swipeOffset > 0) 220f else -220f
+                        if (Math.abs(swipeOffset) > dismissThreshold) {
+                            swipeOffset = if (swipeOffset > 0) screenWidthPx else -screenWidthPx
+                            onUnlike()
+                        } else {
+                            swipeOffset = 0f
+                        }
+                    },
+                    onDragCancel = {
+                        swipeOffset = 0f
                     }
                 )
             }
