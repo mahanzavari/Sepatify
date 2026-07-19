@@ -47,7 +47,8 @@ data class PlaylistEntity(
     val title: String,
     val description: String,
     val isUserCreated: Boolean,
-    val category: String // "International", "Local", "User"
+    val category: String, // "International", "Local", "User"
+    val isPrivate: Boolean = false
 )
 
 @Entity(tableName = "playlist_song_cross_ref", primaryKeys = ["playlistId", "songId"])

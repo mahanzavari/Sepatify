@@ -1,3 +1,4 @@
+// Paste this into: app/src/main/java/com/aistudio/sepatify/data/repository/ChatRepositoryImpl.kt
 package com.aistudio.sepatify.data.repository
 
 import androidx.paging.Pager
@@ -5,10 +6,13 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.aistudio.sepatify.data.local.ChatMessageDao
 import com.aistudio.sepatify.data.local.ChatMessageEntity
+import com.aistudio.sepatify.data.remote.dto.LikedSongJoinDto
+import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.data.remote.Supa
 import com.aistudio.sepatify.data.remote.dto.ChatMessageDto
 import com.aistudio.sepatify.data.remote.dto.NewChatMessageDto
+import com.aistudio.sepatify.data.remote.dto.PlaylistDto
 import com.aistudio.sepatify.data.remote.dto.ProfileDto
 import com.aistudio.sepatify.data.remote.dto.TypingPayload
 import io.github.jan.supabase.postgrest.from
@@ -57,27 +61,20 @@ class ChatRepositoryImpl(
     private val typingStates = mutableMapOf<String, MutableStateFlow<Boolean>>()
     private val typingChannelUsers = mutableSetOf<String>()
 
-    // Profile Cache
     private val profileCache = MutableStateFlow<Map<String, ProfileDto>>(emptyMap())
 
-    // Presence System State
     private val _onlineUsers = MutableStateFlow<Set<String>>(emptySet())
     private var presenceChannel: io.github.jan.supabase.realtime.RealtimeChannel? = null
 
-    // Heartbeat controls
     private val activeUserTimestamps = ConcurrentHashMap<String, Long>()
     private var presenceHeartbeatJob: Job? = null
     private var presenceCleanupJob: Job? = null
 
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
-
-        // --- ADDED: Start listening to Realtime Profile Updates ---
         repoScope.launch { subscribeToRealtimeProfiles() }
-        // ---------------------------------------------------------
     }
 
-    // --- ADDED: Realtime Profile Invalidation Listener ---
     private suspend fun subscribeToRealtimeProfiles() {
         try {
             val channel = Supa.client.realtime.channel("public-profiles-updates")
@@ -91,7 +88,6 @@ class ChatRepositoryImpl(
                     val id = record["id"]?.jsonPrimitive?.content ?: return@collect
 
                     val usernameToUpdate = idToUsername[id]
-                    // Only re-fetch if this profile is actively cached/viewed by the UI right now
                     if (usernameToUpdate != null && profileCache.value.containsKey(usernameToUpdate)) {
                         try {
                             val freshProfile = Supa.client.from("profiles")
@@ -109,28 +105,83 @@ class ChatRepositoryImpl(
                                 usernameToId[freshProfile.username] = id
                             }
                         } catch (e: Exception) {
-                            // Ignore network fetch errors during realtime sync
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            // Realtime not reachable
         }
     }
-    // -----------------------------------------------------
 
     override fun getProfileFlow(username: String): Flow<ProfileDto?> {
         return profileCache.map { it[username] }.onStart {
             if (!profileCache.value.containsKey(username)) {
-                repoScope.launch { resolveId(username) } // Triggers fetch and cache if missing
+                repoScope.launch { resolveId(username) } 
             }
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Presence System Implementation (Broadcast Heartbeat Strategy)
-    // ---------------------------------------------------------------------
+    override suspend fun getUserProfileDetails(username: String): UserProfileDetails {
+        val id = resolveId(username) ?: return UserProfileDetails(0, 0, emptyList())
+        val myId = authRepository.currentUserId()
+
+        var followersCount = 0
+        var followingCount = 0
+        var mappedPlaylists = emptyList<PlaylistEntity>()
+        var mappedSongs = emptyList<Song>()
+
+        // 1. Fetch Followers (Isolated)
+        try {
+            followersCount = Supa.client.from("follows")
+                .select(columns = Columns.ALL) { filter { eq("followed_id", id) } }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().size
+        } catch (e: Exception) { e.printStackTrace() }
+
+        // 2. Fetch Following (Isolated)
+        try {
+            followingCount = Supa.client.from("follows")
+                .select(columns = Columns.ALL) { filter { eq("follower_id", id) } }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().size
+        } catch (e: Exception) { e.printStackTrace() }
+
+        // 3. Fetch Playlists (Isolated & Smart Privacy)
+        try {
+            val remotePlaylists = Supa.client.from("playlists")
+                .select(columns = Columns.ALL) { 
+                    filter { eq("owner_id", id) } 
+                }
+                .decodeList<PlaylistDto>()
+                // Filter out private playlists UNLESS it's the signed-in user viewing their own profile
+                .filter { !it.isPrivate || id == myId }
+
+            mappedPlaylists = remotePlaylists.map {
+                PlaylistEntity(
+                    id = it.id,
+                    title = it.title,
+                    description = it.description,
+                    isUserCreated = false, 
+                    category = it.category,
+                    isPrivate = it.isPrivate
+                )
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+
+        // 4. Fetch Liked Songs (Isolated)
+        try {
+            val likedSongsJson = Supa.client.from("liked_songs")
+                .select(columns = Columns.raw("user_id, song_id, songs(*)")) { filter { eq("user_id", id) } }
+                .decodeList<LikedSongJoinDto>()
+
+            mappedSongs = likedSongsJson.mapNotNull {
+                val s = it.songs
+                if (s != null) {
+                    Song(s.id, s.title, s.artistName, s.coverImageUrl, s.audioUrl, s.category)
+                } else null
+            }
+        } catch (e: Exception) { e.printStackTrace() }
+
+        return UserProfileDetails(followersCount, followingCount, mappedPlaylists, mappedSongs)
+    }
 
     override fun getOnlineUsers(): Flow<Set<String>> = _onlineUsers.asStateFlow()
 
@@ -230,10 +281,6 @@ class ChatRepositoryImpl(
         } catch (e: Exception) { }
     }
 
-    // ---------------------------------------------------------------------
-    // Username <-> Supabase user id resolution
-    // ---------------------------------------------------------------------
-
     private suspend fun resolveId(username: String): String? {
         profileCache.value[username]?.let { return it.id }
 
@@ -274,10 +321,6 @@ class ChatRepositoryImpl(
             id
         }
     }
-
-    // ---------------------------------------------------------------------
-    // Existing Chat / Feed functionality below
-    // ---------------------------------------------------------------------
 
     override fun getRecentConversations(): Flow<List<String>> {
         return chatMessageDao.getRecentConversations()

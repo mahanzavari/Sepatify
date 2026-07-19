@@ -18,9 +18,9 @@ class PlaylistViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Ensure the onResult signature is exactly: (Boolean, String?) -> Unit
-    fun createNewPlaylistWithSongs(title: String, description: String, songIds: List<String>, onResult: (Boolean, String?) -> Unit) {
+    fun createNewPlaylistWithSongs(title: String, description: String, isPrivate: Boolean, songIds: List<String>, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
-            val pid = songRepository.createPlaylist(title, description, "User")
+            val pid = songRepository.createPlaylist(title, description, "User", isPrivate)
             if (pid != -1L) {
                 val result = songRepository.addSongsToPlaylist(pid, songIds)
                 if (result.isFailure) {
