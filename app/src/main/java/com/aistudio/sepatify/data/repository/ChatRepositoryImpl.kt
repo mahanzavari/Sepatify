@@ -5,6 +5,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import com.aistudio.sepatify.data.local.ChatMessageDao
 import com.aistudio.sepatify.data.local.ChatMessageEntity
+import com.aistudio.sepatify.data.remote.dto.LikedSongJoinDto
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.data.remote.Supa
@@ -119,28 +120,48 @@ class ChatRepositoryImpl(
         }
     }
 
-    override suspend fun getUserProfileDetails(username: String): UserProfileDetails {
+override suspend fun getUserProfileDetails(username: String): UserProfileDetails {
         val id = resolveId(username) ?: return UserProfileDetails(0, 0, emptyList())
         return try {
-            val followers = Supa.client.from("follows").select(columns = Columns.raw("follower_id")) { filter { eq("followed_id", id) } }.decodeList<JsonObject>().size
-            val following = Supa.client.from("follows").select(columns = Columns.raw("followed_id")) { filter { eq("follower_id", id) } }.decodeList<JsonObject>().size
-            val remotePlaylists = Supa.client.from("playlists").select(columns = Columns.ALL) { filter { eq("owner_id", id) } }.decodeList<PlaylistDto>()
+            val followers = Supa.client.from("follows")
+                .select(columns = Columns.raw("follower_id")) { filter { eq("followed_id", id) } }
+                .decodeList<JsonObject>().size
+            val following = Supa.client.from("follows")
+                .select(columns = Columns.raw("followed_id")) { filter { eq("follower_id", id) } }
+                .decodeList<JsonObject>().size
             
-            val mapped = remotePlaylists.map {
+            // Query only public playlists: is_private = false
+            val remotePlaylists = Supa.client.from("playlists").select(columns = Columns.ALL) { 
+                filter { 
+                    eq("owner_id", id) 
+                    eq("is_private", false) 
+                } 
+            }.decodeList<PlaylistDto>()
+            
+            // Query public liked songs to represent "Recently Played"
+            val likedSongsJson = Supa.client.from("liked_songs")
+                .select(columns = Columns.raw("song_id, songs(*)")) { filter { eq("user_id", id) } }
+                .decodeList<LikedSongJoinDto>()
+
+            val mappedPlaylists = remotePlaylists.map {
                 PlaylistEntity(
                     id = it.id,
                     title = it.title,
                     description = it.description,
                     isUserCreated = false, 
-                    category = it.category
+                    category = it.category,
+                    isPrivate = it.isPrivate
                 )
             }
-            UserProfileDetails(followers, following, mapped)
+            val mappedSongs = likedSongsJson.map {
+                val s = it.songs
+                Song(s.id, s.title, s.artistName, s.coverImageUrl, s.audioUrl, s.category)
+            }
+            UserProfileDetails(followers, following, mappedPlaylists, mappedSongs)
         } catch (e: Exception) {
             UserProfileDetails(0, 0, emptyList())
         }
     }
-
     override fun getOnlineUsers(): Flow<Set<String>> = _onlineUsers.asStateFlow()
 
     override suspend fun trackPresence() {
