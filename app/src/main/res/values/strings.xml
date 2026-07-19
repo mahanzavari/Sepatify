@@ -282,6 +282,6 @@
     <string name="guest_user_default">Guest User</string>
 
     <!-- Network State -->
-    <string name="network_lost">Network connection lost. Please check your internet.</string>
-    <string name="network_restored">Network connection restored.</string>
+    <string name="network_lost">Network Lost</string>
+    <string name="network_restored">Network is back.</string>
 </resources>

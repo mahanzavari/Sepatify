@@ -29,7 +29,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
@@ -490,8 +492,26 @@ fun AppMainHub(
                 snackbarHost = {
                     SnackbarHost(
                         hostState = snackbarHostState,
-                        modifier = Modifier.padding(bottom = dimens.heightBottomNavBar + if (currentSong != null) dimens.marginKeyboardMiniplayer else dimens.zero)
-                    )
+                        modifier = Modifier
+                            .padding(bottom = dimens.heightBottomNavBar + if (currentSong != null) dimens.marginKeyboardMiniplayer else dimens.zero)
+                            .fillMaxWidth()
+                            .wrapContentWidth(Alignment.CenterHorizontally)
+                    ) { data ->
+                        Snackbar(
+                            modifier = Modifier.padding(12.dp).widthIn(max = 240.dp),
+                            shape = CircleShape, // Creates the fully curved pill-shape
+                            containerColor = MaterialTheme.colorScheme.inverseSurface,
+                            contentColor = MaterialTheme.colorScheme.inverseOnSurface
+                        ) {
+                            Text(
+                                text = data.visuals.message,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 },
                 bottomBar = {}
             ) { paddingValues ->
