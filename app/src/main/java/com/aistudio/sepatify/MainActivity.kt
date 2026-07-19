@@ -223,19 +223,19 @@ fun AppMainHub(
     val shapes = MaterialTheme.sepatifyShapes
     val colors = MaterialTheme.sepatifyColors
 
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+   val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
-                chatViewModel.trackPresence()
+                chatViewModel.onEvent(ChatEvent.TrackPresence)
             } else if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                chatViewModel.untrackPresence()
+                chatViewModel.onEvent(ChatEvent.UntrackPresence)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            chatViewModel.untrackPresence()
+            chatViewModel.onEvent(ChatEvent.UntrackPresence)
         }
     }
 

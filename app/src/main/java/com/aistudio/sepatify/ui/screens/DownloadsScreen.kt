@@ -20,6 +20,7 @@ import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.DownloadedSongEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.viewmodel.DownloadEvent
 import com.aistudio.sepatify.ui.viewmodel.DownloadViewModel
 import androidx.compose.ui.res.stringResource
 
@@ -67,7 +68,6 @@ fun DownloadsScreen(
                 modifier = Modifier.weight(1f).fillMaxWidth()
             )
         } else {
-            // Sort Dropdown implementation
             var expanded by remember { mutableStateOf(false) }
             val sortType by downloadViewModel.sortType.collectAsState()
 
@@ -90,15 +90,15 @@ fun DownloadsScreen(
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         DropdownMenuItem(
                             text = { Text(locString(R.string.sort_by_date)) },
-                            onClick = { downloadViewModel.updateSort("date"); expanded = false }
+                            onClick = { downloadViewModel.onEvent(DownloadEvent.UpdateSort("date")); expanded = false }
                         )
                         DropdownMenuItem(
                             text = { Text(locString(R.string.sort_by_title)) },
-                            onClick = { downloadViewModel.updateSort("title"); expanded = false }
+                            onClick = { downloadViewModel.onEvent(DownloadEvent.UpdateSort("title")); expanded = false }
                         )
                         DropdownMenuItem(
                             text = { Text(locString(R.string.sort_by_artist)) },
-                            onClick = { downloadViewModel.updateSort("artist"); expanded = false }
+                            onClick = { downloadViewModel.onEvent(DownloadEvent.UpdateSort("artist")); expanded = false }
                         )
                     }
                 }
@@ -113,10 +113,9 @@ fun DownloadsScreen(
 
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 200.dp), // Added bottom padding to avoid player overlap
+                contentPadding = PaddingValues(bottom = 200.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
-                // First show actively downloading items
                 items(activeDownloads.toList()) { (songId, progress) ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -138,7 +137,6 @@ fun DownloadsScreen(
                     }
                 }
 
-                // Then show completed downloads
                 items(
                     items = downloadedSongs,
                     key = { it.id }
@@ -154,7 +152,7 @@ fun DownloadsScreen(
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = {
                             if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
-                                downloadViewModel.removeDownload(entity.id)
+                                downloadViewModel.onEvent(DownloadEvent.RemoveDownload(entity.id))
                                 true
                             } else false
                         }

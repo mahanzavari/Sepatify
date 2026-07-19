@@ -26,6 +26,7 @@ import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
+import com.aistudio.sepatify.ui.viewmodel.SearchEvent
 import com.aistudio.sepatify.ui.viewmodel.SearchUiState
 import com.aistudio.sepatify.ui.viewmodel.SearchViewModel
 
@@ -53,12 +54,12 @@ fun SearchScreen(
     ) {
         OutlinedTextField(
             value = query,
-            onValueChange = { searchViewModel.updateSearchQuery(it) },
+            onValueChange = { searchViewModel.onEvent(SearchEvent.UpdateQuery(it)) },
             placeholder = { Text(locString(R.string.search_hint)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = locString(R.string.nav_search)) },
             trailingIcon = if (query.isNotEmpty()) {
                 {
-                    IconButton(onClick = { searchViewModel.updateSearchQuery("") }) {
+                    IconButton(onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("")) }) {
                         Icon(Icons.Default.Clear, contentDescription = locString(R.string.clear_history))
                     }
                 }
@@ -82,7 +83,7 @@ fun SearchScreen(
 
                 FilterChip(
                     selected = (filter == filterItem),
-                    onClick = { searchViewModel.setFilter(filterItem) },
+                    onClick = { searchViewModel.onEvent(SearchEvent.SetFilter(filterItem)) },
                     label = { Text(localizedFilter) }
                 )
             }
@@ -110,7 +111,7 @@ fun SearchScreen(
                                     color = MaterialTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.Bold
                                 )
-                                TextButton(onClick = { searchViewModel.clearHistory() }) {
+                                TextButton(onClick = { searchViewModel.onEvent(SearchEvent.ClearHistory) }) {
                                     Text(locString(R.string.clear_history), color = MaterialTheme.colorScheme.primary)
                                 }
                             }
@@ -120,7 +121,7 @@ fun SearchScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { searchViewModel.updateSearchQuery(historyItem) }
+                                    .clickable { searchViewModel.onEvent(SearchEvent.UpdateQuery(historyItem)) }
                                     .padding(vertical = dimens.spaceFour),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -136,7 +137,7 @@ fun SearchScreen(
                                     )
                                     Text(text = historyItem, style = MaterialTheme.typography.bodyMedium)
                                 }
-                                IconButton(onClick = { searchViewModel.deleteHistoryItem(historyItem) }) {
+                                IconButton(onClick = { searchViewModel.onEvent(SearchEvent.DeleteHistoryItem(historyItem)) }) {
                                     Icon(
                                         Icons.Default.Close,
                                         contentDescription = locString(R.string.clear_history),
@@ -167,7 +168,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_pop),
                                     backgroundColor = colors.genrePop,
                                     imageUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("Pop") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("Pop")) }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -175,7 +176,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_indie),
                                     backgroundColor = colors.genreIndie,
                                     imageUrl = "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("Indie") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("Indie")) }
                                 )
                             }
                         }
@@ -191,7 +192,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_rock),
                                     backgroundColor = colors.genreRock,
                                     imageUrl = "https://images.unsplash.com/photo-1487180142328-0c4e37023af5?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("Rock") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("Rock")) }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -199,7 +200,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_r_b),
                                     backgroundColor = colors.genreRandB,
                                     imageUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("R&B") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("R&B")) }
                                 )
                             }
                         }
@@ -225,7 +226,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_podcasts),
                                     backgroundColor = colors.genrePodcasts,
                                     imageUrl = "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("Podcasts") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("Podcasts")) }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -233,7 +234,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_made_for_you),
                                     backgroundColor = colors.genreMadeForYou,
                                     imageUrl = "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("Made For You") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("Made For You")) }
                                 )
                             }
                         }
@@ -249,7 +250,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_charts),
                                     backgroundColor = colors.genreCharts,
                                     imageUrl = "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("Charts") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("Charts")) }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -257,7 +258,7 @@ fun SearchScreen(
                                     title = locString(R.string.genre_new_releases_tag),
                                     backgroundColor = colors.genreNewReleases,
                                     imageUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&q=80",
-                                    onClick = { searchViewModel.updateSearchQuery("New Releases") }
+                                    onClick = { searchViewModel.onEvent(SearchEvent.UpdateQuery("New Releases")) }
                                 )
                             }
                         }

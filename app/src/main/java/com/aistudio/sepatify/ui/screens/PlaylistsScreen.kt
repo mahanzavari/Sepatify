@@ -44,6 +44,7 @@ import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
+import com.aistudio.sepatify.ui.viewmodel.PlaylistEvent
 import com.aistudio.sepatify.ui.viewmodel.PlaylistViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -51,7 +52,6 @@ import kotlinx.coroutines.launch
 enum class PlaylistsViewState { MAIN, FOLDER_DETAIL, CREATE_PLAYLIST, CREATE_FOLDER }
 
 @OptIn(ExperimentalMaterial3Api::class)
-
 @Composable
 fun PlaylistsScreen(
     playlistViewModel: PlaylistViewModel,
@@ -73,7 +73,6 @@ fun PlaylistsScreen(
         if (playlistsFirstLoad) playlistsFirstLoad = false
     }
 
-    // Permissions
     val context = androidx.compose.ui.platform.LocalContext.current
     val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
         android.Manifest.permission.READ_MEDIA_AUDIO
@@ -91,11 +90,9 @@ fun PlaylistsScreen(
     val shapes = MaterialTheme.sepatifyShapes
     val colors = MaterialTheme.sepatifyColors
 
-    // Back Handler
     androidx.activity.compose.BackHandler(enabled = selectedPlaylist != null || activeView != PlaylistsViewState.MAIN) {
-        if (selectedPlaylist != null) {
-            selectedPlaylist = null
-        } else {
+        if (selectedPlaylist != null) selectedPlaylist = null
+        else {
             activeView = PlaylistsViewState.MAIN
             activeFolder = null
         }
@@ -117,31 +114,14 @@ fun PlaylistsScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                // 1. Add Playlist Item (Correctly uses primaryContainer/onPrimaryContainer)
                 ListItem(
-                    headlineContent = { 
-                        Text(
-                            text = locString(R.string.add_playlist_title), 
-                            fontWeight = FontWeight.Bold
-                        ) 
-                    },
-                    supportingContent = { 
-                        Text(text = locString(R.string.add_playlist_desc)) 
-                    },
+                    headlineContent = { Text(text = locString(R.string.add_playlist_title), fontWeight = FontWeight.Bold) },
+                    supportingContent = { Text(text = locString(R.string.add_playlist_desc)) },
                     leadingContent = {
                         Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer), 
+                            modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlaylistAdd, 
-                                contentDescription = null, 
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
+                        ) { Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer) }
                     },
                     modifier = Modifier.clickable {
                         coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -152,31 +132,14 @@ fun PlaylistsScreen(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
                 
-                // 2. Add Folder Item (Fixed: Box background changed to secondaryContainer)
                 ListItem(
-                    headlineContent = { 
-                        Text(
-                            text = locString(R.string.add_folder_title), 
-                            fontWeight = FontWeight.Bold
-                        ) 
-                    },
-                    supportingContent = { 
-                        Text(text = locString(R.string.add_folder_desc)) 
-                    },
+                    headlineContent = { Text(text = locString(R.string.add_folder_title), fontWeight = FontWeight.Bold) },
+                    supportingContent = { Text(text = locString(R.string.add_folder_desc)) },
                     leadingContent = {
                         Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.secondaryContainer), // Fixed: changed from onSecondaryContainer
+                            modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
                             contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CreateNewFolder, 
-                                contentDescription = null, 
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
+                        ) { Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer) }
                     },
                     modifier = Modifier.clickable {
                         coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
@@ -206,24 +169,17 @@ fun PlaylistsScreen(
             label = ""
         ) { isDetailMode ->
             if (!isDetailMode) {
-                // MAIN GRID
                 Column(modifier = Modifier.fillMaxSize()) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(bottom = dimens.spaceNormal),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = locString(R.string.playlists_title),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text(text = locString(R.string.playlists_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         IconButton(
                             onClick = { showAddBottomSheet = true },
                             modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add", tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        }
+                        ) { Icon(Icons.Default.Add, contentDescription = "Add", tint = MaterialTheme.colorScheme.onPrimaryContainer) }
                     }
 
                     val totalPlaylists = listOf(
@@ -233,20 +189,16 @@ fun PlaylistsScreen(
                     ) + playlists
 
                     val standardPlaylists = totalPlaylists.filter { !it.category.startsWith("folder:") }
-                    val folderNames = totalPlaylists.filter { it.category.startsWith("folder:") }
-                        .map { it.category.removePrefix("folder:") }.distinct()
-
+                    val folderNames = totalPlaylists.filter { it.category.startsWith("folder:") }.map { it.category.removePrefix("folder:") }.distinct()
                     val gridItems = standardPlaylists + folderNames
 
                     if (playlistsFirstLoad) {
                         LazyVerticalGrid(
-                            columns = GridCells.Fixed(2), 
+                            columns = GridCells.Fixed(2),
                             modifier = Modifier.weight(1f).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve), 
+                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve),
                             verticalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
-                        ) {
-                            items(6) { PlaylistCardSkeleton() }
-                        }
+                        ) { items(6) { PlaylistCardSkeleton() } }
                     } else {
                         LazyVerticalGrid(
                             columns = GridCells.Fixed(2),
@@ -258,7 +210,6 @@ fun PlaylistsScreen(
                             items(gridItems.size) { index ->
                                 val item = gridItems[index]
                                 if (item is String) {
-                                    // Render Folder Card
                                     Card(
                                         modifier = Modifier.fillMaxWidth().height(dimens.heightPlaylistCard).clickable {
                                             activeFolder = item
@@ -267,10 +218,7 @@ fun PlaylistsScreen(
                                         shape = shapes.card,
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
-                                        Column(
-                                            modifier = Modifier.fillMaxSize().padding(dimens.spaceNormal),
-                                            verticalArrangement = Arrangement.SpaceBetween
-                                        ) {
+                                        Column(modifier = Modifier.fillMaxSize().padding(dimens.spaceNormal), verticalArrangement = Arrangement.SpaceBetween) {
                                             Box(modifier = Modifier.clip(shapes.chip).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)).padding(horizontal = dimens.spaceTen, vertical = dimens.spaceFive)) {
                                                 Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(dimens.sizeIconSmall))
                                             }
@@ -285,11 +233,7 @@ fun PlaylistsScreen(
                                     val (backgroundColor, textColor, _) = getCardColors(index, isSystemInDarkTheme(), colors)
                                     Card(
                                         modifier = Modifier.fillMaxWidth().height(dimens.heightPlaylistCard).clickable { 
-                                            if (item.id == -3L) {
-                                                onLikedSongsClick()
-                                            } else {
-                                                selectedPlaylist = item 
-                                            }
+                                            if (item.id == -3L) onLikedSongsClick() else selectedPlaylist = item 
                                         },
                                         shape = shapes.card,
                                         colors = CardDefaults.cardColors(containerColor = backgroundColor)
@@ -315,7 +259,6 @@ fun PlaylistsScreen(
                     }
                 }
             } else {
-                // Secondary Views
                 when {
                     selectedPlaylist != null -> {
                         PlaylistDetailView(
@@ -324,10 +267,12 @@ fun PlaylistsScreen(
                             onBack = { selectedPlaylist = null },
                             onShare = { onShareClick(selectedPlaylist!!) },
                             onDelete = {
-                                playlistViewModel.deletePlaylist(selectedPlaylist!!.id)
+                                playlistViewModel.onEvent(PlaylistEvent.DeletePlaylist(selectedPlaylist!!.id))
                                 selectedPlaylist = null
                             },
-                            onRemoveSong = { sid -> playlistViewModel.removeSongFromPlaylist(selectedPlaylist!!.id, sid) },
+                            onRemoveSong = { sid ->
+                                playlistViewModel.onEvent(PlaylistEvent.RemoveSong(selectedPlaylist!!.id, sid))
+                            },
                             onSongSelect = onSongSelect,
                             requestPermission = { launcher.launch(permission) },
                             playlistViewModel = playlistViewModel,
@@ -362,12 +307,7 @@ fun PlaylistsScreen(
 }
 
 @Composable
-fun FolderDetailView(
-    folderName: String,
-    playlists: List<PlaylistEntity>,
-    onBack: () -> Unit,
-    onPlaylistSelect: (PlaylistEntity) -> Unit
-) {
+fun FolderDetailView(folderName: String, playlists: List<PlaylistEntity>, onBack: () -> Unit, onPlaylistSelect: (PlaylistEntity) -> Unit) {
     val dimens = MaterialTheme.sepatifyDimens
     val colors = MaterialTheme.sepatifyColors
     Column(modifier = Modifier.fillMaxSize()) {
@@ -410,10 +350,7 @@ fun FolderDetailView(
 }
 
 @Composable
-fun CreatePlaylistView(
-    playlistViewModel: PlaylistViewModel,
-    onBack: () -> Unit
-) {
+fun CreatePlaylistView(playlistViewModel: PlaylistViewModel, onBack: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var isPrivate by remember { mutableStateOf(false) }
@@ -427,7 +364,6 @@ fun CreatePlaylistView(
     val dimens = MaterialTheme.sepatifyDimens
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // Header
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = dimens.spaceNormal), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
             Text("New Playlist", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -435,51 +371,28 @@ fun CreatePlaylistView(
                 onClick = {
                     if (title.isNotBlank() && selectedSongs.isNotEmpty()) {
                         isCreating = true
-                        playlistViewModel.createNewPlaylistWithSongs(title, desc, isPrivate, selectedSongs) { success, errorMsg ->
-                            isCreating = false
-                            if (success) {
-                                onBack()
-                            } else {
-                                android.widget.Toast.makeText(context, errorMsg ?: "Failed to create playlist", android.widget.Toast.LENGTH_LONG).show()
+                        playlistViewModel.onEvent(
+                            PlaylistEvent.CreatePlaylist(title, desc, isPrivate, selectedSongs) { success, errorMsg ->
+                                isCreating = false
+                                if (success) onBack()
+                                else android.widget.Toast.makeText(context, errorMsg ?: "Failed to create playlist", android.widget.Toast.LENGTH_LONG).show()
                             }
-                        }
+                        )
                     }
                 },
                 enabled = title.isNotBlank() && selectedSongs.isNotEmpty() && !isCreating
             ) {
-                if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                } else {
-                    Text("Create")
-                }
+                if (isCreating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                else Text("Create")
             }
         }
 
-        // Form Inputs
         Column {
-            OutlinedTextField(
-                value = title, 
-                onValueChange = { title = it }, 
-                label = { Text("Playlist Name") }, 
-                modifier = Modifier.fillMaxWidth(), 
-                shape = MaterialTheme.sepatifyShapes.small,
-                singleLine = true
-            )
+            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Playlist Name") }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.sepatifyShapes.small, singleLine = true)
             Spacer(modifier = Modifier.height(dimens.spaceEight))
-            OutlinedTextField(
-                value = desc, 
-                onValueChange = { desc = it }, 
-                label = { Text("Description (Optional)") }, 
-                modifier = Modifier.fillMaxWidth(), 
-                shape = MaterialTheme.sepatifyShapes.small,
-                singleLine = true
-            )
+            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description (Optional)") }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.sepatifyShapes.small, singleLine = true)
             Spacer(modifier = Modifier.height(dimens.spaceEight))
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = dimens.spaceEight),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = dimens.spaceEight), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Private Playlist", fontWeight = FontWeight.SemiBold, color = Color.White)
                 Switch(checked = isPrivate, onCheckedChange = { isPrivate = it })
             }
@@ -487,22 +400,9 @@ fun CreatePlaylistView(
         
         Spacer(modifier = Modifier.height(dimens.spaceLarge))
         
-        // Tab Layout for selections
-        TabRow(
-            selectedTabIndex = tabIndex,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            Tab(
-                selected = tabIndex == 0, 
-                onClick = { tabIndex = 0 }, 
-                text = { Text("Liked Songs", fontWeight = if (tabIndex==0) FontWeight.Bold else FontWeight.Normal) }
-            )
-            Tab(
-                selected = tabIndex == 1, 
-                onClick = { tabIndex = 1 }, 
-                text = { Text("Recently Played", fontWeight = if (tabIndex==1) FontWeight.Bold else FontWeight.Normal) }
-            )
+        TabRow(selectedTabIndex = tabIndex, containerColor = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.primary) {
+            Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }, text = { Text("Liked Songs", fontWeight = if (tabIndex==0) FontWeight.Bold else FontWeight.Normal) })
+            Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }, text = { Text("Recently Played", fontWeight = if (tabIndex==1) FontWeight.Bold else FontWeight.Normal) })
         }
 
         val list = (if (tabIndex == 0) likedSongs else recentSongs).filter { !it.id.startsWith("local_") && !it.audioUrl.startsWith("file://") && !it.audioUrl.startsWith("/") }
@@ -516,19 +416,12 @@ fun CreatePlaylistView(
                 items(list) { song ->
                     val isSelected = selectedSongs.contains(song.id)
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { if (isSelected) selectedSongs.remove(song.id) else selectedSongs.add(song.id) }
-                            .padding(vertical = dimens.spaceEight),
+                        modifier = Modifier.fillMaxWidth().clickable { if (isSelected) selectedSongs.remove(song.id) else selectedSongs.add(song.id) }.padding(vertical = dimens.spaceEight),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = isSelected, onCheckedChange = null)
                         Spacer(modifier = Modifier.width(dimens.spaceTwelve))
-                        AsyncImage(
-                            model = song.coverImageUrl, 
-                            contentDescription = null, 
-                            modifier = Modifier.size(50.dp).clip(MaterialTheme.sepatifyShapes.small)
-                        )
+                        AsyncImage(model = song.coverImageUrl, contentDescription = null, modifier = Modifier.size(50.dp).clip(MaterialTheme.sepatifyShapes.small))
                         Spacer(modifier = Modifier.width(dimens.spaceTwelve))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(song.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
@@ -542,11 +435,7 @@ fun CreatePlaylistView(
 }
 
 @Composable
-fun CreateFolderView(
-    playlistViewModel: PlaylistViewModel,
-    availablePlaylists: List<PlaylistEntity>,
-    onBack: () -> Unit
-) {
+fun CreateFolderView(playlistViewModel: PlaylistViewModel, availablePlaylists: List<PlaylistEntity>, onBack: () -> Unit) {
     val dimens = MaterialTheme.sepatifyDimens
     var folderName by remember { mutableStateOf("") }
     val selectedPlaylists = remember { mutableStateListOf<Long>() }
@@ -560,36 +449,24 @@ fun CreateFolderView(
                 onClick = {
                     if (folderName.isNotBlank() && selectedPlaylists.isNotEmpty()) {
                         isGrouping = true
-                        playlistViewModel.groupPlaylistsIntoFolder(folderName, selectedPlaylists) {
+                        playlistViewModel.onEvent(PlaylistEvent.GroupPlaylists(folderName, selectedPlaylists) {
                             isGrouping = false
                             onBack()
-                        }
+                        })
                     }
                 },
                 enabled = folderName.isNotBlank() && selectedPlaylists.isNotEmpty() && !isGrouping
             ) {
-                if (isGrouping) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                } else {
-                    Text("Group")
-                }
+                if (isGrouping) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                else Text("Group")
             }
         }
-
         Column {
-            OutlinedTextField(
-                value = folderName, 
-                onValueChange = { folderName = it }, 
-                label = { Text("Folder Name") }, 
-                modifier = Modifier.fillMaxWidth(), 
-                shape = MaterialTheme.sepatifyShapes.small,
-                singleLine = true
-            )
+            OutlinedTextField(value = folderName, onValueChange = { folderName = it }, label = { Text("Folder Name") }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.sepatifyShapes.small, singleLine = true)
             Spacer(modifier = Modifier.height(dimens.spaceLarge))
             Text("Select Playlists to Group", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(dimens.spaceEight))
         }
-
         if (availablePlaylists.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text("No user playlists available to group.", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
@@ -599,10 +476,7 @@ fun CreateFolderView(
                 items(availablePlaylists) { pl ->
                     val isSelected = selectedPlaylists.contains(pl.id)
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { if (isSelected) selectedPlaylists.remove(pl.id) else selectedPlaylists.add(pl.id) }
-                            .padding(vertical = 12.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { if (isSelected) selectedPlaylists.remove(pl.id) else selectedPlaylists.add(pl.id) }.padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = isSelected, onCheckedChange = null)
@@ -637,80 +511,37 @@ fun PlaylistDetailView(
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(), 
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) { 
-                Icon(
-                    imageVector = Icons.Default.ArrowBack, 
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onBackground // Explicit high-contrast tint
-                ) 
-            }
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground) }
             Spacer(modifier = Modifier.width(dimens.spaceEight))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = playlist.title, 
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground // Explicit adaptive color
-                )
-                Text(
-                    text = playlist.description, 
-                    style = MaterialTheme.typography.bodySmall, 
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                )
+                Text(text = playlist.title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+                Text(text = playlist.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
             }
-            IconButton(onClick = onShare) { 
-                Icon(
-                    imageVector = Icons.Default.Share, 
-                    contentDescription = "Share", 
-                    tint = MaterialTheme.colorScheme.primary 
-                ) 
-            }
+            IconButton(onClick = onShare) { Icon(Icons.Default.Share, contentDescription = "Share", tint = MaterialTheme.colorScheme.primary) }
             if (playlist.isUserCreated) {
-                IconButton(onClick = { showDeleteConfirm = true }) { 
-                    Icon(
-                        imageVector = Icons.Default.Delete, 
-                        contentDescription = "Delete", 
-                        tint = MaterialTheme.colorScheme.error 
-                    ) 
-                }
-             }
-         }
- 
+                IconButton(onClick = { showDeleteConfirm = true }) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
+            }
+        }
+
         if (showDeleteConfirm) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = false },
                 title = { Text(locString(R.string.delete_playlist_title), fontWeight = FontWeight.Bold) },
                 text = { Text(String.format(locString(R.string.delete_playlist_confirm), playlist.title)) },
                 confirmButton = {
-                    Button(
-                        onClick = {
-                            showDeleteConfirm = false
-                            onDelete()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
+                    Button(onClick = { showDeleteConfirm = false; onDelete() }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
                         Text(locString(R.string.cd_delete), color = Color.White)
                     }
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = false }) {
-                        Text(locString(R.string.cancel))
-                    }
-                }
+                dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(locString(R.string.cancel)) } }
             )
         }
 
         Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
         if (playlist.category == "Local" && !hasPermission) {
-            Column(
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(dimens.spaceHuge), 
-                horizontalAlignment = Alignment.CenterHorizontally, 
-                verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().weight(1f).padding(dimens.spaceHuge), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(dimens.spaceNormal)) {
                 Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(dimens.spaceTera), tint = MaterialTheme.colorScheme.primary)
                 Text(locString(R.string.permission_storage_required), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                 Button(onClick = requestPermission) { Text(locString(R.string.permission_grant_btn)) }
@@ -736,7 +567,6 @@ fun PlaylistDetailView(
                         }
                     } else {
                         val listState = rememberLazyListState()
-                        
                         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                             LazyColumn(
                                 state = listState,
@@ -747,31 +577,14 @@ fun PlaylistDetailView(
                                     val s = pagedSongs[index] ?: return@items
                                     val art = rememberSongArt(s)
                                     Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items.filterNotNull()) }
-                                            .padding(vertical = dimens.spaceSix),
+                                        modifier = Modifier.fillMaxWidth().clickable { onSongSelect(s, pagedSongs.itemSnapshotList.items.filterNotNull()) }.padding(vertical = dimens.spaceSix),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        AsyncImage(
-                                            model = art, 
-                                            contentDescription = s.title, 
-                                            modifier = Modifier.size(dimens.sizeSongThumbnailMedium).clip(MaterialTheme.shapes.extraSmall),
-                                            contentScale = ContentScale.Crop
-                                        )
+                                        AsyncImage(model = art, contentDescription = s.title, modifier = Modifier.size(dimens.sizeSongThumbnailMedium).clip(MaterialTheme.shapes.extraSmall), contentScale = ContentScale.Crop)
                                         Spacer(modifier = Modifier.width(dimens.spaceTwelve))
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = s.title, 
-                                                style = MaterialTheme.typography.bodyLarge, 
-                                                color = MaterialTheme.colorScheme.onBackground, // Explicit adaptive color
-                                                maxLines = 1
-                                            )
-                                            Text(
-                                                text = s.artistName, 
-                                                style = MaterialTheme.typography.bodySmall, 
-                                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                                            )
+                                            Text(text = s.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground, maxLines = 1)
+                                            Text(text = s.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                                         }
                                         if (playlist.isUserCreated) {
                                             IconButton(onClick = { onRemoveSong(s.id); pagedSongs.refresh() }) {
@@ -782,43 +595,36 @@ fun PlaylistDetailView(
                                 }
                             }
 
-                            // Interactive Custom Alphabet Scrollbar / Fast Slider
                             val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".map { it.toString() }
                             var currentLetter by remember { mutableStateOf<String?>(null) }
                             val coroutineScope = rememberCoroutineScope()
 
                             BoxWithConstraints(
-                                modifier = Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .fillMaxHeight()
-                                    .width(24.dp)
-                                    .padding(top = 16.dp, bottom = dimens.spaceBottomOverScroll, start = 2.dp, end = 2.dp)
+                                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(24.dp).padding(top = 16.dp, bottom = dimens.spaceBottomOverScroll, start = 2.dp, end = 2.dp)
                             ) {
                                 val sliderHeight = maxHeight
                                 val itemHeight = sliderHeight / alphabet.size
 
                                 Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .pointerInput(Unit) {
-                                            detectVerticalDragGestures(
-                                                onDragStart = { offset ->
-                                                    val idx = (offset.y / itemHeight.toPx()).toInt().coerceIn(0, alphabet.lastIndex)
-                                                    currentLetter = alphabet[idx]
+                                    modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                                        detectVerticalDragGestures(
+                                            onDragStart = { offset ->
+                                                val idx = (offset.y / itemHeight.toPx()).toInt().coerceIn(0, alphabet.lastIndex)
+                                                currentLetter = alphabet[idx]
+                                                scrollToLetter(currentLetter, pagedSongs, listState, coroutineScope)
+                                            },
+                                            onVerticalDrag = { change, _ ->
+                                                val idx = (change.position.y / itemHeight.toPx()).toInt().coerceIn(0, alphabet.lastIndex)
+                                                val newLetter = alphabet[idx]
+                                                if (newLetter != currentLetter) {
+                                                    currentLetter = newLetter
                                                     scrollToLetter(currentLetter, pagedSongs, listState, coroutineScope)
-                                                },
-                                                onVerticalDrag = { change, _ ->
-                                                    val idx = (change.position.y / itemHeight.toPx()).toInt().coerceIn(0, alphabet.lastIndex)
-                                                    val newLetter = alphabet[idx]
-                                                    if (newLetter != currentLetter) {
-                                                        currentLetter = newLetter
-                                                        scrollToLetter(currentLetter, pagedSongs, listState, coroutineScope)
-                                                    }
-                                                },
-                                                onDragEnd = { currentLetter = null },
-                                                onDragCancel = { currentLetter = null }
-                                            )
-                                        },
+                                                }
+                                            },
+                                            onDragEnd = { currentLetter = null },
+                                            onDragCancel = { currentLetter = null }
+                                        )
+                                    },
                                     verticalArrangement = Arrangement.SpaceEvenly,
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
@@ -833,8 +639,6 @@ fun PlaylistDetailView(
                                     }
                                 }
                             }
-
-                            // Dynamic Pop-up Preview Bubble when Sliding
                             LetterPreviewBubble(currentLetter)
                         }
                     }
@@ -846,48 +650,25 @@ fun PlaylistDetailView(
 
 @Composable
 fun LetterPreviewBubble(currentLetter: String?, modifier: Modifier = Modifier) {
-    AnimatedVisibility(
-        visible = currentLetter != null,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = modifier
-    ) {
+    AnimatedVisibility(visible = currentLetter != null, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
         Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
+            modifier = Modifier.size(80.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = currentLetter ?: "",
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
+            Text(text = currentLetter ?: "", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 }
 
-fun scrollToLetter(
-    letter: String?,
-    pagedSongs: LazyPagingItems<Song>,
-    listState: LazyListState,
-    coroutineScope: CoroutineScope
-) {
+fun scrollToLetter(letter: String?, pagedSongs: LazyPagingItems<Song>, listState: LazyListState, coroutineScope: CoroutineScope) {
     if (letter == null) return
     val items = pagedSongs.itemSnapshotList.items
     val index = items.indexOfFirst { song ->
         val firstChar = song.title.take(1).uppercase()
-        if (letter == "#") {
-            firstChar.firstOrNull()?.isLetter() == false
-        } else {
-            firstChar == letter
-        }
+        if (letter == "#") firstChar.firstOrNull()?.isLetter() == false else firstChar == letter
     }
     if (index != -1) {
-        coroutineScope.launch {
-            listState.scrollToItem(index)
-        }
+        coroutineScope.launch { listState.scrollToItem(index) }
     }
 }
 
