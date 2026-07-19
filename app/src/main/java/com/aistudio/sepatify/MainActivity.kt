@@ -500,8 +500,8 @@ fun AppMainHub(
                         Snackbar(
                             modifier = Modifier.padding(12.dp).widthIn(max = 240.dp),
                             shape = CircleShape, // Creates the fully curved pill-shape
-                            containerColor = MaterialTheme.colorScheme.inverseSurface,
-                            contentColor = MaterialTheme.colorScheme.inverseOnSurface
+                            containerColor = MaterialTheme.sepatifyColors.playlistAccentMintLight,
+                            contentColor = MaterialTheme.sepatifyColors.playlistTextMintDark
                         ) {
                             Text(
                                 text = data.visuals.message,
