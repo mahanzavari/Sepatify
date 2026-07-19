@@ -21,13 +21,13 @@ sealed interface SearchUiState {
 @OptIn(FlowPreview::class)
 class SearchViewModel(
     private val songRepository: SongRepository,
-    private val mainViewModel: MainViewModel // helper to retrieve language of strings if needed
+    private val mainViewModel: MainViewModel
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedFilter = MutableStateFlow("All") // "All", "Songs", "Artists"
+    private val _selectedFilter = MutableStateFlow("All")
     val selectedFilter: StateFlow<String> = _selectedFilter.asStateFlow()
 
     private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
@@ -36,7 +36,6 @@ class SearchViewModel(
     val searchHistory: StateFlow<List<String>> = songRepository.getSearchHistory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Paginated results (FR: search must use Paging 3 instead of loading the full result set at once).
     @OptIn(ExperimentalCoroutinesApi::class)
     val pagedResults: Flow<PagingData<Song>> = _searchQuery
         .debounce(300)
@@ -58,7 +57,6 @@ class SearchViewModel(
         .cachedIn(viewModelScope)
 
     init {
-        // Debounce search flow to meet: "FR-20: The search input shall use debounce() to prevent network calls on every keystroke"
         _searchQuery
             .debounce(300)
             .distinctUntilChanged()
@@ -77,7 +75,7 @@ class SearchViewModel(
             }
             .combine(_selectedFilter) { results, filter ->
                 when (filter) {
-                    "Songs" -> results.filter { true } // in our case all are songs, but artist filtering applies
+                    "Songs" -> results.filter { true }
                     "Artists" -> results.filter { it.artistName.lowercase().contains(_searchQuery.value.lowercase()) }
                     else -> results
                 }
@@ -109,6 +107,16 @@ class SearchViewModel(
     fun clearHistory() {
         viewModelScope.launch {
             songRepository.clearSearchHistory()
+        }
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: SearchEvent) {
+        when (event) {
+            is SearchEvent.UpdateQuery        -> updateSearchQuery(event.query)
+            is SearchEvent.SetFilter          -> setFilter(event.filter)
+            is SearchEvent.DeleteHistoryItem  -> deleteHistoryItem(event.query)
+            SearchEvent.ClearHistory          -> clearHistory()
         }
     }
 }

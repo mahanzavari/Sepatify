@@ -81,7 +81,6 @@ class MainViewModel(
             if (avatar.startsWith("file://")) {
                 val file = java.io.File(java.net.URI(avatar))
                 authRepository.uploadAvatar(file).onSuccess { publicUrl ->
-                    // Save the persistent remote URL to DataStore once uploaded
                     preferencesManager.updateProfileAvatar(publicUrl)
                 }
             } else {
@@ -110,6 +109,19 @@ class MainViewModel(
     fun setUserSession(email: String, name: String) {
         viewModelScope.launch {
             preferencesManager.setUserSession(email, name)
+        }
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: MainEvent) {
+        when (event) {
+            is MainEvent.UpdateTheme        -> updateTheme(event.theme)
+            is MainEvent.UpdateLanguage     -> updateLanguage(event.lang)
+            is MainEvent.UpdateFontSize     -> updateFontSize(event.scale)
+            is MainEvent.SetPremium         -> setPremium(event.isPremium, event.syncRemote)
+            is MainEvent.UpdateDisplayName  -> updateDisplayName(event.name)
+            is MainEvent.UpdateAvatar       -> updateAvatar(event.avatar)
+            MainEvent.Logout                -> logout()
         }
     }
 }

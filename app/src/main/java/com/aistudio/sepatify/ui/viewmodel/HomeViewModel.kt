@@ -17,7 +17,7 @@ sealed interface HomeUiState {
         val mostPopular: List<Song>,
         val globalPlaylistSongs: List<Song> = emptyList(),
         val localPlaylistSongs: List<Song> = emptyList(),
-        val exclusiveSongs: List<Song> = emptyList() // Added Exclusive
+        val exclusiveSongs: List<Song> = emptyList()
     ) : HomeUiState
 }
 
@@ -36,7 +36,7 @@ class HomeViewModel(
     fun loadHomeData() {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
-            delay(1200) // Shimmer animation rule requirement NFR-05
+            delay(1200)
 
             combine(
                 songRepository.getTrendingSongs(),
@@ -45,7 +45,7 @@ class HomeViewModel(
                 songRepository.getMostPopular(),
                 songRepository.getGlobalPlaylists(),
                 songRepository.getLocalPlaylists(),
-                songRepository.getExclusiveSongs() // Added to Flow list
+                songRepository.getExclusiveSongs()
             ) { values ->
                 HomeUiState.Success(
                     trending = values[0] as List<Song>,
@@ -54,11 +54,18 @@ class HomeViewModel(
                     mostPopular = values[3] as List<Song>,
                     globalPlaylistSongs = values[4] as List<Song>,
                     localPlaylistSongs = values[5] as List<Song>,
-                    exclusiveSongs = values[6] as List<Song> // Maps to 7th flow
+                    exclusiveSongs = values[6] as List<Song>
                 )
             }.collect { state ->
                 _uiState.value = state
             }
+        }
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: HomeEvent) {
+        when (event) {
+            HomeEvent.Refresh -> loadHomeData()
         }
     }
 }

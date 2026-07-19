@@ -36,8 +36,6 @@ class AuthViewModel(
     val isCheckingSession: StateFlow<Boolean> = _isCheckingSession.asStateFlow()
 
     init {
-        // If a Supabase session already exists on disk (previous app launch), restore it
-        // silently so the user isn't sent back to the login screen unnecessarily.
         viewModelScope.launch {
             if (authRepository.hasValidSession()) {
                 val profile = authRepository.currentProfile()
@@ -46,12 +44,9 @@ class AuthViewModel(
                     mainViewModel.setPremium(profile.isPremium, syncRemote = false)
                     mainViewModel.updateProfileAvatar(profile.avatarUrl ?: "")
                 }
-                // Do nothing if profile is null (e.g. offline). They remain logged in 
-                // via their cached DataStore session handled by MainViewModel.
             } else {
                 mainViewModel.logout()
             }
-            // Verification is complete, allow the UI to render
             _isCheckingSession.value = false
         }
     }
@@ -120,5 +115,15 @@ class AuthViewModel(
 
     fun resetState() {
         _uiState.value = AuthUiState.Idle
+    }
+
+    // === MVI central event handler ===
+    fun onEvent(event: AuthEvent) {
+        when (event) {
+            is AuthEvent.Login      -> login(event.email, event.pass)
+            is AuthEvent.Register   -> register(event.email, event.name, event.pass)
+            AuthEvent.Logout        -> logout()
+            AuthEvent.ResetState    -> resetState()
+        }
     }
 }
