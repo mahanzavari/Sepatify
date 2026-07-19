@@ -116,7 +116,7 @@ data class LikedSongDto(
 data class LikedSongJoinDto(
     @SerialName("user_id") val userId: String,
     @SerialName("song_id") val songId: String,
-    @SerialName("songs") val songs: SongDto
+    @SerialName("songs") val songs: SongDto? = null
 )
 
 @Serializable

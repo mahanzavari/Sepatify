@@ -1,3 +1,4 @@
+// Paste this into: app/src/main/java/com/aistudio/sepatify/data/repository/ChatRepositoryImpl.kt
 package com.aistudio.sepatify.data.repository
 
 import androidx.paging.Pager
@@ -120,30 +121,40 @@ class ChatRepositoryImpl(
         }
     }
 
-override suspend fun getUserProfileDetails(username: String): UserProfileDetails {
+    override suspend fun getUserProfileDetails(username: String): UserProfileDetails {
         val id = resolveId(username) ?: return UserProfileDetails(0, 0, emptyList())
-        return try {
-            val followers = Supa.client.from("follows")
-                .select(columns = Columns.raw("follower_id")) { filter { eq("followed_id", id) } }
-                .decodeList<JsonObject>().size
-            val following = Supa.client.from("follows")
-                .select(columns = Columns.raw("followed_id")) { filter { eq("follower_id", id) } }
-                .decodeList<JsonObject>().size
-            
-            // Query only public playlists: is_private = false
-            // Query only public playlists: is_private = false
-            val remotePlaylists = Supa.client.from("playlists").select(columns = Columns.ALL) { 
-                filter { 
-                    eq("owner_id", id) 
-                } 
-            }.decodeList<PlaylistDto>()
-            
-            // Query public liked songs to represent "Recently Played"
-            val likedSongsJson = Supa.client.from("liked_songs")
-                .select(columns = Columns.raw("user_id, song_id, songs(*)")) { filter { eq("user_id", id) } }
-                .decodeList<LikedSongJoinDto>()
+        val myId = authRepository.currentUserId()
 
-            val mappedPlaylists = remotePlaylists.map {
+        var followersCount = 0
+        var followingCount = 0
+        var mappedPlaylists = emptyList<PlaylistEntity>()
+        var mappedSongs = emptyList<Song>()
+
+        // 1. Fetch Followers (Isolated)
+        try {
+            followersCount = Supa.client.from("follows")
+                .select(columns = Columns.ALL) { filter { eq("followed_id", id) } }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().size
+        } catch (e: Exception) { e.printStackTrace() }
+
+        // 2. Fetch Following (Isolated)
+        try {
+            followingCount = Supa.client.from("follows")
+                .select(columns = Columns.ALL) { filter { eq("follower_id", id) } }
+                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().size
+        } catch (e: Exception) { e.printStackTrace() }
+
+        // 3. Fetch Playlists (Isolated & Smart Privacy)
+        try {
+            val remotePlaylists = Supa.client.from("playlists")
+                .select(columns = Columns.ALL) { 
+                    filter { eq("owner_id", id) } 
+                }
+                .decodeList<PlaylistDto>()
+                // Filter out private playlists UNLESS it's the signed-in user viewing their own profile
+                .filter { !it.isPrivate || id == myId }
+
+            mappedPlaylists = remotePlaylists.map {
                 PlaylistEntity(
                     id = it.id,
                     title = it.title,
@@ -153,15 +164,25 @@ override suspend fun getUserProfileDetails(username: String): UserProfileDetails
                     isPrivate = it.isPrivate
                 )
             }
-            val mappedSongs = likedSongsJson.map {
+        } catch (e: Exception) { e.printStackTrace() }
+
+        // 4. Fetch Liked Songs (Isolated)
+        try {
+            val likedSongsJson = Supa.client.from("liked_songs")
+                .select(columns = Columns.raw("user_id, song_id, songs(*)")) { filter { eq("user_id", id) } }
+                .decodeList<LikedSongJoinDto>()
+
+            mappedSongs = likedSongsJson.mapNotNull {
                 val s = it.songs
-                Song(s.id, s.title, s.artistName, s.coverImageUrl, s.audioUrl, s.category)
+                if (s != null) {
+                    Song(s.id, s.title, s.artistName, s.coverImageUrl, s.audioUrl, s.category)
+                } else null
             }
-            UserProfileDetails(followers, following, mappedPlaylists, mappedSongs)
-        } catch (e: Exception) {
-            UserProfileDetails(0, 0, emptyList())
-        }
+        } catch (e: Exception) { e.printStackTrace() }
+
+        return UserProfileDetails(followersCount, followingCount, mappedPlaylists, mappedSongs)
     }
+
     override fun getOnlineUsers(): Flow<Set<String>> = _onlineUsers.asStateFlow()
 
     override suspend fun trackPresence() {

@@ -99,7 +99,9 @@ data class PlaylistDto(
     val description: String = "",
     val category: String = "User",
     @SerialName("cover_url") val coverUrl: String? = null,
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("is_private") val isPrivate: Boolean = false
+
 )
 
 @Serializable
@@ -108,7 +110,9 @@ data class NewPlaylistDto(
     val title: String,
     val description: String = "",
     val category: String = "User",
-    @SerialName("cover_url") val coverUrl: String? = null
+    @SerialName("cover_url") val coverUrl: String? = null,
+    @SerialName("is_private") val isPrivate: Boolean = false
+
 )
 
 @Serializable
@@ -136,7 +140,7 @@ data class LikedSongDto(
 data class LikedSongJoinDto(
     @SerialName("user_id") val userId: String,
     @SerialName("song_id") val songId: String,
-    val songs: SongDto
+    @SerialName("songs") val songs: SongDto? = null
 )
 
 @Serializable

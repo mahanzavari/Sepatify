@@ -1,3 +1,4 @@
+// Paste this into: app/src/main/java/com/aistudio/sepatify/data/repository/SongRepositoryImpl.kt
 package com.aistudio.sepatify.data.repository
 
 import android.content.Context
@@ -252,9 +253,11 @@ class SongRepositoryImpl(
 
             liked.forEach { row ->
                 val s = row.songs
-                likedSongDao.insertLikedSong(
-                    LikedSongEntity(s.id, s.title, s.artistName, s.coverImageUrl, s.audioUrl)
-                )
+                if (s != null) {
+                    likedSongDao.insertLikedSong(
+                        LikedSongEntity(s.id, s.title, s.artistName, s.coverImageUrl, s.audioUrl)
+                    )
+                }
             }
         } catch (e: Exception) {
             // Offline - keep whatever liked songs are already cached locally.
@@ -302,8 +305,16 @@ class SongRepositoryImpl(
     override suspend fun createPlaylist(title: String, description: String, category: String, isPrivate: Boolean): Long {
         val uid = authRepository.currentUserId() ?: return -1L
         return try {
-             val createdList = Supa.client.from("playlists")
-                .insert(com.aistudio.sepatify.data.remote.dto.NewPlaylistDto(ownerId = uid, title = title, description = description, category = category)) {
+            val createdList = Supa.client.from("playlists")
+                .insert(
+                    com.aistudio.sepatify.data.remote.dto.NewPlaylistDto(
+                        ownerId = uid, 
+                        title = title, 
+                        description = description, 
+                        category = category,
+                        isPrivate = isPrivate
+                    )
+                ) {
                     select(columns = Columns.ALL)
                 }
                 .decodeList<com.aistudio.sepatify.data.remote.dto.PlaylistDto>()
