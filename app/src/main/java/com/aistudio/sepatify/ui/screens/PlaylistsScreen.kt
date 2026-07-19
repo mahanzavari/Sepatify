@@ -115,6 +115,7 @@ fun PlaylistsScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                // 1. Add Playlist Item (Correctly uses primaryContainer/onPrimaryContainer)
                 ListItem(
                     headlineContent = { 
                         Text(
@@ -126,8 +127,18 @@ fun PlaylistsScreen(
                         Text(text = locString(R.string.add_playlist_desc)) 
                     },
                     leadingContent = {
-                        Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer), 
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlaylistAdd, 
+                                contentDescription = null, 
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
                     },
                     modifier = Modifier.clickable {
@@ -138,6 +149,8 @@ fun PlaylistsScreen(
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
+                
+                // 2. Add Folder Item (Fixed: Box background changed to secondaryContainer)
                 ListItem(
                     headlineContent = { 
                         Text(
@@ -149,8 +162,18 @@ fun PlaylistsScreen(
                         Text(text = locString(R.string.add_folder_desc)) 
                     },
                     leadingContent = {
-                        Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSecondaryContainer), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer), // Fixed: changed from onSecondaryContainer
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CreateNewFolder, 
+                                contentDescription = null, 
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         }
                     },
                     modifier = Modifier.clickable {

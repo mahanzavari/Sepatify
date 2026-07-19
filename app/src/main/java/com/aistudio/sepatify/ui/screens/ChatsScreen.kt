@@ -1,3 +1,4 @@
+// Paste this into: app/src/main/java/com/aistudio/sepatify/ui/screens/ChatsScreen.kt
 package com.aistudio.sepatify.ui.screens
 
 import androidx.compose.animation.*
@@ -7,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -253,6 +255,16 @@ fun ChatsScreen(
 
             var isTypingSent by remember(user) { mutableStateOf(false) }
 
+            // Fixed: Create listState to manage viewport position
+            val listState = rememberLazyListState()
+
+            // Fixed: Automatically animate scroll to the bottom when keyboard appears or messages arrive
+            LaunchedEffect(pagedMessages.itemCount, isKeyboardVisible) {
+                if (pagedMessages.itemCount > 0) {
+                    listState.animateScrollToItem(pagedMessages.itemCount - 1)
+                }
+            }
+
             LaunchedEffect(chatInputText, user) {
                 if (chatInputText.isNotEmpty()) {
                     if (!isTypingSent) {
@@ -337,6 +349,7 @@ fun ChatsScreen(
 
             // Message Bubble list
             LazyColumn(
+                state = listState, // Fixed: Bind custom listState
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(dimens.aspectRatioSquare),
@@ -420,7 +433,6 @@ fun ChatsScreen(
                             }
                         }
 
-                        // Tick marks alignment using mapped theme alphas
                         // Tick marks alignment using mapped theme alphas
                         if (isMe) {
                             Row(
