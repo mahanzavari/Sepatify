@@ -279,4 +279,9 @@
 
     <!-- Preferences -->
     <string name="guest_user_default">کاربر مهمان</string>
+
+
+    <!-- Network State -->
+    <string name="network_lost">اعدم دسترسی به شبکه</string>
+    <string name="network_restored">ارتباط شبکه برقرار شد.</string>
 </resources>

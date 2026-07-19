@@ -68,6 +68,12 @@ class PlaylistViewModel(
     fun getRecentlyPlayedSongs(): Flow<List<Song>> {
         return songRepository.getRecentlyPlayedSongs()
     }
+    
+    fun removeRecentSong(songId: String) {
+        viewModelScope.launch {
+            songRepository.deleteRecentSong(songId)
+        }
+    }
 
     fun getSongsForPlaylistPaged(playlistId: Long, category: String): Flow<PagingData<Song>> {
         // Delegate routing seamlessly up to repository & ensure ViewModel caches it uniformly

@@ -29,12 +29,15 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.components.EqualizerDialog
 import com.aistudio.sepatify.ui.components.ShareBottomSheet
+import com.aistudio.sepatify.data.network.NetworkMonitor
 import com.aistudio.sepatify.ui.theme.SepatifyTheme
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
@@ -42,6 +45,7 @@ import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.screens.*
 import com.aistudio.sepatify.ui.viewmodel.*
 import org.koin.androidx.compose.koinViewModel
+import org.koin.android.ext.android.inject
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -63,6 +67,9 @@ private data class BottomNavItem(
 )
 
 class MainActivity : ComponentActivity() {
+
+    private val networkMonitor: NetworkMonitor by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -84,6 +91,7 @@ class MainActivity : ComponentActivity() {
             val currentFontSizeScale by mainViewModel.fontSizeScale.collectAsState()
             val isPremium by mainViewModel.isPremium.collectAsState()
             val userEmail by mainViewModel.userEmail.collectAsState()
+            val isConnected by networkMonitor.isConnected.collectAsState(initial = true)
 
             // Configuration for live locale/RTL translations
             val context = LocalContext.current
@@ -158,6 +166,7 @@ class MainActivity : ComponentActivity() {
                             playlistViewModel = playlistViewModel,
                             chatViewModel = chatViewModel,
                             sharedAudioViewModel = sharedAudioViewModel,
+                            isConnected = isConnected,
                             isPremium = isPremium,
                             locString = locString
                         )
@@ -184,6 +193,7 @@ fun AppMainHub(
     chatViewModel: ChatViewModel,
     sharedAudioViewModel: SharedAudioViewModel,
     isPremium: Boolean,
+    isConnected: Boolean,
     locString: (Int) -> String
 ) {
     var activeTab by remember { mutableStateOf(TAB_HOME) }
@@ -251,7 +261,25 @@ fun AppMainHub(
         BottomNavItem(TAB_CHAT, R.string.nav_chat, Icons.Default.Chat, "nav_chat"),
         BottomNavItem(TAB_PROFILE, R.string.nav_profile, Icons.Default.Person, "nav_profile")
     )
+    val snackbarHostState = remember { SnackbarHostState() }
+    var wasDisconnected by remember { mutableStateOf(false) }
 
+    LaunchedEffect(isConnected) {
+        if (!isConnected) {
+            wasDisconnected = true
+            snackbarHostState.showSnackbar(
+                message = locString(R.string.network_lost),
+                duration = SnackbarDuration.Indefinite
+            )
+        } else if (wasDisconnected) {
+            wasDisconnected = false
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = locString(R.string.network_restored),
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
     androidx.activity.compose.BackHandler(
         enabled = showNowPlayingOverlay || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
     ) {
@@ -459,6 +487,30 @@ fun AppMainHub(
                             onAvatarClick = { scope.launch { drawerState.open() } },
                             onNotificationsClick = { showNotificationDialog = true }
                         )
+                    }
+                },
+                snackbarHost = {
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier
+                            .padding(bottom = dimens.heightBottomNavBar + if (currentSong != null) dimens.marginKeyboardMiniplayer else dimens.zero)
+                            .fillMaxWidth()
+                            .wrapContentWidth(Alignment.CenterHorizontally)
+                    ) { data ->
+                        Snackbar(
+                            modifier = Modifier.padding(12.dp).widthIn(max = 240.dp),
+                            shape = CircleShape, // Creates the fully curved pill-shape
+                            containerColor = MaterialTheme.sepatifyColors.playlistAccentMintLight,
+                            contentColor = MaterialTheme.sepatifyColors.playlistTextMintDark
+                        ) {
+                            Text(
+                                text = data.visuals.message,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 },
                 bottomBar = {}

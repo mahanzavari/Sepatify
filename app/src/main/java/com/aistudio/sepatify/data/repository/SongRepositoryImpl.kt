@@ -5,7 +5,7 @@ import android.provider.MediaStore
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
-import androidx.paging.map 
+import androidx.paging.map
 import com.aistudio.sepatify.data.local.*
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.data.remote.PlaylistSongsPagingSource
@@ -239,6 +239,11 @@ class SongRepositoryImpl(
         )
     }
 
+    // Newly added function
+    override suspend fun deleteRecentSong(songId: String) {
+        recentlyPlayedDao.deleteRecentSongById(songId)
+    }
+
     private suspend fun syncLikedSongsFromRemote() {
         val uid = authRepository.currentUserId() ?: return
         try {
@@ -276,7 +281,7 @@ class SongRepositoryImpl(
                         order("created_at", Order.ASCENDING)
                     }
                     .decodeList<PlaylistDto>()
-                    
+
                 remote.forEach { dto ->
                     playlistDao.insertPlaylist(PlaylistEntity(
                         id = dto.id,
@@ -297,13 +302,13 @@ class SongRepositoryImpl(
     override suspend fun createPlaylist(title: String, description: String, category: String): Long {
         val uid = authRepository.currentUserId() ?: return -1L
         return try {
-             val createdList = Supa.client.from("playlists")
+            val createdList = Supa.client.from("playlists")
                 .insert(com.aistudio.sepatify.data.remote.dto.NewPlaylistDto(ownerId = uid, title = title, description = description, category = category)) {
                     select(columns = Columns.ALL)
                 }
                 .decodeList<com.aistudio.sepatify.data.remote.dto.PlaylistDto>()
 
-                val created = createdList.firstOrNull() ?: throw Exception("Empty database response")
+            val created = createdList.firstOrNull() ?: throw Exception("Empty database response")
 
             playlistDao.insertPlaylist(PlaylistEntity(
                 id = created.id,
@@ -334,8 +339,8 @@ class SongRepositoryImpl(
 
     override suspend fun addSongsToPlaylist(playlistId: Long, songIds: List<String>): Result<Unit> {
         val validSongIds = songIds.filter { !it.startsWith("local_") }
-         if (validSongIds.isEmpty()) return Result.failure(Exception("No valid cloud songs selected"))
-        
+        if (validSongIds.isEmpty()) return Result.failure(Exception("No valid cloud songs selected"))
+
         val dtos = validSongIds.mapIndexed { index, sid ->
             com.aistudio.sepatify.data.remote.dto.PlaylistSongDto(playlistId, sid, position = index)
         }
@@ -362,6 +367,7 @@ class SongRepositoryImpl(
             }
         }
     }
+
     override suspend fun updatePlaylistCategory(playlistId: Long, category: String) {
         runCatching {
             Supa.client.from("playlists").update(com.aistudio.sepatify.data.remote.dto.PlaylistCategoryUpdateDto(category)) {
@@ -480,7 +486,7 @@ class SongRepositoryImpl(
                 }
             }.flow
         }
-        
+
         // Server-side default pagination for user playlists
         return Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
             PlaylistSongsPagingSource(playlistId)

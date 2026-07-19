@@ -52,6 +52,10 @@ interface RecentlyPlayedDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRecentSong(song: RecentlyPlayedEntity)
 
+    @Query("DELETE FROM recently_played WHERE id = :id")
+    suspend fun deleteRecentSongById(id: String)
+
+
     @Query("DELETE FROM recently_played")
     suspend fun clearAllRecent()
 }
