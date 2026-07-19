@@ -590,6 +590,7 @@ fun AppMainHub(
                                     sharedAudioViewModel.playSong(song, queue)
                                 },
                                 onShareClick = { itemToShare = it },
+                                onLikedSongsClick = { activeTab = TAB_LIKED },
                                 locString = locString
                             )
 

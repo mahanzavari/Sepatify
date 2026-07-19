@@ -51,11 +51,13 @@ import kotlinx.coroutines.launch
 enum class PlaylistsViewState { MAIN, FOLDER_DETAIL, CREATE_PLAYLIST, CREATE_FOLDER }
 
 @OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun PlaylistsScreen(
     playlistViewModel: PlaylistViewModel,
     onSongSelect: (Song, List<Song>) -> Unit,
     onShareClick: (Any) -> Unit = {},
+    onLikedSongsClick: () -> Unit = {},
     locString: (Int) -> String
 ) {
     val playlists by playlistViewModel.userPlaylists.collectAsState()
@@ -282,7 +284,13 @@ fun PlaylistsScreen(
                                 } else if (item is PlaylistEntity) {
                                     val (backgroundColor, textColor, _) = getCardColors(index, isSystemInDarkTheme(), colors)
                                     Card(
-                                        modifier = Modifier.fillMaxWidth().height(dimens.heightPlaylistCard).clickable { selectedPlaylist = item },
+                                        modifier = Modifier.fillMaxWidth().height(dimens.heightPlaylistCard).clickable { 
+                                            if (item.id == -3L) {
+                                                onLikedSongsClick()
+                                            } else {
+                                                selectedPlaylist = item 
+                                            }
+                                        },
                                         shape = shapes.card,
                                         colors = CardDefaults.cardColors(containerColor = backgroundColor)
                                     ) {
