@@ -744,7 +744,8 @@ fun AppMainHub(
                         activeTab = TAB_CHAT
                         viewedUser = null
                     },
-                    onPlaylistClick = { viewedUserPlaylist = it }
+                    onPlaylistClick = { viewedUserPlaylist = it },
+                    onPlaySong = { song -> sharedAudioViewModel.playSong(song) }
                 )
             }
         }

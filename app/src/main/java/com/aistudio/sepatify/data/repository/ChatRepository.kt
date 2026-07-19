@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.Flow
 data class UserProfileDetails(
     val followersCount: Int,
     val followingCount: Int,
-    val playlists: List<PlaylistEntity>
+    val playlists: List<PlaylistEntity>,
+    val likedSongs: List<Song> = emptyList()
 )
 
 interface ChatRepository {
