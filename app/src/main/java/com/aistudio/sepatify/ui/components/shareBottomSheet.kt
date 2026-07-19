@@ -26,6 +26,7 @@ import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
+import com.aistudio.sepatify.ui.viewmodel.ChatEvent
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 
@@ -68,7 +69,6 @@ fun ShareBottomSheet(
 
             Spacer(modifier = Modifier.height(dimens.spaceLarge))
 
-            // Option 1: Share Externally via Android Intent
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,7 +103,6 @@ fun ShareBottomSheet(
             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaGrooves * 2.5f))
             Spacer(modifier = Modifier.height(dimens.spaceNormal))
 
-            // Option 2: Send internally inside Sepatify Chat System
             Text(
                 text = locString(R.string.send_to_friends),
                 style = MaterialTheme.typography.titleMedium,
@@ -189,11 +188,18 @@ private fun shareExternally(context: Context, song: Song?, playlist: PlaylistEnt
     context.startActivity(Intent.createChooser(intent, locString(R.string.share)))
 }
 
-private fun sendInternalMessage(user: String, song: Song?, playlist: PlaylistEntity?, chatViewModel: ChatViewModel, context: Context, locString: (Int) -> String) {
+private fun sendInternalMessage(
+    user: String, song: Song?, playlist: PlaylistEntity?,
+    chatViewModel: ChatViewModel, context: Context, locString: (Int) -> String
+) {
     if (song != null) {
-        chatViewModel.sendMessage(user, "Check out this song!", song)
+        chatViewModel.onEvent(ChatEvent.SendMessage(user, "Check out this song!", song))
     } else if (playlist != null) {
-        chatViewModel.sendMessage(user, "Check out this playlist: ${playlist.title}\n${playlist.description}", null)
+        chatViewModel.onEvent(ChatEvent.SendMessage(
+            user,
+            "Check out this playlist: ${playlist.title}\n${playlist.description}",
+            null
+        ))
     }
     Toast.makeText(context, String.format(locString(R.string.sent_success), user), Toast.LENGTH_SHORT).show()
 }

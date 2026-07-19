@@ -49,6 +49,13 @@ import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
+import com.aistudio.sepatify.ui.viewmodel.AudioEvent
+import com.aistudio.sepatify.ui.viewmodel.AudioEvent.PlayNext
+import com.aistudio.sepatify.ui.viewmodel.AudioEvent.PlayPrevious
+import com.aistudio.sepatify.ui.viewmodel.AudioEvent.TogglePlayPause
+import com.aistudio.sepatify.ui.viewmodel.AudioEvent.ToggleRepeat
+import com.aistudio.sepatify.ui.viewmodel.AudioEvent.ToggleShuffle
+import com.aistudio.sepatify.ui.viewmodel.DownloadEvent
 import com.aistudio.sepatify.ui.viewmodel.DownloadViewModel
 import com.aistudio.sepatify.ui.viewmodel.SharedAudioViewModel
 import kotlinx.coroutines.Dispatchers
@@ -86,7 +93,6 @@ fun NowPlayingScreen(
 
     var dominantColor by remember { mutableStateOf(colors.playerBgFallback) }
 
-    // DYNAMIC VINYL ROTATION ANGLE LINKED TO PLAYBACK SPEED
     var finalAngle by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(isPlaying, speed) {
@@ -109,7 +115,6 @@ fun NowPlayingScreen(
         label = "coverScale"
     )
 
-    // EXTRACT COLOR USING PALETTE API
     LaunchedEffect(currentSong) {
         currentSong?.let { song ->
             coroutineScope.launch(Dispatchers.IO) {
@@ -153,7 +158,6 @@ fun NowPlayingScreen(
         }
     }
 
-    // ALBUM COVER ROTATION VALUE
     val infiniteTransition = rememberInfiniteTransition(label = "rotation")
     val rotationAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -269,7 +273,6 @@ fun NowPlayingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -302,8 +305,8 @@ fun NowPlayingScreen(
                             imageVector = if (showLyrics) Icons.Filled.Lyrics else Icons.Outlined.Lyrics,
                             contentDescription = "Lyrics",
                             tint = if (!lyricsAvailable) Color.White.copy(alpha = dimens.alphaDisabled)
-                                   else if (showLyrics) MaterialTheme.colorScheme.primary
-                                   else Color.White
+                            else if (showLyrics) MaterialTheme.colorScheme.primary
+                            else Color.White
                         )
                     }
                     IconButton(onClick = { showSleepTimerDialog = true }) {
@@ -368,7 +371,7 @@ fun NowPlayingScreen(
                                     maxLines = 1
                                 )
                             }
-                            IconButton(onClick = { sharedAudioViewModel.toggleLikeSong(song) }) {
+                            IconButton(onClick = { sharedAudioViewModel.onEvent(AudioEvent.ToggleLikeSong(song)) }) {
                                 Icon(
                                     imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = "Like Song",
@@ -461,7 +464,7 @@ fun NowPlayingScreen(
                                                 this.alpha = alpha
                                             }
                                             .clickable {
-                                                sharedAudioViewModel.seekTo(line.timestampMs)
+                                                sharedAudioViewModel.onEvent(AudioEvent.SeekTo(line.timestampMs))
                                             }
                                             .padding(horizontal = dimens.spaceTwelve)
                                     )
@@ -487,7 +490,6 @@ fun NowPlayingScreen(
                                 label = "diskSize"
                             )
 
-                            // Main vinyl record with animated smaller size
                             Box(
                                 modifier = Modifier
                                     .size(targetDiskSize)
@@ -503,7 +505,6 @@ fun NowPlayingScreen(
                                     .background(Color.Black, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Vinyl grooves
                                 Canvas(modifier = Modifier.fillMaxSize()) {
                                     val center = this.center
                                     val maxRadius = size.minDimension / 2
@@ -520,7 +521,6 @@ fun NowPlayingScreen(
                                         )
                                     }
 
-                                    // Outer rim shine
                                     drawCircle(
                                         color = Color.White.copy(alpha = dimens.alphaRimShine),
                                         radius = maxRadius - dimens.sizeVinylDiskRimShine.toPx(),
@@ -529,7 +529,6 @@ fun NowPlayingScreen(
                                     )
                                 }
 
-                                // Center album art sticker
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize(dimens.scaleSticker)
@@ -547,7 +546,6 @@ fun NowPlayingScreen(
                                     )
                                 }
 
-                                // Center spindle hole
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize(dimens.scaleSpindleHole)
@@ -588,7 +586,7 @@ fun NowPlayingScreen(
                                 label = "likeScale"
                             )
                             IconButton(
-                                onClick = { sharedAudioViewModel.toggleLikeSong(song) },
+                                onClick = { sharedAudioViewModel.onEvent(AudioEvent.ToggleLikeSong(song)) },
                                 modifier = Modifier.graphicsLayer {
                                     scaleX = likeScale
                                     scaleY = likeScale
@@ -616,7 +614,7 @@ fun NowPlayingScreen(
                                     if (!isPremium) {
                                         showUpgradeDialog = true
                                     } else if (!isDownloaded && downloadProgress == null) {
-                                        downloadViewModel.initiateDownload(song)
+                                        downloadViewModel.onEvent(DownloadEvent.InitiateDownload(song))
                                     }
                                 }
                             ) {
@@ -660,7 +658,6 @@ fun NowPlayingScreen(
                 }
             }
 
-            // Seek Position timeline sliders
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -690,7 +687,7 @@ fun NowPlayingScreen(
 
                 Slider(
                     value = progressPct,
-                    onValueChange = { sharedAudioViewModel.seekTo((it * duration).toLong()) },
+                    onValueChange = { sharedAudioViewModel.onEvent(AudioEvent.SeekTo((it * duration).toLong())) },
                     interactionSource = sliderInteractionSource,
                     track = { _ ->
                         Box(
@@ -755,7 +752,6 @@ fun NowPlayingScreen(
                 }
             }
 
-            // CONTROLS INTERACTIVE ROW
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -764,7 +760,7 @@ fun NowPlayingScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { sharedAudioViewModel.toggleShuffle() },
+                    onClick = { sharedAudioViewModel.onEvent(ToggleShuffle) },
                     modifier = Modifier.graphicsLayer {
                         scaleX = shuffleScale
                         scaleY = shuffleScale
@@ -777,7 +773,7 @@ fun NowPlayingScreen(
                     )
                 }
 
-                IconButton(onClick = { sharedAudioViewModel.playPrevious() }) {
+                IconButton(onClick = { sharedAudioViewModel.onEvent(PlayPrevious) }) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
                         contentDescription = "Previous",
@@ -787,7 +783,7 @@ fun NowPlayingScreen(
                 }
 
                 IconButton(
-                    onClick = { sharedAudioViewModel.togglePlayPause() },
+                    onClick = { sharedAudioViewModel.onEvent(TogglePlayPause) },
                     modifier = Modifier
                         .size(dimens.sizePlayPauseContainer)
                         .graphicsLayer {
@@ -804,7 +800,7 @@ fun NowPlayingScreen(
                     )
                 }
 
-                IconButton(onClick = { sharedAudioViewModel.playNext() }) {
+                IconButton(onClick = { sharedAudioViewModel.onEvent(PlayNext) }) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
@@ -814,7 +810,7 @@ fun NowPlayingScreen(
                 }
 
                 IconButton(
-                    onClick = { sharedAudioViewModel.toggleRepeat() },
+                    onClick = { sharedAudioViewModel.onEvent(ToggleRepeat) },
                     modifier = Modifier.graphicsLayer {
                         scaleX = repeatScale
                         scaleY = repeatScale
@@ -828,7 +824,6 @@ fun NowPlayingScreen(
                 }
             }
 
-            // PLAYBACK SPEED ADJUSTMENT FOOTER
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -858,7 +853,7 @@ fun NowPlayingScreen(
                             1.5f -> 2.0f
                             else -> 1.0f
                         }
-                        sharedAudioViewModel.setPlaybackSpeed(nextSpeed)
+                        sharedAudioViewModel.onEvent(AudioEvent.SetPlaybackSpeed(nextSpeed))
                     },
                     modifier = Modifier
                         .graphicsLayer {
@@ -885,7 +880,7 @@ fun NowPlayingScreen(
                             targetState = speedText,
                             transitionSpec = {
                                 slideInVertically { height -> height } + fadeIn() togetherWith
-                                slideOutVertically { height -> -height } + fadeOut()
+                                        slideOutVertically { height -> -height } + fadeOut()
                             },
                             label = "speedTextTransition"
                         ) { text ->
@@ -899,7 +894,6 @@ fun NowPlayingScreen(
             }
         }
 
-        // SLEEP TIMER PROMPT DIALOG
         if (showSleepTimerDialog) {
             AlertDialog(
                 onDismissRequest = { showSleepTimerDialog = false },
@@ -910,7 +904,7 @@ fun NowPlayingScreen(
                         listOf(5, 15, 30, 45, 60).forEach { mins ->
                             Button(
                                 onClick = {
-                                    sharedAudioViewModel.setSleepTimer(mins)
+                                    sharedAudioViewModel.onEvent(AudioEvent.SetSleepTimer(mins))
                                     showSleepTimerDialog = false
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -925,7 +919,7 @@ fun NowPlayingScreen(
                         if (sleepTimerMins != null) {
                             Button(
                                 onClick = {
-                                    sharedAudioViewModel.setSleepTimer(null)
+                                    sharedAudioViewModel.onEvent(AudioEvent.SetSleepTimer(null))
                                     showSleepTimerDialog = false
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -1023,7 +1017,6 @@ fun AudioVisualizerComponent(
     val density = LocalDensity.current
     val dimens = MaterialTheme.sepatifyDimens
 
-    // Local smoothing state to prevent jittery movements
     var smoothedBars by remember { mutableStateOf(FloatArray(totalBarsCount) { 0f }) }
 
     LaunchedEffect(rawVisualizerBars) {

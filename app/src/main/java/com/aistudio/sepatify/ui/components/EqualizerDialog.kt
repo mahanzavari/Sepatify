@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.sepatify.R
+import com.aistudio.sepatify.ui.viewmodel.AudioEvent
 import com.aistudio.sepatify.ui.viewmodel.SharedAudioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,7 +76,6 @@ fun EqualizerDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // === Playback Crossfade ===
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -88,7 +88,7 @@ fun EqualizerDialog(
                         }
                         Switch(
                             checked = crossfadeEnabled,
-                            onCheckedChange = { sharedViewModel.setCrossfadeEnabled(it) }
+                            onCheckedChange = { sharedViewModel.onEvent(AudioEvent.SetCrossfadeEnabled(it)) }
                         )
                     }
 
@@ -103,7 +103,7 @@ fun EqualizerDialog(
                             }
                             Slider(
                                 value = crossfadeDurationSec.toFloat(),
-                                onValueChange = { sharedViewModel.setCrossfadeDuration(it.toInt()) },
+                                onValueChange = { sharedViewModel.onEvent(AudioEvent.SetCrossfadeDuration(it.toInt())) },
                                 valueRange = 1f..10f,
                                 steps = 8
                             )
@@ -113,7 +113,6 @@ fun EqualizerDialog(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                // === Hardware Tuning Switch ===
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -131,13 +130,12 @@ fun EqualizerDialog(
                         }
                         Switch(
                             checked = eqEnabled,
-                            onCheckedChange = { sharedViewModel.setEqualizerEnabled(it) }
+                            onCheckedChange = { sharedViewModel.onEvent(AudioEvent.SetEqualizerEnabled(it)) }
                         )
                     }
                 }
 
                 if (eqEnabled) {
-                    // === Equalizer Bands ===
                     if (eqFrequencies.isNotEmpty()) {
                         Text(text = stringResource(R.string.bands), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         val minLevel = eqBandRange.first
@@ -156,7 +154,7 @@ fun EqualizerDialog(
                                 Slider(
                                     value = levelMilliBels.toFloat(),
                                     onValueChange = { newValue ->
-                                        sharedViewModel.setEqualizerBandLevel(index, newValue.toInt())
+                                        sharedViewModel.onEvent(AudioEvent.SetEqualizerBandLevel(index, newValue.toInt()))
                                     },
                                     valueRange = minLevel.toFloat()..maxLevel.toFloat(),
                                     modifier = Modifier.padding(vertical = 4.dp)
@@ -167,11 +165,9 @@ fun EqualizerDialog(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    // === Bass & Virtualizer ===
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(text = stringResource(R.string.audio_enhancements), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
-                        // Bass Boost
                         Column {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -182,12 +178,11 @@ fun EqualizerDialog(
                             }
                             Slider(
                                 value = bassBoostStrength.toFloat(),
-                                onValueChange = { sharedViewModel.setBassBoostStrength(it.toInt()) },
+                                onValueChange = { sharedViewModel.onEvent(AudioEvent.SetBassBoostStrength(it.toInt())) },
                                 valueRange = 0f..1000f
                             )
                         }
 
-                        // Virtualizer
                         Column {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -198,7 +193,7 @@ fun EqualizerDialog(
                             }
                             Slider(
                                 value = virtualizerStrength.toFloat(),
-                                onValueChange = { sharedViewModel.setVirtualizerStrength(it.toInt()) },
+                                onValueChange = { sharedViewModel.onEvent(AudioEvent.SetVirtualizerStrength(it.toInt())) },
                                 valueRange = 0f..1000f
                             )
                         }
@@ -206,7 +201,6 @@ fun EqualizerDialog(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    // === Reverb Preset ===
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(text = stringResource(R.string.reverb_preset), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         val presets = listOf(
@@ -244,7 +238,7 @@ fun EqualizerDialog(
                                     DropdownMenuItem(
                                         text = { Text(name) },
                                         onClick = {
-                                            sharedViewModel.setReverbPreset(idx)
+                                            sharedViewModel.onEvent(AudioEvent.SetReverbPreset(idx))
                                             expanded = false
                                         }
                                     )
