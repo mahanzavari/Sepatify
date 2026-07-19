@@ -97,6 +97,7 @@
     <string name="shared_song_card_title">Shared Song</string>
     <string name="play_now">Play Now</string>
     <string name="message_sending">Sending</string>
+    <string name="message_sent">Sent</string>
     <string name="message_delivered">Delivered</string>
     <string name="message_read">Read</string>
     <string name="no_chat_messages">No messages. Start a real-time, live conversation!</string>
@@ -279,4 +280,8 @@
 
     <!-- Preferences -->
     <string name="guest_user_default">Guest User</string>
+
+    <!-- Network State -->
+    <string name="network_lost">Network Lost</string>
+    <string name="network_restored">Network is back.</string>
 </resources>

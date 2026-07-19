@@ -290,6 +290,30 @@ fun RecentlyPlayedScreen(
                 modifier = Modifier.weight(1f)
             )
         } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${recentSongs.size} songs",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
+                FloatingActionButton(
+                    onClick = {
+                        val shuffled = recentSongs.shuffled()
+                        shuffled.firstOrNull()?.let { first -> onSongSelect(first, shuffled) }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Default.Shuffle, contentDescription = "Shuffle All", tint = Color.Black)
+                }
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -298,29 +322,96 @@ fun RecentlyPlayedScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(recentSongs, key = { it.id }) { song ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSongSelect(song, recentSongs) }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        val art = rememberSongArt(song)
-                        AsyncImage(
-                            model = art,
-                            contentDescription = song.title,
-                            modifier = Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                            Text(text = song.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-                        }
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = MaterialTheme.colorScheme.primary)
-                    }
+                    SwipeToRemoveRecentSongItem(
+                        song = song,
+                        onClick = { onSongSelect(song, recentSongs) },
+                        onRemove = { playlistViewModel.removeRecentSong(song.id) }
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SwipeToRemoveRecentSongItem(
+    song: Song,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    var swipeOffset by remember { mutableStateOf(0f) }
+    val animatedOffset by animateFloatAsState(targetValue = swipeOffset, label = "swipe-remove")
+
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val dismissThreshold = screenWidthPx * 0.5f
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { _, dragAmount ->
+                        swipeOffset += dragAmount
+                    },
+                    onDragEnd = {
+                        if (Math.abs(swipeOffset) > dismissThreshold) {
+                            swipeOffset = if (swipeOffset > 0) screenWidthPx else -screenWidthPx
+                            onRemove()
+                        } else {
+                            swipeOffset = 0f
+                        }
+                    },
+                    onDragCancel = {
+                        swipeOffset = 0f
+                    }
+                )
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Remove",
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(end = 20.dp)
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { translationX = animatedOffset }
+                .clickable { onClick() },
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val art = rememberSongArt(song)
+                AsyncImage(
+                    model = art,
+                    contentDescription = song.title,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                    Text(text = song.artistName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                }
+                Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -408,12 +499,10 @@ fun SwipeToUnlikeSongItem(
     var swipeOffset by remember { mutableStateOf(0f) }
     val animatedOffset by animateFloatAsState(targetValue = swipeOffset, label = "swipe-unlike")
 
-    LaunchedEffect(swipeOffset) {
-        if (swipeOffset < -220f || swipeOffset > 220f) {
-            onUnlike()
-            swipeOffset = 0f
-        }
-    }
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val dismissThreshold = screenWidthPx * 0.5f
 
     Box(
         modifier = Modifier
@@ -424,7 +513,15 @@ fun SwipeToUnlikeSongItem(
                         swipeOffset += dragAmount
                     },
                     onDragEnd = {
-                        swipeOffset = if (swipeOffset > 0) 220f else -220f
+                        if (Math.abs(swipeOffset) > dismissThreshold) {
+                            swipeOffset = if (swipeOffset > 0) screenWidthPx else -screenWidthPx
+                            onUnlike()
+                        } else {
+                            swipeOffset = 0f
+                        }
+                    },
+                    onDragCancel = {
+                        swipeOffset = 0f
                     }
                 )
             }
