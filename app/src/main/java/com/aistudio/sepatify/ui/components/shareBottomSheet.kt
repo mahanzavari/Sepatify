@@ -23,11 +23,13 @@ import androidx.compose.ui.res.stringResource
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.screens.FriendRowSkeleton
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.ChatEvent
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
+import com.aistudio.sepatify.ui.viewmodel.FollowedUsersUiState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,7 +42,7 @@ fun ShareBottomSheet(
     locString: (Int) -> String
 ) {
     val context = LocalContext.current
-    val followedUsers by chatViewModel.followedUsers.collectAsState()
+    val followedState by chatViewModel.followedUsersState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
 
@@ -111,61 +113,79 @@ fun ShareBottomSheet(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            if (followedUsers.isEmpty()) {
-                Text(
-                    text = locString(R.string.no_friends),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaMuted),
-                    modifier = Modifier.padding(vertical = dimens.spaceNormal)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = dimens.heightMaxLazyColumn),
-                    verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
-                    contentPadding = PaddingValues(bottom = dimens.spaceLarge)
-                ) {
-                    items(followedUsers) { user ->
-                        Row(
+            // Fix for smart cast: assign to local val
+            val currentFollowedState = followedState
+            when (currentFollowedState) {
+                is FollowedUsersUiState.Loading -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = dimens.heightMaxLazyColumn),
+                        verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
+                        contentPadding = PaddingValues(bottom = dimens.spaceLarge)
+                    ) {
+                        items(6) { FriendRowSkeleton() }
+                    }
+                }
+                is FollowedUsersUiState.Loaded -> {
+                    val followedUsers = currentFollowedState.users
+                    if (followedUsers.isEmpty()) {
+                        Text(
+                            text = locString(R.string.no_friends),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaMuted),
+                            modifier = Modifier.padding(vertical = dimens.spaceNormal)
+                        )
+                    } else {
+                        LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(shapes.small)
-                                .clickable {
-                                    sendInternalMessage(user, song, playlist, chatViewModel, context, locString)
-                                    coroutineScope.launch { sheetState.hide(); onDismiss() }
-                                }
-                                .padding(dimens.spaceTwelve),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
+                                .heightIn(max = dimens.heightMaxLazyColumn),
+                            verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
+                            contentPadding = PaddingValues(bottom = dimens.spaceLarge)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(dimens.sizeAvatarNormal)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.primary.copy(
-                                            alpha = dimens.alphaGrooves * 3.75f
-                                        ), 
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = user.take(1).uppercase(), 
-                                    color = MaterialTheme.colorScheme.primary, 
-                                    fontWeight = FontWeight.Bold
-                                )
+                            items(followedUsers) { user ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(shapes.small)
+                                        .clickable {
+                                            sendInternalMessage(user, song, playlist, chatViewModel, context, locString)
+                                            coroutineScope.launch { sheetState.hide(); onDismiss() }
+                                        }
+                                        .padding(dimens.spaceTwelve),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(dimens.sizeAvatarNormal)
+                                            .background(
+                                                color = MaterialTheme.colorScheme.primary.copy(
+                                                    alpha = dimens.alphaGrooves * 3.75f
+                                                ), 
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = user.take(1).uppercase(), 
+                                            color = MaterialTheme.colorScheme.primary, 
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Text(
+                                        text = user,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.weight(dimens.aspectRatioSquare)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Chat, 
+                                        contentDescription = "Send", 
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
-                            Text(
-                                text = user,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(dimens.aspectRatioSquare)
-                            )
-                            Icon(
-                                imageVector = Icons.Default.Chat, 
-                                contentDescription = "Send", 
-                                tint = MaterialTheme.colorScheme.primary
-                            )
                         }
                     }
                 }

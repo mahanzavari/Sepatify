@@ -153,14 +153,23 @@ fun UserProfileScreen(
                 }
             }
 
+            // ── UPDATED STATS CARD WITH SHIMMER ──
             item {
                 Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2020))) {
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        StatItem(details?.followersCount?.toString() ?: "0", "Followers")
-                        Box(modifier = Modifier.height(30.dp).width(1.dp).background(Color.Gray.copy(alpha = 0.3f)))
-                        StatItem(details?.followingCount?.toString() ?: "0", "Following")
-                        Box(modifier = Modifier.height(30.dp).width(1.dp).background(Color.Gray.copy(alpha = 0.3f)))
-                        StatItem(details?.playlists?.size?.toString() ?: "0", "Playlists")
+                        if (details == null) {
+                            StatItemSkeleton()
+                            Box(modifier = Modifier.height(30.dp).width(1.dp).background(Color.Gray.copy(alpha = 0.3f)))
+                            StatItemSkeleton()
+                            Box(modifier = Modifier.height(30.dp).width(1.dp).background(Color.Gray.copy(alpha = 0.3f)))
+                            StatItemSkeleton()
+                        } else {
+                            StatItem(details!!.followersCount.toString(), "Followers")
+                            Box(modifier = Modifier.height(30.dp).width(1.dp).background(Color.Gray.copy(alpha = 0.3f)))
+                            StatItem(details!!.followingCount.toString(), "Following")
+                            Box(modifier = Modifier.height(30.dp).width(1.dp).background(Color.Gray.copy(alpha = 0.3f)))
+                            StatItem(details!!.playlists.size.toString(), "Playlists")
+                        }
                     }
                 }
             }
@@ -199,9 +208,26 @@ fun UserProfileScreen(
                 }
             }
 
+            // ── UPDATED PLAYLISTS TAB WITH SHIMMER ──
             if (selectedTab == 0) {
                 val playlists = details?.playlists ?: emptyList()
-                if (playlists.isEmpty()) {
+                if (details == null) {
+                    items(3) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            val brush = shimmerBrush()
+                            Box(modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(0.85f)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(brush))
+                            Box(modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(0.85f)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(brush))
+                        }
+                    }
+                } else if (playlists.isEmpty()) {
                     item { Text("No public playlists available.", color = Color.Gray, modifier = Modifier.padding(16.dp)) }
                 } else {
                     items(playlists.chunked(2)) { rowItems ->
@@ -241,8 +267,11 @@ fun UserProfileScreen(
                     }
                 }
             } else {
+                // ── UPDATED RECENTLY PLAYED TAB WITH SHIMMER ──
                 val songs = details?.likedSongs ?: emptyList()
-                if (songs.isEmpty()) {
+                if (details == null) {
+                    items(5) { SongRowSkeleton() }
+                } else if (songs.isEmpty()) {
                     item { Text("No playback history available.", color = Color.Gray, modifier = Modifier.padding(16.dp)) }
                 } else {
                     items(songs) { song ->

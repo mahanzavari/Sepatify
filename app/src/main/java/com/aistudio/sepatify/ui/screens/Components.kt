@@ -218,6 +218,73 @@ fun ChatRowSkeleton(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Skeleton for a friend row in the ShareBottomSheet (avatar + name + chat icon).
+ */
+@Composable
+fun FriendRowSkeleton(modifier: Modifier = Modifier) {
+    val brush = shimmerBrush()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp, horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Avatar circle placeholder
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(brush)
+        )
+        // Name bar
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(16.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(brush)
+        )
+        // Chat icon placeholder
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(brush)
+        )
+    }
+}
+
+/**
+ * Skeleton for a single stat item (number + label) in the UserProfileScreen.
+ */
+@Composable
+fun StatItemSkeleton(modifier: Modifier = Modifier) {
+    val brush = shimmerBrush()
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Number placeholder
+        Box(
+            modifier = Modifier
+                .width(48.dp)
+                .height(22.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(brush)
+        )
+        // Label placeholder
+        Box(
+            modifier = Modifier
+                .width(64.dp)
+                .height(12.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(brush)
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

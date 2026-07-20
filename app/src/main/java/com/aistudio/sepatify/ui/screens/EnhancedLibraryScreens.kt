@@ -58,6 +58,7 @@ import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.model.Song
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
+import com.aistudio.sepatify.ui.viewmodel.FollowedUsersUiState
 import com.aistudio.sepatify.ui.viewmodel.PlaylistViewModel
 import com.aistudio.sepatify.ui.viewmodel.SharedAudioViewModel
 import kotlin.math.roundToInt
@@ -423,7 +424,7 @@ fun FollowedUsersScreen(
     locString: (Int) -> String,
     onUserClick: (String) -> Unit
 ) {
-    val followedUsers by chatViewModel.followedUsers.collectAsState()
+    val followedState by chatViewModel.followedUsersState.collectAsState()
 
     Column(
         modifier = Modifier
@@ -438,49 +439,60 @@ fun FollowedUsersScreen(
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        if (followedUsers.isEmpty()) {
-            EmptyStateView(
-                icon = Icons.Default.People,
-                title = locString(R.string.followed_users_empty_title),
-                subtitle = locString(R.string.followed_users_empty_subtitle)
-            )
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(followedUsers) { username ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                modifier = Modifier.clickable { onUserClick(username) },
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        val currentFollowedState = followedState
+        when (currentFollowedState) {
+            is FollowedUsersUiState.Loading -> {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(6) { FriendRowSkeleton() }
+                }
+            }
+            is FollowedUsersUiState.Loaded -> {
+                val followedUsers = currentFollowedState.users
+                if (followedUsers.isEmpty()) {
+                    EmptyStateView(
+                        icon = Icons.Default.People,
+                        title = locString(R.string.followed_users_empty_title),
+                        subtitle = locString(R.string.followed_users_empty_subtitle)
+                    )
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(followedUsers) { username ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                shape = RoundedCornerShape(16.dp)
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
-                                        .size(40.dp)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(username.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                                }
-                                Text(text = username, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                            }
+                                    Row(
+                                        modifier = Modifier.clickable { onUserClick(username) },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(username.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                        }
+                                        Text(text = username, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                    }
 
-                            Button(
-                                onClick = { chatViewModel.toggleFollow(username) },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)),
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                Text(text = locString(R.string.unfollow), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                                    Button(
+                                        onClick = { chatViewModel.toggleFollow(username) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)),
+                                        shape = RoundedCornerShape(20.dp)
+                                    ) {
+                                        Text(text = locString(R.string.unfollow), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
                             }
                         }
                     }
