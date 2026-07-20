@@ -1,5 +1,6 @@
 package com.aistudio.sepatify.ui.components
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -113,7 +114,6 @@ fun ShareBottomSheet(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            // Fix for smart cast: assign to local val
             val currentFollowedState = followedState
             when (currentFollowedState) {
                 is FollowedUsersUiState.Loading -> {
@@ -195,17 +195,29 @@ fun ShareBottomSheet(
 }
 
 private fun shareExternally(context: Context, song: Song?, playlist: PlaylistEntity?, locString: (Int) -> String) {
+    val baseUrl = "https://sepatify.app" // Replace with your actual domain if you have one
+
     val shareText = if (song != null) {
-        String.format(locString(R.string.share_song_text), song.title, song.artistName)
+        val link = "$baseUrl/song/${song.id}"
+        "${String.format(locString(R.string.share_song_text), song.title, song.artistName)}\n$link"
     } else if (playlist != null) {
-        String.format(locString(R.string.share_playlist_text), playlist.title)
+        val link = "$baseUrl/playlist/${playlist.id}"
+        "${String.format(locString(R.string.share_playlist_text), playlist.title)}\n$link"
     } else ""
 
-    val intent = Intent(Intent.ACTION_SEND).apply {
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, shareText)
     }
-    context.startActivity(Intent.createChooser(intent, locString(R.string.share)))
+
+    val chooserIntent = Intent.createChooser(shareIntent, locString(R.string.share))
+    chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    try {
+        context.startActivity(chooserIntent)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(context, "No app available to share", Toast.LENGTH_SHORT).show()
+    }
 }
 
 private fun sendInternalMessage(
