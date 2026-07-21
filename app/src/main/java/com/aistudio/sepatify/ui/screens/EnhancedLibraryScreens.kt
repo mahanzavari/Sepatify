@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -439,8 +440,7 @@ fun FollowedUsersScreen(
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        val currentFollowedState = followedState
-        when (currentFollowedState) {
+        when (val currentFollowedState = followedState) {
             is FollowedUsersUiState.Loading -> {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(6) { FriendRowSkeleton() }
@@ -457,6 +457,9 @@ fun FollowedUsersScreen(
                 } else {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(followedUsers) { username ->
+                            val profile by chatViewModel.getProfile(username).collectAsState(initial = null)
+                            val displayName = profile?.displayName ?: username
+                            
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
@@ -480,9 +483,18 @@ fun FollowedUsersScreen(
                                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(username.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                            if (!profile?.avatarUrl.isNullOrEmpty()) {
+                                                AsyncImage(
+                                                    model = profile!!.avatarUrl,
+                                                    contentDescription = displayName,
+                                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            } else {
+                                                Text(displayName.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                            }
                                         }
-                                        Text(text = username, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                        Text(text = displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                     }
 
                                     Button(

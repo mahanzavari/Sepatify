@@ -18,9 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
@@ -51,7 +53,6 @@ fun ShareBottomSheet(
 
     val dimens = MaterialTheme.sepatifyDimens
     val shapes = MaterialTheme.sepatifyShapes
-    val colors = MaterialTheme.sepatifyColors
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -114,9 +115,9 @@ fun ShareBottomSheet(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            val currentFollowedState = followedState
-            when (currentFollowedState) {
+            when (val currentFollowedState = followedState) {
                 is FollowedUsersUiState.Loading -> {
+                    // Shimmer skeleton effect while the network fetches the friends list
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -145,6 +146,10 @@ fun ShareBottomSheet(
                             contentPadding = PaddingValues(bottom = dimens.spaceLarge)
                         ) {
                             items(followedUsers) { user ->
+                                // Fetch their actual display profile (Avatar + Display Name)
+                                val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
+                                val displayName = profile?.displayName ?: user
+                                
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -168,14 +173,23 @@ fun ShareBottomSheet(
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = user.take(1).uppercase(), 
-                                            color = MaterialTheme.colorScheme.primary, 
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        if (!profile?.avatarUrl.isNullOrEmpty()) {
+                                            AsyncImage(
+                                                model = profile!!.avatarUrl,
+                                                contentDescription = displayName,
+                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(
+                                                text = displayName.take(1).uppercase(), 
+                                                color = MaterialTheme.colorScheme.primary, 
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                     Text(
-                                        text = user,
+                                        text = displayName,
                                         style = MaterialTheme.typography.bodyLarge,
                                         modifier = Modifier.weight(dimens.aspectRatioSquare)
                                     )
@@ -195,7 +209,7 @@ fun ShareBottomSheet(
 }
 
 private fun shareExternally(context: Context, song: Song?, playlist: PlaylistEntity?, locString: (Int) -> String) {
-    val baseUrl = "https://sepatify.app" // Replace with your actual domain if you have one
+    val baseUrl = "https://sepatify.app"
 
     val shareText = if (song != null) {
         val link = "$baseUrl/song/${song.id}"
