@@ -12,6 +12,12 @@ import com.aistudio.sepatify.data.repository.UserProfileDetails
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+// ── Add this sealed interface ABOVE the class ──
+sealed interface FollowedUsersUiState {
+    object Loading : FollowedUsersUiState
+    data class Loaded(val users: List<String>) : FollowedUsersUiState
+}
+
 class ChatViewModel(
     private val chatRepository: ChatRepository,
     private val mainViewModel: MainViewModel
@@ -24,8 +30,18 @@ class ChatViewModel(
         .flatMapLatest { chatRepository.searchUsers(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // ── KEEP the existing followedUsers for backward compat ──
     val followedUsers: StateFlow<List<String>> = chatRepository.getFollowedUsers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ── ADD this new state that distinguishes Loading vs Loaded ──
+    val followedUsersState: StateFlow<FollowedUsersUiState> = chatRepository.getFollowedUsers()
+        .map { state -> FollowedUsersUiState.Loaded(state) as FollowedUsersUiState }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            FollowedUsersUiState.Loading
+        )
 
     val recentConversations: StateFlow<List<String>> = chatRepository.getRecentConversations()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

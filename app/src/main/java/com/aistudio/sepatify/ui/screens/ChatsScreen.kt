@@ -48,6 +48,7 @@ fun ChatsScreen(
     val recentConversations by chatViewModel.recentConversations.collectAsState()
     val onlineUsers by chatViewModel.onlineUsers.collectAsState()
     var chatsFirstLoad by remember { mutableStateOf(true) }
+    
     LaunchedEffect(recentConversations) {
         if (chatsFirstLoad) chatsFirstLoad = false
     }
@@ -55,7 +56,6 @@ fun ChatsScreen(
     var chatInputText by remember { mutableStateOf("") }
     val dimens = MaterialTheme.sepatifyDimens
     val shapes = MaterialTheme.sepatifyShapes
-    val colors = MaterialTheme.sepatifyColors
 
     val isKeyboardVisible = WindowInsets.isImeVisible
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -78,6 +78,7 @@ fun ChatsScreen(
             .padding(bottom = bottomPadding)
     ) {
         if (activeChatUser == null) {
+            // --- CONVERSATION LIST & SEARCH ---
             Text(
                 text = locString(R.string.chat_title),
                 style = MaterialTheme.typography.titleLarge,
@@ -238,6 +239,7 @@ fun ChatsScreen(
                 }
             }
         } else {
+            // --- ACTIVE CHAT VIEW ---
             val user = activeChatUser
             val pagedMessages = chatViewModel.getMessagesPaged(user).collectAsLazyPagingItems()
             val otherIsTyping = remember(user) { chatViewModel.getTypingState(user) }.collectAsState(initial = false)
@@ -286,6 +288,7 @@ fun ChatsScreen(
                 }
             }
 
+            // Top Header active chat
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -295,41 +298,51 @@ fun ChatsScreen(
                 }
                 Spacer(modifier = Modifier.width(dimens.spaceEight))
 
-                Box(
+                // Wrapping Avatar and Title in a clickable Row
+                Row(
                     modifier = Modifier
-                        .size(dimens.sizeAvatarNormal)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
-                    contentAlignment = Alignment.Center
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onViewUserProfile(user) }
+                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (!profile?.avatarUrl.isNullOrEmpty()) {
-                        AsyncImage(
-                            model = profile!!.avatarUrl,
-                            contentDescription = displayName,
-                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Text(
-                            text = displayName.take(1).uppercase(),
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                    Box(
+                        modifier = Modifier
+                            .size(dimens.sizeAvatarNormal)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!profile?.avatarUrl.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = profile!!.avatarUrl,
+                                contentDescription = displayName,
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = displayName.take(1).uppercase(),
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
                     }
-                }
-                Spacer(modifier = Modifier.width(dimens.spaceTwelve))
+                    Spacer(modifier = Modifier.width(dimens.spaceTwelve))
 
-                Column {
-                    Text(text = displayName, style = MaterialTheme.typography.titleMedium)
-                    if (otherIsTyping.value) {
-                        Text(text = locString(R.string.typing), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    } else {
-                        val isOnline = onlineUsers.contains(user)
-                        Text(
-                            text = if (isOnline) locString(R.string.status_online) else locString(R.string.status_offline),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isOnline) MaterialTheme.colorScheme.primary else Color.Gray
-                        )
+                    Column {
+                        Text(text = displayName, style = MaterialTheme.typography.titleMedium)
+                        if (otherIsTyping.value) {
+                            Text(text = locString(R.string.typing), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        } else {
+                            val isOnline = onlineUsers.contains(user)
+                            Text(
+                                text = if (isOnline) locString(R.string.status_online) else locString(R.string.status_offline),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isOnline) MaterialTheme.colorScheme.primary else Color.Gray
+                            )
+                        }
                     }
                 }
             }
