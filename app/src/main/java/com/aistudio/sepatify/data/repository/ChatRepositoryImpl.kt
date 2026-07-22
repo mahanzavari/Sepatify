@@ -1,4 +1,3 @@
-// Paste this into: app/src/main/java/com/aistudio/sepatify/data/repository/ChatRepositoryImpl.kt
 package com.aistudio.sepatify.data.repository
 
 import androidx.paging.Pager
@@ -29,13 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -70,9 +63,36 @@ class ChatRepositoryImpl(
     private var presenceHeartbeatJob: Job? = null
     private var presenceCleanupJob: Job? = null
 
+    // Reactive Cache for Follow/Unfollow UI Synchronization
+    private val followedUsersCache = MutableStateFlow<Set<String>?>(null)
+    private var lastUserIdForFollows: String? = null
+
     init {
         repoScope.launch { subscribeToRealtimeMessages() }
         repoScope.launch { subscribeToRealtimeProfiles() }
+    }
+
+    private suspend fun ensureFollowedUsersLoaded() {
+        val myId = authRepository.currentUserId() ?: return
+        // Prevent unnecessary network calls if we already cached this user's state
+        if (followedUsersCache.value != null && lastUserIdForFollows == myId) return
+
+        try {
+            val rows = Supa.client.from("follows")
+                .select(columns = Columns.raw("followed_id, profiles!follows_followed_id_fkey(username)")) {
+                    filter { eq("follower_id", myId) }
+                }
+                .decodeList<JsonObject>()
+
+            val set = rows.mapNotNull { row ->
+                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content
+            }.toSet()
+            lastUserIdForFollows = myId
+            followedUsersCache.value = set
+        } catch (e: Exception) {
+            followedUsersCache.value = emptySet()
+            lastUserIdForFollows = myId
+        }
     }
 
     private suspend fun subscribeToRealtimeProfiles() {
@@ -116,7 +136,7 @@ class ChatRepositoryImpl(
     override fun getProfileFlow(username: String): Flow<ProfileDto?> {
         return profileCache.map { it[username] }.onStart {
             if (!profileCache.value.containsKey(username)) {
-                repoScope.launch { resolveId(username) } 
+                repoScope.launch { resolveId(username) }
             }
         }
     }
@@ -147,8 +167,8 @@ class ChatRepositoryImpl(
         // 3. Fetch Playlists (Isolated & Smart Privacy)
         try {
             val remotePlaylists = Supa.client.from("playlists")
-                .select(columns = Columns.ALL) { 
-                    filter { eq("owner_id", id) } 
+                .select(columns = Columns.ALL) {
+                    filter { eq("owner_id", id) }
                 }
                 .decodeList<PlaylistDto>()
                 // Filter out private playlists UNLESS it's the signed-in user viewing their own profile
@@ -159,7 +179,7 @@ class ChatRepositoryImpl(
                     id = it.id,
                     title = it.title,
                     description = it.description,
-                    isUserCreated = false, 
+                    isUserCreated = false,
                     category = it.category,
                     isPrivate = it.isPrivate
                 )
@@ -577,18 +597,10 @@ class ChatRepositoryImpl(
             emit(emptyList())
             return@flow
         }
-        try {
-            val rows = Supa.client.from("follows")
-                .select(columns = Columns.raw("followed_id, profiles!follows_followed_id_fkey(username)")) {
-                    filter { eq("follower_id", myId) }
-                }
-                .decodeList<JsonObject>()
-            
-            emit(rows.mapNotNull { row -> 
-                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content 
-            })
-        } catch (e: Exception) {
-            emit(emptyList())
+        ensureFollowedUsersLoaded()
+        // Reactively collect from the cache. The UI will instantly update on emission!
+        followedUsersCache.collect { set ->
+            emit(set?.toList() ?: emptyList())
         }
     }
 
@@ -604,9 +616,9 @@ class ChatRepositoryImpl(
                     filter { eq("followed_id", myId) }
                 }
                 .decodeList<JsonObject>()
-                
-            emit(rows.mapNotNull { row -> 
-                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content 
+
+            emit(rows.mapNotNull { row ->
+                (row["profiles"] as? JsonObject)?.get("username")?.jsonPrimitive?.content
             })
         } catch (e: Exception) {
             emit(emptyList())
@@ -616,17 +628,19 @@ class ChatRepositoryImpl(
     override suspend fun toggleFollowUser(username: String) {
         val myId = authRepository.currentUserId() ?: return
         val otherId = resolveId(username) ?: return
-        try {
-            val alreadyFollowing = Supa.client.from("follows")
-                .select(columns = Columns.ALL) {
-                    filter {
-                        eq("follower_id", myId)
-                        eq("followed_id", otherId)
-                    }
-                }
-                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>()
-                .isNotEmpty()
 
+        ensureFollowedUsersLoaded()
+        val currentSet = followedUsersCache.value ?: emptySet()
+        val alreadyFollowing = currentSet.contains(username)
+
+        // Optimistic UI Update: Immediately notify the UI of the new state
+        followedUsersCache.value = if (alreadyFollowing) {
+            currentSet - username
+        } else {
+            currentSet + username
+        }
+
+        try {
             if (alreadyFollowing) {
                 Supa.client.from("follows").delete {
                     filter {
@@ -639,29 +653,22 @@ class ChatRepositoryImpl(
                     com.aistudio.sepatify.data.remote.dto.FollowDto(followerId = myId, followedId = otherId)
                 )
             }
-        } catch (e: Exception) { }
+        } catch (e: Exception) {
+            // Revert back the UI safely on failure
+            followedUsersCache.value = currentSet
+        }
     }
 
     override fun isFollowing(username: String): Flow<Boolean> = flow {
         val myId = authRepository.currentUserId()
-        val otherId = resolveId(username)
-        if (myId == null || otherId == null) {
+        if (myId == null) {
             emit(false)
             return@flow
         }
-        try {
-            val exists = Supa.client.from("follows")
-                .select(columns = Columns.ALL) {
-                    filter {
-                        eq("follower_id", myId)
-                        eq("followed_id", otherId)
-                    }
-                }
-                .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>()
-                .isNotEmpty()
-            emit(exists)
-        } catch (e: Exception) {
-            emit(false)
+        ensureFollowedUsersLoaded()
+        // Reactively collect to sync individual Follow/Following buttons instantly
+        followedUsersCache.collect { set ->
+            emit(set?.contains(username) == true)
         }
     }
 

@@ -12,7 +12,6 @@ import com.aistudio.sepatify.data.repository.UserProfileDetails
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// ── Add this sealed interface ABOVE the class ──
 sealed interface FollowedUsersUiState {
     object Loading : FollowedUsersUiState
     data class Loaded(val users: List<String>) : FollowedUsersUiState
@@ -30,11 +29,9 @@ class ChatViewModel(
         .flatMapLatest { chatRepository.searchUsers(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ── KEEP the existing followedUsers for backward compat ──
     val followedUsers: StateFlow<List<String>> = chatRepository.getFollowedUsers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // ── ADD this new state that distinguishes Loading vs Loaded ──
     val followedUsersState: StateFlow<FollowedUsersUiState> = chatRepository.getFollowedUsers()
         .map { state -> FollowedUsersUiState.Loaded(state) as FollowedUsersUiState }
         .stateIn(
@@ -52,8 +49,12 @@ class ChatViewModel(
     private val _viewedUserDetails = MutableStateFlow<UserProfileDetails?>(null)
     val viewedUserDetails: StateFlow<UserProfileDetails?> = _viewedUserDetails.asStateFlow()
 
+    // Track the actively viewed user profile to safely increment/decrement follower counts
+    private var currentlyViewedUser: String? = null
+
     fun loadUserDetails(username: String) {
         viewModelScope.launch {
+            currentlyViewedUser = username
             _viewedUserDetails.value = null
             _viewedUserDetails.value = chatRepository.getUserProfileDetails(username)
         }
@@ -81,7 +82,28 @@ class ChatViewModel(
 
     fun toggleFollow(username: String) {
         viewModelScope.launch {
+            // Take a snapshot of status before execution
+            val wasFollowing = chatRepository.isFollowing(username).first()
+
             chatRepository.toggleFollowUser(username)
+
+            // Take a snapshot of status after execution (instantly reflects thanks to caching)
+            val isFollowingNow = chatRepository.isFollowing(username).first()
+
+            // If the status has actually changed, apply instant follower count calculation
+            if (wasFollowing != isFollowingNow) {
+                val currentDetails = _viewedUserDetails.value
+
+                // Only modify counts if we are actively viewing this exact user's profile right now
+                if (currentDetails != null && currentlyViewedUser == username) {
+                    val newCount = if (isFollowingNow) {
+                        currentDetails.followersCount + 1
+                    } else {
+                        (currentDetails.followersCount - 1).coerceAtLeast(0)
+                    }
+                    _viewedUserDetails.value = currentDetails.copy(followersCount = newCount)
+                }
+            }
         }
     }
 
