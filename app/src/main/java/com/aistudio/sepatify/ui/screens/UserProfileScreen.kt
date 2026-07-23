@@ -47,8 +47,8 @@ fun UserProfileScreen(
     val details by chatViewModel.viewedUserDetails.collectAsState()
     val onlineUsers by chatViewModel.onlineUsers.collectAsState()
     val isOnline = onlineUsers.contains(username)
-    
-    var selectedTab by remember { mutableStateOf(0) } 
+
+    var selectedTab by remember { mutableStateOf(0) }
     val isLoading = profile == null || details == null
     val brush = shimmerBrush()
 
@@ -81,7 +81,6 @@ fun UserProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
-            // ── HEADER WITH SHIMMER ──
             item {
                 Card(
                     shape = RoundedCornerShape(24.dp),
@@ -138,9 +137,9 @@ fun UserProfileScreen(
                                 }
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(20.dp))
-                        
+
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Button(
                                 onClick = { chatViewModel.onEvent(ChatEvent.ToggleFollow(username)) },
@@ -171,7 +170,6 @@ fun UserProfileScreen(
                 }
             }
 
-            // ── STATS NUMBERS CARD WITH SHIMMER ──
             item {
                 Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2020))) {
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -226,7 +224,6 @@ fun UserProfileScreen(
                 }
             }
 
-            // ── PLAYLISTS TAB WITH SHIMMER ──
             if (selectedTab == 0) {
                 if (isLoading) {
                     items(3) {
@@ -237,6 +234,8 @@ fun UserProfileScreen(
                     }
                 } else {
                     val playlists = details?.playlists ?: emptyList()
+                    val trackCounts = details?.playlistSongCounts ?: emptyMap()
+
                     if (playlists.isEmpty()) {
                         item { Text("No public playlists available.", color = Color.Gray, modifier = Modifier.padding(16.dp)) }
                     } else {
@@ -264,7 +263,9 @@ fun UserProfileScreen(
                                             }
                                             Column(modifier = Modifier.align(Alignment.BottomStart)) {
                                                 Text(playlist.title, style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
-                                                Text("${(playlist.id * 3 % 20) + 5} tracks", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+
+                                                val trackCount = trackCounts[playlist.id] ?: 0
+                                                Text("$trackCount tracks", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
                                             }
                                             Box(modifier = Modifier.align(Alignment.BottomEnd).size(36.dp).clip(CircleShape).background(Color(0xFF1DB954)), contentAlignment = Alignment.Center) {
                                                 Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(20.dp))
@@ -278,7 +279,6 @@ fun UserProfileScreen(
                     }
                 }
             } else {
-                // ── RECENTLY PLAYED TAB WITH SHIMMER ──
                 if (isLoading) {
                     items(5) { SongRowSkeleton() }
                 } else {

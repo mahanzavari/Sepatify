@@ -11,7 +11,8 @@ data class UserProfileDetails(
     val followersCount: Int,
     val followingCount: Int,
     val playlists: List<PlaylistEntity>,
-    val likedSongs: List<Song> = emptyList()
+    val likedSongs: List<Song> = emptyList(),
+    val playlistSongCounts: Map<Long, Int> = emptyMap()
 )
 
 interface ChatRepository {
@@ -32,7 +33,7 @@ interface ChatRepository {
     suspend fun untrackPresence()
 
     fun getProfileFlow(username: String): Flow<ProfileDto?>
-    
+
     // The missing method needed for the UI:
     suspend fun getUserProfileDetails(username: String): UserProfileDetails
 }

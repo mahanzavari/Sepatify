@@ -16,5 +16,6 @@ data class UserProfileDetails(
     val followersCount: Int,
     val followingCount: Int,
     val playlists: List<Playlist>,
-    val likedSongs: List<Song> = emptyList()
+    val likedSongs: List<Song> = emptyList(),
+    val playlistSongCounts: Map<Long, Int> = emptyMap()
 )

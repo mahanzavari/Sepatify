@@ -63,7 +63,6 @@ class ChatRepositoryImpl(
     private var presenceHeartbeatJob: Job? = null
     private var presenceCleanupJob: Job? = null
 
-    // Reactive Cache for Follow/Unfollow UI Synchronization
     private val followedUsersCache = MutableStateFlow<Set<String>?>(null)
     private var lastUserIdForFollows: String? = null
 
@@ -74,7 +73,6 @@ class ChatRepositoryImpl(
 
     private suspend fun ensureFollowedUsersLoaded() {
         val myId = authRepository.currentUserId() ?: return
-        // Prevent unnecessary network calls if we already cached this user's state
         if (followedUsersCache.value != null && lastUserIdForFollows == myId) return
 
         try {
@@ -149,29 +147,29 @@ class ChatRepositoryImpl(
         var followingCount = 0
         var mappedPlaylists = emptyList<PlaylistEntity>()
         var mappedSongs = emptyList<Song>()
+        var playlistCounts = emptyMap<Long, Int>()
 
-        // 1. Fetch Followers (Isolated)
+        // 1. Fetch Followers
         try {
             followersCount = Supa.client.from("follows")
                 .select(columns = Columns.ALL) { filter { eq("followed_id", id) } }
                 .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().size
         } catch (e: Exception) { e.printStackTrace() }
 
-        // 2. Fetch Following (Isolated)
+        // 2. Fetch Following
         try {
             followingCount = Supa.client.from("follows")
                 .select(columns = Columns.ALL) { filter { eq("follower_id", id) } }
                 .decodeList<com.aistudio.sepatify.data.remote.dto.FollowDto>().size
         } catch (e: Exception) { e.printStackTrace() }
 
-        // 3. Fetch Playlists (Isolated & Smart Privacy)
+        // 3. Fetch Playlists and Counts
         try {
             val remotePlaylists = Supa.client.from("playlists")
                 .select(columns = Columns.ALL) {
                     filter { eq("owner_id", id) }
                 }
                 .decodeList<PlaylistDto>()
-                // Filter out private playlists UNLESS it's the signed-in user viewing their own profile
                 .filter { !it.isPrivate || id == myId }
 
             mappedPlaylists = remotePlaylists.map {
@@ -184,9 +182,25 @@ class ChatRepositoryImpl(
                     isPrivate = it.isPrivate
                 )
             }
+
+            // Efficiently Fetch Track Counts for these specific playlists
+            if (mappedPlaylists.isNotEmpty()) {
+                try {
+                    val playlistIds = mappedPlaylists.map { it.id }
+                    val playlistSongs = Supa.client.from("playlist_songs")
+                        .select(columns = Columns.list("playlist_id")) {
+                            filter { isIn("playlist_id", playlistIds) }
+                        }
+                        .decodeList<JsonObject>()
+
+                    playlistCounts = playlistSongs.groupBy {
+                        it["playlist_id"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+                    }.mapValues { it.value.size }
+                } catch (e: Exception) { e.printStackTrace() }
+            }
         } catch (e: Exception) { e.printStackTrace() }
 
-        // 4. Fetch Liked Songs (Isolated)
+        // 4. Fetch Liked Songs
         try {
             val likedSongsJson = Supa.client.from("liked_songs")
                 .select(columns = Columns.raw("user_id, song_id, songs(*)")) { filter { eq("user_id", id) } }
@@ -200,7 +214,7 @@ class ChatRepositoryImpl(
             }
         } catch (e: Exception) { e.printStackTrace() }
 
-        return UserProfileDetails(followersCount, followingCount, mappedPlaylists, mappedSongs)
+        return UserProfileDetails(followersCount, followingCount, mappedPlaylists, mappedSongs, playlistCounts)
     }
 
     override fun getOnlineUsers(): Flow<Set<String>> = _onlineUsers.asStateFlow()
@@ -598,7 +612,6 @@ class ChatRepositoryImpl(
             return@flow
         }
         ensureFollowedUsersLoaded()
-        // Reactively collect from the cache. The UI will instantly update on emission!
         followedUsersCache.collect { set ->
             emit(set?.toList() ?: emptyList())
         }
@@ -633,7 +646,6 @@ class ChatRepositoryImpl(
         val currentSet = followedUsersCache.value ?: emptySet()
         val alreadyFollowing = currentSet.contains(username)
 
-        // Optimistic UI Update: Immediately notify the UI of the new state
         followedUsersCache.value = if (alreadyFollowing) {
             currentSet - username
         } else {
@@ -654,7 +666,6 @@ class ChatRepositoryImpl(
                 )
             }
         } catch (e: Exception) {
-            // Revert back the UI safely on failure
             followedUsersCache.value = currentSet
         }
     }
@@ -666,7 +677,6 @@ class ChatRepositoryImpl(
             return@flow
         }
         ensureFollowedUsersLoaded()
-        // Reactively collect to sync individual Follow/Following buttons instantly
         followedUsersCache.collect { set ->
             emit(set?.contains(username) == true)
         }
