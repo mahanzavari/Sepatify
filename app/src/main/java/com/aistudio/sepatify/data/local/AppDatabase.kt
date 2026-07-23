@@ -14,9 +14,10 @@ import androidx.room.RoomDatabase
         PlaylistEntity::class,
         PlaylistSongCrossRef::class,
         ChatMessageEntity::class,
-        SongCacheEntity::class
+        SongCacheEntity::class,
+        ArtistEntity::class    
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun songCacheDao(): SongCacheDao
+    abstract fun artistDao(): ArtistDao
 
     companion object {
         @Volatile

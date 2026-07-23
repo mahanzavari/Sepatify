@@ -506,6 +506,6 @@ class SongRepositoryImpl(
     }
 }
 
-private fun SongDto.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category)
-private fun SongDto.toCacheEntity() = SongCacheEntity(id, title, artistName, coverImageUrl, audioUrl, category)
-private fun SongCacheEntity.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category)
+private fun SongDto.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category, artistId)
+private fun SongDto.toCacheEntity() = SongCacheEntity(id, title, artistName, coverImageUrl, audioUrl, category, artistId)
+private fun SongCacheEntity.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category, artistId)

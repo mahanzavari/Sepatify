@@ -64,7 +64,8 @@ data class SongCacheEntity(
     val artistName: String,
     val coverImageUrl: String,
     val audioUrl: String,
-    val category: String
+    val category: String,
+    val artistId: String? = null 
 )
 
 @Entity(tableName = "chat_messages")

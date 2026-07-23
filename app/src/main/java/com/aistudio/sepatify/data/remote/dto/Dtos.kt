@@ -31,7 +31,8 @@ data class SongDto(
     @SerialName("cover_image_url") val coverImageUrl: String,
     @SerialName("audio_url") val audioUrl: String,
     @SerialName("category") val category: String = "Popular",
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("artist_id") val artistId: String? = null
 )
 
 @Serializable

@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
             val playlistViewModel: PlaylistViewModel = koinViewModel()
             val chatViewModel: ChatViewModel = koinViewModel()
             val sharedAudioViewModel: SharedAudioViewModel = koinViewModel()
+            val artistViewModel: ArtistViewModel = koinViewModel() // NEW
 
             // Observe settings
             val currentLanguage by mainViewModel.currentLanguage.collectAsState()
@@ -165,6 +166,7 @@ class MainActivity : ComponentActivity() {
                             playlistViewModel = playlistViewModel,
                             chatViewModel = chatViewModel,
                             sharedAudioViewModel = sharedAudioViewModel,
+                            artistViewModel = artistViewModel, // NEW
                             isPremium = isPremium,
                             isConnected = isConnected,
                             locString = locString
@@ -191,6 +193,7 @@ fun AppMainHub(
     playlistViewModel: PlaylistViewModel,
     chatViewModel: ChatViewModel,
     sharedAudioViewModel: SharedAudioViewModel,
+    artistViewModel: ArtistViewModel, // NEW
     isPremium: Boolean,
     isConnected: Boolean,
     locString: (Int) -> String
@@ -201,6 +204,7 @@ fun AppMainHub(
     var itemToShare by remember { mutableStateOf<Any?>(null) }
     var viewedUser by remember { mutableStateOf<String?>(null) }
     var viewedUserPlaylist by remember { mutableStateOf<PlaylistEntity?>(null) }
+    var viewedArtistId by remember { mutableStateOf<String?>(null) } // NEW
 
     val currentSong by sharedAudioViewModel.currentSong.collectAsState()
     val isPlaying by sharedAudioViewModel.isPlaying.collectAsState()
@@ -284,10 +288,12 @@ fun AppMainHub(
     }
 
     androidx.activity.compose.BackHandler(
-        enabled = showNowPlayingOverlay || viewedUserPlaylist != null || viewedUser != null || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
+        enabled = showNowPlayingOverlay || viewedArtistId != null || viewedUserPlaylist != null || viewedUser != null || activeTab != TAB_HOME || isPlaying || (activeTab == TAB_CHAT && activeChatUser != null)
     ) {
         if (showNowPlayingOverlay) {
             showNowPlayingOverlay = false
+        } else if (viewedArtistId != null) {
+            viewedArtistId = null
         } else if (viewedUserPlaylist != null) {
             viewedUserPlaylist = null
         } else if (viewedUser != null) {
@@ -751,6 +757,27 @@ fun AppMainHub(
             }
         }
 
+        // NEW — artist profile overlay, same slide-in pattern as viewedUser
+        AnimatedVisibility(
+            visible = viewedArtistId != null,
+            enter = slideInHorizontally(initialOffsetX = { it }),
+            exit = slideOutHorizontally(targetOffsetX = { it })
+        ) {
+            viewedArtistId?.let { id ->
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    ArtistProfileScreen(
+                        artistId = id,
+                        artistViewModel = artistViewModel,
+                        onBack = { viewedArtistId = null },
+                        onSongSelect = { song, queue -> sharedAudioViewModel.playSong(song, queue) }
+                    )
+                }
+            }
+        }
+
 // Replace the AnimatedVisibility block for viewedUserPlaylist in MainActivity.kt
         AnimatedVisibility(
             visible = viewedUserPlaylist != null,
@@ -807,6 +834,10 @@ fun AppMainHub(
                     isPremium = isPremium,
                     onBackClick = { showNowPlayingOverlay = false },
                     onShareClick = { itemToShare = currentSong },
+                    onArtistClick = { artistId ->
+                        showNowPlayingOverlay = false
+                        viewedArtistId = artistId
+                    }, // NEW
                     locString = locString,
                     coverModifier = Modifier
                 )

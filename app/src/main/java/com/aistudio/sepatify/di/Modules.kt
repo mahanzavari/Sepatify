@@ -25,12 +25,15 @@ val appModule = module {
     single { com.aistudio.sepatify.player.AudioPlayerManager(androidContext()) }
     single { WorkManager.getInstance(androidContext()) }
     single { NetworkMonitor(androidContext()) }
+    single { get<AppDatabase>().artistDao() } 
 
     // Repositories
     single<AuthRepository> { AuthRepositoryImpl() }
     single<SongRepository> { SongRepositoryImpl(androidContext(), get(), get(), get(), get(), get(), get()) }
     single<ChatRepository> { ChatRepositoryImpl(get(), get()) }
     single<DownloadRepository> { DownloadRepositoryImpl(androidContext(), get(), get()) }
+    single<ArtistRepository> { ArtistRepositoryImpl(get(), get()) }
+    viewModel { ArtistViewModel(get()) }
 
     // ViewModels
     viewModel { MainViewModel(get(), get(), get(), get()) }

@@ -11,7 +11,7 @@ import io.github.jan.supabase.postgrest.query.Order
 
 private const val PAGE_SIZE = 20
 
-private fun SongDto.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category)
+private fun SongDto.toDomain() = Song(id, title, artistName, coverImageUrl, audioUrl, category, artistId)
 
 /** Paginates the `songs` catalog through Postgrest `.range()`, used for text search (FR: Paging 3 for search results). */
 class SongSearchPagingSource(private val query: String) : PagingSource<Int, Song>() {

@@ -71,6 +71,7 @@ fun NowPlayingScreen(
     isPremium: Boolean,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit = {},
+    onArtistClick: (String) -> Unit = {},
     locString: (Int) -> String,
     coverModifier: Modifier = Modifier
 ) {
@@ -573,12 +574,15 @@ fun NowPlayingScreen(
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1
                                 )
-                                Text(
-                                    text = song.artistName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White.copy(alpha = dimens.alphaStandard),
-                                    maxLines = 1
-                                )
+                            Text(
+                                text = song.artistName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White.copy(alpha = dimens.alphaStandard),
+                                maxLines = 1,
+                                modifier = Modifier.clickable(enabled = song.artistId != null) {
+                                    song.artistId?.let { onArtistClick(it) }
+                                }
+                            )
                             }
                             val likeScale by animateFloatAsState(
                                 targetValue = if (isLiked) 1.2f else 1.0f,
