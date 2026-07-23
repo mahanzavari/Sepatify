@@ -1,5 +1,6 @@
 package com.aistudio.sepatify.ui.components
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -17,17 +18,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import coil.compose.AsyncImage
 import com.aistudio.sepatify.R
 import com.aistudio.sepatify.data.local.PlaylistEntity
 import com.aistudio.sepatify.data.model.Song
+import com.aistudio.sepatify.ui.screens.FriendRowSkeleton
 import com.aistudio.sepatify.ui.theme.sepatifyColors
 import com.aistudio.sepatify.ui.theme.sepatifyDimens
 import com.aistudio.sepatify.ui.theme.sepatifyShapes
 import com.aistudio.sepatify.ui.viewmodel.ChatEvent
 import com.aistudio.sepatify.ui.viewmodel.ChatViewModel
+import com.aistudio.sepatify.ui.viewmodel.FollowedUsersUiState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,7 +45,7 @@ fun ShareBottomSheet(
     locString: (Int) -> String
 ) {
     val context = LocalContext.current
-    val followedUsers by chatViewModel.followedUsers.collectAsState()
+    val followedState by chatViewModel.followedUsersState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
 
@@ -48,7 +53,6 @@ fun ShareBottomSheet(
 
     val dimens = MaterialTheme.sepatifyDimens
     val shapes = MaterialTheme.sepatifyShapes
-    val colors = MaterialTheme.sepatifyColors
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -111,61 +115,91 @@ fun ShareBottomSheet(
 
             Spacer(modifier = Modifier.height(dimens.spaceTwelve))
 
-            if (followedUsers.isEmpty()) {
-                Text(
-                    text = locString(R.string.no_friends),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaMuted),
-                    modifier = Modifier.padding(vertical = dimens.spaceNormal)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = dimens.heightMaxLazyColumn),
-                    verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
-                    contentPadding = PaddingValues(bottom = dimens.spaceLarge)
-                ) {
-                    items(followedUsers) { user ->
-                        Row(
+            when (val currentFollowedState = followedState) {
+                is FollowedUsersUiState.Loading -> {
+                    // Shimmer skeleton effect while the network fetches the friends list
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = dimens.heightMaxLazyColumn),
+                        verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
+                        contentPadding = PaddingValues(bottom = dimens.spaceLarge)
+                    ) {
+                        items(6) { FriendRowSkeleton() }
+                    }
+                }
+                is FollowedUsersUiState.Loaded -> {
+                    val followedUsers = currentFollowedState.users
+                    if (followedUsers.isEmpty()) {
+                        Text(
+                            text = locString(R.string.no_friends),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = dimens.alphaMuted),
+                            modifier = Modifier.padding(vertical = dimens.spaceNormal)
+                        )
+                    } else {
+                        LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(shapes.small)
-                                .clickable {
-                                    sendInternalMessage(user, song, playlist, chatViewModel, context, locString)
-                                    coroutineScope.launch { sheetState.hide(); onDismiss() }
-                                }
-                                .padding(dimens.spaceTwelve),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
+                                .heightIn(max = dimens.heightMaxLazyColumn),
+                            verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
+                            contentPadding = PaddingValues(bottom = dimens.spaceLarge)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(dimens.sizeAvatarNormal)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.primary.copy(
-                                            alpha = dimens.alphaGrooves * 3.75f
-                                        ), 
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = user.take(1).uppercase(), 
-                                    color = MaterialTheme.colorScheme.primary, 
-                                    fontWeight = FontWeight.Bold
-                                )
+                            items(followedUsers) { user ->
+                                // Fetch their actual display profile (Avatar + Display Name)
+                                val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
+                                val displayName = profile?.displayName ?: user
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(shapes.small)
+                                        .clickable {
+                                            sendInternalMessage(user, song, playlist, chatViewModel, context, locString)
+                                            coroutineScope.launch { sheetState.hide(); onDismiss() }
+                                        }
+                                        .padding(dimens.spaceTwelve),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(dimens.sizeAvatarNormal)
+                                            .background(
+                                                color = MaterialTheme.colorScheme.primary.copy(
+                                                    alpha = dimens.alphaGrooves * 3.75f
+                                                ), 
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (!profile?.avatarUrl.isNullOrEmpty()) {
+                                            AsyncImage(
+                                                model = profile!!.avatarUrl,
+                                                contentDescription = displayName,
+                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(
+                                                text = displayName.take(1).uppercase(), 
+                                                color = MaterialTheme.colorScheme.primary, 
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = displayName,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.weight(dimens.aspectRatioSquare)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Chat, 
+                                        contentDescription = "Send", 
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
-                            Text(
-                                text = user,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(dimens.aspectRatioSquare)
-                            )
-                            Icon(
-                                imageVector = Icons.Default.Chat, 
-                                contentDescription = "Send", 
-                                tint = MaterialTheme.colorScheme.primary
-                            )
                         }
                     }
                 }
@@ -175,17 +209,29 @@ fun ShareBottomSheet(
 }
 
 private fun shareExternally(context: Context, song: Song?, playlist: PlaylistEntity?, locString: (Int) -> String) {
+    val baseUrl = "https://sepatify.app"
+
     val shareText = if (song != null) {
-        String.format(locString(R.string.share_song_text), song.title, song.artistName)
+        val link = "$baseUrl/song/${song.id}"
+        "${String.format(locString(R.string.share_song_text), song.title, song.artistName)}\n$link"
     } else if (playlist != null) {
-        String.format(locString(R.string.share_playlist_text), playlist.title)
+        val link = "$baseUrl/playlist/${playlist.id}"
+        "${String.format(locString(R.string.share_playlist_text), playlist.title)}\n$link"
     } else ""
 
-    val intent = Intent(Intent.ACTION_SEND).apply {
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, shareText)
     }
-    context.startActivity(Intent.createChooser(intent, locString(R.string.share)))
+
+    val chooserIntent = Intent.createChooser(shareIntent, locString(R.string.share))
+    chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    try {
+        context.startActivity(chooserIntent)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(context, "No app available to share", Toast.LENGTH_SHORT).show()
+    }
 }
 
 private fun sendInternalMessage(
