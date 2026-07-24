@@ -458,51 +458,56 @@ fun FollowedUsersScreen(
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(followedUsers) { username ->
                             val profile by chatViewModel.getProfile(username).collectAsState(initial = null)
-                            val displayName = profile?.displayName ?: username
                             
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                            if (profile == null) {
+                                FriendRowSkeleton()
+                            } else {
+                                val displayName = profile!!.displayName
+                                
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                    shape = RoundedCornerShape(16.dp)
                                 ) {
                                     Row(
-                                        modifier = Modifier.clickable { onUserClick(username) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
-                                            contentAlignment = Alignment.Center
+                                        Row(
+                                            modifier = Modifier.clickable { onUserClick(username) },
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
-                                            if (!profile?.avatarUrl.isNullOrEmpty()) {
-                                                AsyncImage(
-                                                    model = profile!!.avatarUrl,
-                                                    contentDescription = displayName,
-                                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                                    contentScale = ContentScale.Crop
-                                                )
-                                            } else {
-                                                Text(displayName.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (!profile!!.avatarUrl.isNullOrEmpty()) {
+                                                    AsyncImage(
+                                                        model = profile!!.avatarUrl,
+                                                        contentDescription = displayName,
+                                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+                                                } else {
+                                                    Text(displayName.take(1).uppercase(), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                                }
                                             }
+                                            Text(text = displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                         }
-                                        Text(text = displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                                    }
 
-                                    Button(
-                                        onClick = { chatViewModel.toggleFollow(username) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)),
-                                        shape = RoundedCornerShape(20.dp)
-                                    ) {
-                                        Text(text = locString(R.string.unfollow), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                                        Button(
+                                            onClick = { chatViewModel.toggleFollow(username) },
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f)),
+                                            shape = RoundedCornerShape(20.dp)
+                                        ) {
+                                            Text(text = locString(R.string.unfollow), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                                        }
                                     }
                                 }
                             }

@@ -148,56 +148,61 @@ fun ShareBottomSheet(
                             items(followedUsers) { user ->
                                 // Fetch their actual display profile (Avatar + Display Name)
                                 val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
-                                val displayName = profile?.displayName ?: user
                                 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(shapes.small)
-                                        .clickable {
-                                            sendInternalMessage(user, song, playlist, chatViewModel, context, locString)
-                                            coroutineScope.launch { sheetState.hide(); onDismiss() }
-                                        }
-                                        .padding(dimens.spaceTwelve),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
-                                ) {
-                                    Box(
+                                if (profile == null) {
+                                    FriendRowSkeleton()
+                                } else {
+                                    val displayName = profile!!.displayName
+                                    
+                                    Row(
                                         modifier = Modifier
-                                            .size(dimens.sizeAvatarNormal)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.primary.copy(
-                                                    alpha = dimens.alphaGrooves * 3.75f
-                                                ), 
-                                                shape = CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
+                                            .fillMaxWidth()
+                                            .clip(shapes.small)
+                                            .clickable {
+                                                sendInternalMessage(user, song, playlist, chatViewModel, context, locString)
+                                                coroutineScope.launch { sheetState.hide(); onDismiss() }
+                                            }
+                                            .padding(dimens.spaceTwelve),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(dimens.spaceNormal)
                                     ) {
-                                        if (!profile?.avatarUrl.isNullOrEmpty()) {
-                                            AsyncImage(
-                                                model = profile!!.avatarUrl,
-                                                contentDescription = displayName,
-                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                                contentScale = ContentScale.Crop
-                                            )
-                                        } else {
-                                            Text(
-                                                text = displayName.take(1).uppercase(), 
-                                                color = MaterialTheme.colorScheme.primary, 
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(dimens.sizeAvatarNormal)
+                                                .background(
+                                                    color = MaterialTheme.colorScheme.primary.copy(
+                                                        alpha = dimens.alphaGrooves * 3.75f
+                                                    ), 
+                                                    shape = CircleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (!profile!!.avatarUrl.isNullOrEmpty()) {
+                                                AsyncImage(
+                                                    model = profile!!.avatarUrl,
+                                                    contentDescription = displayName,
+                                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = displayName.take(1).uppercase(), 
+                                                    color = MaterialTheme.colorScheme.primary, 
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
                                         }
+                                        Text(
+                                            text = displayName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            modifier = Modifier.weight(dimens.aspectRatioSquare)
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Chat, 
+                                            contentDescription = "Send", 
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
                                     }
-                                    Text(
-                                        text = displayName,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.weight(dimens.aspectRatioSquare)
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.Chat, 
-                                        contentDescription = "Send", 
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
                                 }
                             }
                         }

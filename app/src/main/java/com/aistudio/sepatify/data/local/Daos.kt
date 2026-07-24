@@ -150,6 +150,9 @@ interface ChatMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: ChatMessageEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessages(messages: List<ChatMessageEntity>)
+
     @Query("UPDATE chat_messages SET status = :status WHERE id = :id")
     suspend fun updateMessageStatus(id: Long, status: String)
 

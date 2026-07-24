@@ -50,7 +50,14 @@ fun ChatsScreen(
     var chatsFirstLoad by remember { mutableStateOf(true) }
     
     LaunchedEffect(recentConversations) {
-        if (chatsFirstLoad) chatsFirstLoad = false
+        if (chatsFirstLoad && recentConversations.isNotEmpty()) {
+            chatsFirstLoad = false
+        }
+    }
+    
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1200)
+        chatsFirstLoad = false
     }
 
     var chatInputText by remember { mutableStateOf("") }
@@ -108,55 +115,60 @@ fun ChatsScreen(
                     verticalArrangement = Arrangement.spacedBy(dimens.spaceEight),
                     modifier = Modifier.fillMaxWidth().weight(dimens.aspectRatioSquare)
                 ) {
-                    items(matchingUsers) { usr ->
-                        val isFollowingFlow = chatViewModel.isFollowing(usr).collectAsState(initial = false)
+                    items(matchingUsers, key = { it }) { usr ->
                         val profile by chatViewModel.getProfile(usr).collectAsState(initial = null)
-                        val displayName = profile?.displayName ?: usr
+                        
+                        if (profile == null) {
+                            ChatRowSkeleton()
+                        } else {
+                            val isFollowingFlow = chatViewModel.isFollowing(usr).collectAsState(initial = false)
+                            val displayName = profile!!.displayName
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onViewUserProfile(usr) }
-                                .padding(vertical = dimens.spaceEight),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
                             Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onViewUserProfile(usr) }
+                                    .padding(vertical = dimens.spaceEight),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(dimens.spaceTen)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(dimens.sizeAvatarNormal)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
-                                    contentAlignment = Alignment.Center
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceTen)
                                 ) {
-                                    if (!profile?.avatarUrl.isNullOrEmpty()) {
-                                        AsyncImage(
-                                            model = profile!!.avatarUrl,
-                                            contentDescription = displayName,
-                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    } else {
-                                        Text(text = displayName.take(1).uppercase(), color = MaterialTheme.colorScheme.primary)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(dimens.sizeAvatarNormal)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (!profile!!.avatarUrl.isNullOrEmpty()) {
+                                            AsyncImage(
+                                                model = profile!!.avatarUrl,
+                                                contentDescription = displayName,
+                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(text = displayName.take(1).uppercase(), color = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
+                                    Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
                                 }
-                                Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
-                            }
 
-                            Button(
-                                onClick = { chatViewModel.onEvent(ChatEvent.ToggleFollow(usr)) },
-                                shape = shapes.button,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isFollowingFlow.value) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Text(
-                                    text = if (isFollowingFlow.value) locString(R.string.following) else locString(R.string.follow),
-                                    style = MaterialTheme.typography.labelSmall
-                                )
+                                Button(
+                                    onClick = { chatViewModel.onEvent(ChatEvent.ToggleFollow(usr)) },
+                                    shape = shapes.button,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isFollowingFlow.value) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text(
+                                        text = if (isFollowingFlow.value) locString(R.string.following) else locString(R.string.follow),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                             }
                         }
                     }
@@ -187,52 +199,57 @@ fun ChatsScreen(
                         verticalArrangement = Arrangement.spacedBy(dimens.spaceTen),
                         modifier = Modifier.fillMaxWidth().weight(dimens.aspectRatioSquare)
                     ) {
-                        items(recentConversations) { user ->
+                        items(recentConversations, key = { it }) { user ->
                             val profile by chatViewModel.getProfile(user).collectAsState(initial = null)
-                            val displayName = profile?.displayName ?: user
+                            
+                            if (profile == null) {
+                                ChatRowSkeleton()
+                            } else {
+                                val displayName = profile!!.displayName
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onActiveChatUserChange(user) }
-                                    .padding(vertical = dimens.spaceEight),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
-                            ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
-                                        .size(dimens.sizeAvatarLarge)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight))
-                                        .clickable { onViewUserProfile(user) },
-                                    contentAlignment = Alignment.Center
+                                        .fillMaxWidth()
+                                        .clickable { onActiveChatUserChange(user) }
+                                        .padding(vertical = dimens.spaceEight),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(dimens.spaceTwelve)
                                 ) {
-                                    if (!profile?.avatarUrl.isNullOrEmpty()) {
-                                        AsyncImage(
-                                            model = profile!!.avatarUrl,
-                                            contentDescription = displayName,
-                                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    } else {
-                                        Text(text = displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(dimens.sizeAvatarLarge)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaShimmerHighlight))
+                                            .clickable { onViewUserProfile(user) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (!profile!!.avatarUrl.isNullOrEmpty()) {
+                                            AsyncImage(
+                                                model = profile!!.avatarUrl,
+                                                contentDescription = displayName,
+                                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Text(text = displayName.take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                        }
                                     }
-                                }
-                                Column(modifier = Modifier.weight(dimens.aspectRatioSquare)) {
-                                    Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
+                                    Column(modifier = Modifier.weight(dimens.aspectRatioSquare)) {
+                                        Text(text = displayName, style = MaterialTheme.typography.bodyLarge)
 
-                                    val isOnline = onlineUsers.contains(user)
-                                    Text(
-                                        text = if (isOnline) locString(R.string.status_online) else locString(R.string.status_offline),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = dimens.alphaMuted)
+                                        val isOnline = onlineUsers.contains(user)
+                                        Text(
+                                            text = if (isOnline) locString(R.string.status_online) else locString(R.string.status_offline),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (isOnline) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = dimens.alphaMuted)
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.Chat, 
+                                        contentDescription = locString(R.string.chat_icon_desc), 
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaOverlayAmbient)
                                     )
                                 }
-                                Icon(
-                                    imageVector = Icons.Default.Chat, 
-                                    contentDescription = locString(R.string.chat_icon_desc), 
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = dimens.alphaOverlayAmbient)
-                                )
                             }
                         }
                     }

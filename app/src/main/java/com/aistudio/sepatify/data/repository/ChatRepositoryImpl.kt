@@ -349,7 +349,27 @@ class ChatRepositoryImpl(
                 }
                 .decodeList<ChatMessageDto>()
 
-            remoteMessages.forEach { upsertRemoteMessage(it, myId) }
+            val entities = remoteMessages.map { dto ->
+                val existing = chatMessageDao.findByRemoteId(dto.id)
+                val senderName = if (dto.senderId == myId) "Me" else resolveUsername(dto.senderId)
+                val receiverName = if (dto.receiverId == myId) "Me" else resolveUsername(dto.receiverId)
+                ChatMessageEntity(
+                    id = existing?.id ?: 0,
+                    remoteId = dto.id,
+                    senderName = senderName,
+                    receiverName = receiverName,
+                    text = dto.text,
+                    isSongShare = dto.isSongShare,
+                    songId = dto.songId,
+                    songTitle = dto.songTitle,
+                    songArtist = dto.songArtist,
+                    songCover = dto.songCover,
+                    songAudio = dto.songAudio,
+                    timestamp = parseTimestamp(dto.createdAt),
+                    status = dto.status
+                )
+            }
+            chatMessageDao.insertMessages(entities)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -390,7 +410,28 @@ class ChatRepositoryImpl(
                     order("created_at", Order.ASCENDING)
                 }
                 .decodeList<ChatMessageDto>()
-            remoteMessages.forEach { upsertRemoteMessage(it, myId) }
+                
+            val entities = remoteMessages.map { dto ->
+                val existing = chatMessageDao.findByRemoteId(dto.id)
+                val senderName = if (dto.senderId == myId) "Me" else resolveUsername(dto.senderId)
+                val receiverName = if (dto.receiverId == myId) "Me" else resolveUsername(dto.receiverId)
+                ChatMessageEntity(
+                    id = existing?.id ?: 0,
+                    remoteId = dto.id,
+                    senderName = senderName,
+                    receiverName = receiverName,
+                    text = dto.text,
+                    isSongShare = dto.isSongShare,
+                    songId = dto.songId,
+                    songTitle = dto.songTitle,
+                    songArtist = dto.songArtist,
+                    songCover = dto.songCover,
+                    songAudio = dto.songAudio,
+                    timestamp = parseTimestamp(dto.createdAt),
+                    status = dto.status
+                )
+            }
+            chatMessageDao.insertMessages(entities)
         } catch (e: Exception) { }
     }
 
